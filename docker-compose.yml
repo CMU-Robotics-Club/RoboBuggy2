@@ -1,0 +1,7 @@
+services:
+  main:
+    build: .
+    volumes:
+      - ./code:/code
+    stdin_open: true # docker run -i
+    tty: true        # docker run -t
