@@ -8,6 +8,7 @@
 
 # modified environment variables
 export CMAKE_PREFIX_PATH="/rb_ws/devel:$CMAKE_PREFIX_PATH"
+export LD_LIBRARY_PATH="/rb_ws/devel/lib:$LD_LIBRARY_PATH"
 export PWD='/rb_ws/build'
 export ROSLISP_PACKAGE_DIRECTORIES='/rb_ws/devel/share/common-lisp'
 export ROS_PACKAGE_PATH="/rb_ws/src:$ROS_PACKAGE_PATH"

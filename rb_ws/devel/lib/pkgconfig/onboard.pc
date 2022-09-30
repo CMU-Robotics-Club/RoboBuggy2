@@ -1,0 +1,8 @@
+prefix=/rb_ws/devel
+
+Name: onboard
+Description: Description of onboard
+Version: 0.0.0
+Cflags: 
+Libs: -L${prefix}/lib 
+Requires: 
