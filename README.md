@@ -15,7 +15,7 @@ A complete re-write of the old RoboBuggy.
 
         docker exec -it robobuggy2-main-1
 
-- Now you should be presented with a bash CLI as you're used to.
+- Now you should be presented with a bash CLI as you're used to. Then run `source ros_entrypoint.sh`.
 
 ### ROS
 - Navigate to the `rb_ws` workspace. This is where all ROS and Python programs will live.
