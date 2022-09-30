@@ -13,7 +13,7 @@ A complete re-write of the old RoboBuggy.
 
 - Then in another terminal window, in order to access the running Docker's CLI, run:
 
-        docker exec -it robobuggy2-main-1
+        docker exec -it robobuggy2-main-1 bash
 
 - Now you should be presented with a bash CLI as you're used to. Then run `source ros_entrypoint.sh`.
 
