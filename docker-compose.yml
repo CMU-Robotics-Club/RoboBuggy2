@@ -2,6 +2,6 @@ services:
   main:
     build: .
     volumes:
-      - ./code:/code
+      - ./rb_ws:/rb_ws
     stdin_open: true # docker run -i
     tty: true        # docker run -t

@@ -1,0 +1,2 @@
+
+-DCATKIN_DEVEL_PREFIX=/rb_ws/devel -DCMAKE_INSTALL_PREFIX=/rb_ws/install -G Unix Makefiles
