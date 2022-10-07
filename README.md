@@ -23,3 +23,19 @@ A complete re-write of the old RoboBuggy.
 
         catkin_make
         source devel/setup.bash
+
+
+### Notes for Christian
+/rb_ws/src/buggy is the package for our project
+("catkin_create_pkg buggy std_msgs rospy roscpp geometry_msgs")
+
+"rospack find buggy" will find our package
+
+"rosrun buggy hello_world.py" will run the python scripts
+(!!! Make sure hello_world.py is executable via "chomod +x hello_world.py")
+
+Publisher: test_publisher.py
+Subscriber: test_subscriber.py
+Test Python File: hello_world.py
+
+Published Messages is "Robobuggy > Atlas! PublishedTime: %f"
