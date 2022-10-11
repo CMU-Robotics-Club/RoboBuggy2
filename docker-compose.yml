@@ -5,6 +5,15 @@ services:
       - ./rb_ws:/rb_ws
       - /tmp/.X11-unix:/tmp/.X11-unix
       - ~/.XAuthority:/root/.XAuthority
+    devices:
+      - "${GPS_PORT:-/dev/null}:/dev/ttyUSB0"
+      - "${WEBCAM_PORT:-/dev/null}:/dev/ttyUSB1"
+      - "${RLSENSE_PORT:-/dev/null}:/dev/ttyUSB2"
+      - "${TEENSY0_PORT:-/dev/null}:/dev/ttyACM0"
+      - "${TEENSY1_PORT:-/dev/null}:/dev/ttyACM1"
+      - "${TEENSY2_PORT:-/dev/null}:/dev/ttyACM2"
+      - "${TEENSY3_PORT:-/dev/null}:/dev/ttyACM3"
+      - "${TEENSY4_PORT:-/dev/null}:/dev/ttyACM4"
     stdin_open: true # docker run -i
     tty: true        # docker run -t
     environment:
