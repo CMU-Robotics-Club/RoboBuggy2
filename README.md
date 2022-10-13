@@ -20,9 +20,9 @@ A complete re-write of the old RoboBuggy.
 ### ROS
 - Navigate to the `rb_ws` workspace. This is where all ROS and Python programs will live.
 - To build the ROS workspace and source it, run:
-
-        catkin_make
+        
         source devel/setup.bash
+        catkin_make     
         
 ### Running Example Publisher and Subcriber Scripts
 - Ensure you've sourced the `rb_ws` workspace.
