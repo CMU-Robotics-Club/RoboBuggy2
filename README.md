@@ -35,9 +35,17 @@ A complete re-write of the old RoboBuggy.
 - Understand what's going on in the publisher terminal and the subscriber terminal.
 - Open another terminal window and use `rostopic` (http://wiki.ros.org/rostopic) to check everything is working correctly.
 
+### Simulator
+- We're using the Robotis's TurtleBot for our simulator because I (Christian) don't want to create a URDF of the Buggy from our CAD model.
 
+- Run the following to run Gazebo and the Command Server:
 
-### Notes for Christian
+        export TURTLEBOT3_MODEL=burger
+        roslaunch turtlebot3_gazebo turtlebot3_empty_world.launch
+
+- Publishing messages to `/cmd_vel` as in `test_gazebo_publisher.py` will command the turtle bot to move.
+
+### Notes about our ROS Workspace
 /rb_ws/src/buggy is the package for our project
 ("catkin_create_pkg buggy std_msgs rospy roscpp geometry_msgs")
 

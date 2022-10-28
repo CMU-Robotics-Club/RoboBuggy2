@@ -71,7 +71,7 @@ find_package(catkin REQUIRED COMPONENTS
 ## Generate added messages and services with any dependencies listed here
 # generate_messages(
 #   DEPENDENCIES
-#   goemetry_msgs#   std_msgs
+#   geometry_msgs#   std_msgs
 # )
 
 ################################################
@@ -106,7 +106,7 @@ find_package(catkin REQUIRED COMPONENTS
 catkin_package(
 #  INCLUDE_DIRS include
 #  LIBRARIES buggy
-#  CATKIN_DEPENDS goemetry_msgs roscpp rospy std_msgs
+#  CATKIN_DEPENDS geometry_msgs roscpp rospy std_msgs
 #  DEPENDS system_lib
 )
 
