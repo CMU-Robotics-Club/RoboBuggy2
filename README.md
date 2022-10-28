@@ -22,6 +22,7 @@ A complete re-write of the old RoboBuggy.
 - To build the ROS workspace and source it, run:
 <<<<<<< HEAD
 <<<<<<< HEAD
+<<<<<<< HEAD
 =======
 
         catkin_make
@@ -47,6 +48,10 @@ A complete re-write of the old RoboBuggy.
         
 >>>>>>> parent of 3507d13... Revert "automaticallyt changed?"
         source devel/setup.bash
+=======
+        
+        source devel/setup.bash
+>>>>>>> parent of 3507d13... Revert "automaticallyt changed?"
         catkin_make     
         
 ### Running Example Publisher and Subcriber Scripts
