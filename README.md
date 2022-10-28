@@ -17,6 +17,9 @@ A complete re-write of the old RoboBuggy.
 
 - Now you should be presented with a bash CLI as you're used to.
 
+### Setting up X11 Fowarding
+- On the host machine, run `xhost local:docker`.
+
 ### ROS
 - Navigate to the `rb_ws` workspace. This is where all ROS and Python programs will live.
 - To build the ROS workspace and source it, run:
