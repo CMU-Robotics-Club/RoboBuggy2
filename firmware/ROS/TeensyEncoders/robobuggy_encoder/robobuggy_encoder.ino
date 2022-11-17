@@ -26,9 +26,10 @@ Encoder right_wheel_encoder(5, 6);
 Encoder front_wheel_encoder(7, 8);
 
 void setup() {
+  //Serial.begin(115200);
   pinMode(13, OUTPUT);
+  
   nh.initNode();
-
   nh.advertise(p);
 }
 
@@ -38,9 +39,11 @@ void loop() {
   long right_position = right_wheel_encoder.read();
   long front_position = front_wheel_encoder.read();
 
-  es.left_wheel_encoder = left_position / ((double) 4.0);
-  es.right_wheel_encoder = right_position / ((double) 4.0);
-  es.front_wheel_encoder = front_position / ((double) 4.0);
+  es.left_wheel_encoder = left_position / ((double) 4.0 * 720);
+  es.right_wheel_encoder = right_position / ((double) 4.0 * 720);
+  es.front_wheel_encoder = front_position / ((double) 4.0 * 720);
+
+  //Serial.printf("%ld, %f\n", left_position, es.left_wheel_encoder);
 
   p.publish(&es);
   nh.spinOnce();
