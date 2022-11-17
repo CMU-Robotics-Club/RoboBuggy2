@@ -5,10 +5,10 @@
 volatile int pin_2_width = 1500;
 volatile int pin_3_width = 1500;
 
-#define TIMEOUT_CYCLES 10
+#define TIMEOUT_CYCLES 5
 
 volatile int pin_2_timeout = TIMEOUT_CYCLES;
-volatile int pin_3_timeout = TIMEOUT_CYCLES;
+volatile int pin_2_timeout = TIMEOUT_CYCLES;
 
 void setup() {
   Serial.begin(115200);
@@ -59,8 +59,8 @@ void loop()
   {
     t += 5.0;
 
-    if (pin_2_timeout > 0) { --pin_2_timeout; } else { pin_2_width = 0; }
-    if (pin_3_timeout > 0) { --pin_3_timeout; } else { pin_3_width = 0; }
+    if (pin_2_timeout > 0) { --pin_2_timeout; pin_2_width = 0; }
+    if (pin_3_timeout > 0) { --pin_3_timeout; pin_3_width = 0; }
       
     int p2width = pin_2_width;
     if (p2width < 1000) { p2width = 1000; }
@@ -71,19 +71,19 @@ void loop()
     //uint16_t currentPos = 0;
     //motor.read(36, currentPos);
 
-    //uint16_t currentSpeed;
-    //motor.read(38, currentSpeed);
+    uint16_t currentSpeed;
+    motor.read(38, currentSpeed);
 
     if (++i == 10) {
       i = 0;
-      //Serial.printf("speed is %d\n", currentSpeed);
+      Serial.printf("speed is %d\n", currentSpeed);
 
-      //Serial.printf("pin width is %d\n", pin_3_width);
+      Serial.printf("pin width is %d\n", p2width);
     }
 
     double angle = sin(t / 100.0);
     
-    //motor.goalPositionDegree(90 - (range - 0.5) * 2.0 * 60.0);
+    motor.goalPositionDegree(90 - (range - 0.5) * 2.0 * 60.0);
     //motor.goalPositionDegree(90 + angle * 45.0);
 
     if (pin_3_width > 1500.0) {
