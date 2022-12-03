@@ -2,40 +2,103 @@
 #include "DynamixelInterface.h"
 #include "DynamixelMotor.h"
 
-volatile int pin_2_width = 1500;
-volatile int pin_3_width = 1500;
+/* ============= */
+/* RC Controller */
+/* ============= */
 
-#define TIMEOUT_CYCLES 10
+#define NUM_RC_CHANNELS 2
 
-volatile int pin_2_timeout = TIMEOUT_CYCLES;
-volatile int pin_3_timeout = TIMEOUT_CYCLES;
+#define RC_STEER 0
+#define RC_BRAKE 1
+
+#define STEER_PIN 40
+#define BRAKE_PIN 7
+
+typedef void (*interrupt_handler)(void);
+
+const int rc_pins[NUM_RC_CHANNELS] = { STEER_PIN, BRAKE_PIN };
+
+// Ranges from 1000 to 2000 under normal conditions.
+volatile int rc_width[NUM_RC_CHANNELS] = { 0 };
+// Set to millis() when an edge occurs.
+volatile unsigned long rc_last_edge[NUM_RC_CHANNELS] = { 0 };
+
+#define CONCAT( A, B ) A ## B
+#define CREATE_PDM_INTERRUPT_HANDLER( RC , PIN )  \
+  do {                                            \
+    rc_last_edge[ RC ] = millis();                \
+    static unsigned long start_time = 0;          \
+    if (digitalRead( PIN )) {                     \
+      start_time = micros();                      \
+    } else {                                      \
+      int new_width = micros() - start_time;      \
+      if (10 <= new_width && new_width <= 2000) { \
+        rc_width[ RC ] = new_width;               \
+      }                                           \
+      if (new_width > 2000) { digitalWrite(41, HIGH); digitalWrite(41, LOW); } \
+    }                                             \
+  } while (0);
+
+
+void steer_pin_change() {
+  CREATE_PDM_INTERRUPT_HANDLER( RC_STEER , STEER_PIN );
+}
+
+void brake_pin_change() {
+  CREATE_PDM_INTERRUPT_HANDLER( RC_BRAKE , BRAKE_PIN );
+}
+
+const interrupt_handler rc_interrupt_handlers[NUM_RC_CHANNELS] = { steer_pin_change, brake_pin_change };
+
+#undef CONCAT
+#undef CREATE_PDM_INTERRUPT_HANLDER
+
+#define AVERAGE_AMT 50
+
+volatile int next_pin_3 = 0;
+volatile int pin_3_widths[AVERAGE_AMT] = { 0 };
+
+void pin_2_change(void);
+void pin_3_change(void);
+
+enum class BuggyState {
+  Armed,
+
+  Moving,
+
+  Stopped0,
+  Stopped1,
+  Stopped2,
+};
+
+BuggyState buggy_state = BuggyState::Stopped0;
+int buggy_arming_timer_ms = 0;
+
+#define ARM_TIME_MS 1000
+
+#define BRAKE_TIME_MS 100
 
 void setup() {
   Serial.begin(115200);
 
-  pinMode(2, INPUT);
-  pinMode(3, INPUT);
+  for (int i = 0; i < NUM_RC_CHANNELS; ++i) {
+    pinMode(rc_pins[i], INPUT);
+
+    attachInterrupt(digitalPinToInterrupt(rc_pins[i]), rc_interrupt_handlers[i], CHANGE);
+  }
 
   pinMode(25, OUTPUT);
-
   digitalWrite(25, LOW);
-  
-  attachInterrupt(digitalPinToInterrupt(2), pin_2_change, CHANGE);
-  attachInterrupt(digitalPinToInterrupt(3), pin_3_change, CHANGE);
+  pinMode(41, OUTPUT);
 }
+
 
 int i = 0;
 
 double t = 0.0;
 
 void loop()
-{ 
-  /*while (1) {
-  digitalWrite(25, i);
-  i = !i;
-  delay(5000);
-  }*/
-  
+{
   Serial.println("foobar");
   
   DynamixelInterface dInterface(Serial7, 27, DirPinMode::ReadHiWriteLo); // Stream
@@ -55,18 +118,87 @@ void loop()
   motor.jointMode(); // Set the angular limits of the servo. Set to [min, max] by default
   motor.enableTorque();
 
+  int rc_pin_widths[NUM_RC_CHANNELS] = { 0 };
+  bool rc_pin_timed_out[NUM_RC_CHANNELS] = { false };
+
   while (true)
   {
     t += 5.0;
 
-    if (pin_2_timeout > 0) { --pin_2_timeout; } else { pin_2_width = 0; }
-    if (pin_3_timeout > 0) { --pin_3_timeout; } else { pin_3_width = 0; }
+    unsigned long currentMillis = millis();
+
+    for (int i = 0; i < NUM_RC_CHANNELS; ++i) {
+      rc_pin_widths[i] = rc_width[i];
+      // TODO: Perhaps we should warn if it's ever outside of this range
+      //if (rc_pin_widths[i] < 1000) { rc_pin_widths[i] = 1000; }
+      //if (rc_pin_widths[i] > 2000) { rc_pin_widths[i] = 2000; }
       
-    int p2width = pin_2_width;
-    if (p2width < 1000) { p2width = 1000; }
-    if (p2width > 2000) { p2width = 2000; }
-    
-    float range = (pin_2_width - 1000.0) / 800.0;
+      // 50 ms is two and a half RC periods
+      rc_pin_timed_out[i] = (currentMillis - rc_last_edge[i]) >= 50.0;
+    }
+
+    bool throttleAuto = (1750 <= rc_pin_widths[RC_BRAKE]);
+    bool throttleTele = (rc_pin_widths[RC_BRAKE] <= 1250);
+    bool throttleNeutral = !throttleAuto && !throttleTele;
+
+    switch (buggy_state) {
+      case BuggyState::Stopped0:
+        // Must be moved to AUTONOMOUS
+        if (throttleAuto) {
+          if (millis() - buggy_arming_timer_ms > ARM_TIME_MS) {
+            buggy_arming_timer_ms = millis();
+            buggy_state = BuggyState::Stopped1;
+          }
+        } else {
+          buggy_arming_timer_ms = millis();
+        }
+        break;
+      
+      case BuggyState::Stopped1:
+        // Must be moved to TELEOP
+        if (throttleTele) {
+          if (millis() - buggy_arming_timer_ms > ARM_TIME_MS) {
+            buggy_arming_timer_ms = millis();
+            buggy_state = BuggyState::Stopped2;
+          }
+        } else {
+          buggy_arming_timer_ms = millis();
+        }
+        break;
+      
+      case BuggyState::Stopped2:
+        if (throttleNeutral) {
+          if (millis() - buggy_arming_timer_ms > ARM_TIME_MS) {
+            buggy_arming_timer_ms = millis();
+            buggy_state = BuggyState::Armed;
+          }
+        } else {
+          buggy_arming_timer_ms = millis();
+        }
+        break;
+      
+      case BuggyState::Armed:
+        if (throttleTele || throttleAuto) {
+          if (millis() - buggy_arming_timer_ms > ARM_TIME_MS) {
+            buggy_arming_timer_ms = millis();
+            buggy_state = BuggyState::Moving;
+          }
+        } else {
+          buggy_arming_timer_ms = millis();
+        }
+        break;
+      
+      default:
+        if (throttleNeutral) {
+          if (millis() - buggy_arming_timer_ms > BRAKE_TIME_MS) {
+            buggy_arming_timer_ms = millis();
+            buggy_state = BuggyState::Stopped0;
+          }
+        } else {
+          buggy_arming_timer_ms = millis();
+        }
+        break;
+    }
 
     //uint16_t currentPos = 0;
     //motor.read(36, currentPos);
@@ -74,47 +206,28 @@ void loop()
     //uint16_t currentSpeed;
     //motor.read(38, currentSpeed);
 
-    if (++i == 10) {
+    if (++i == 100) {
       i = 0;
-      //Serial.printf("speed is %d\n", currentSpeed);
-
-      //Serial.printf("pin width is %d\n", pin_3_width);
+      Serial.printf("pin width is %d\n", rc_pin_widths[RC_STEER]);
+      Serial.printf("buggy state: %d\n", (int)buggy_state);
     }
 
-    double angle = sin(t / 100.0);
-    
-    //motor.goalPositionDegree(90 - (range - 0.5) * 2.0 * 60.0);
-    //motor.goalPositionDegree(90 + angle * 45.0);
+    if (buggy_state == BuggyState::Moving) {
+      if (throttleTele) {
+        float range = (rc_pin_widths[RC_STEER] - 1000.0) / 1000.0;
 
-    if (pin_3_width > 1500.0) {
-        digitalWrite(25, HIGH);
+        double angle = (0 ? sin(t / 100.0) : 0);
+      
+        motor.goalPositionDegree(90 + (range - 0.5) * 2.0 * 90.0);
+      } else if (throttleAuto) {
+        // TODO: Autonomomous
+      }
+
+      digitalWrite(25, HIGH);
     } else {
-        digitalWrite(25, LOW);
+      digitalWrite(25, LOW);
     }
 
-    delay(10);
-  }
-}
-
-void pin_2_change() {
-  pin_2_timeout = TIMEOUT_CYCLES;
-  
-  static int start_time = 0;
-  if (digitalRead(2)) {
-    start_time = micros();
-  } else {
-    pin_2_width = micros() - start_time;
-  }
-}
-
-
-void pin_3_change() {
-  pin_3_timeout = TIMEOUT_CYCLES;
-  
-  static int start_time = 0;
-  if (digitalRead(3)) {
-    start_time = micros();
-  } else {
-    pin_3_width = micros() - start_time;
+    delay(1);
   }
 }
