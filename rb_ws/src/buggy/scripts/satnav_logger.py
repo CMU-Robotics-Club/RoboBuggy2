@@ -1,41 +1,58 @@
-#!/usr/bin/env python
 import rospy
+import time
 from std_msgs.msg import String
 from sensor_msgs.msg import NavSatFix
+from sensor_msgs.msg import TimeReference
+from nav_msgs.msg import Odometry
 
-# TODO: write a test publisher node
-# TODO: use https://wiki.ros.org/geonav_transform
-# to convert gps coordinate to local xyz
+# records output of Parker gq7 rtk-gps
+# sensor in NED relative position form, as well as LLH
+# global position form.
+# also records other data
+# see: https://wiki.ros.org/microstrain_inertial_driver
 
-class CoordinateLogger:
-    def __init__(self, fileName):
-        self.file = open(fileName, "w")
+class SatNavLogger:
+    def __init__(self):
+        self.file_llh = open("ned_relative_positon_log.txt", "w+")
+        self.file_ned = open("llh_global_position_log.txt", "w+")
         self.isLogging = False
 
     def start(self):
         self.isLogging = True
         self.listener()
+        self.timestart = time.time()
 
     def writeLine(self, data):
         self.file.write(str(data))
         self.file.write("\n")
 
-    def navSatCb(self, data):
+    def time_since_start(self)
+        return time.time() - self.timestart
+
+    def llhposCb(self, data)
         if self.isLogging:
-            self.writeLine(data)
-        
+            self.file_llh.write(str(time_since_start) + str(data) + "\n")
+
+    def rposCb(self, data):
+        if self.isLogging:
+            self.file_ned.write(str(time_since_start) + str(data) + "\n")
+
     def listener(self):
-        rospy.init_node('listener', anonymous=True)
-        rospy.Subscriber("GPS", NavSatFix, self.navSatCb)
+        rospy.init_node("SatNav Logger", anonymous=True)
+
+        # subscribe to gq7 nodes
+        rospy.Subscriber("/gq7/nav/relative_pos_odom", Odometry, self.rposCb)
+        rospy.Subscriber("/gq7/nav/odom", Odometry, self.llhposCb)
 
         # spin() simply keeps python from exiting until this node is stopped
         rospy.spin()
 
     def stop(self):
         self.isLogging = False
-        self.file.close()
+        self.file_llh.close()
+        self.file_ned.close()
         
 
 if __name__ == '__main__':
-    logger = CoordinateLogger("coordinate_list")
+    logger = SatNavLogger()
     logger.start()
