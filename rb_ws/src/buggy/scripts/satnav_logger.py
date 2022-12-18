@@ -1,3 +1,4 @@
+#!/usr/bin/python3
 import rospy
 import time
 from std_msgs.msg import String
@@ -16,6 +17,7 @@ class SatNavLogger:
         self.file_llh = open("ned_relative_positon_log.txt", "w+")
         self.file_ned = open("llh_global_position_log.txt", "w+")
         self.isLogging = False
+        self.timestart = 0
 
     def start(self):
         self.isLogging = True
@@ -26,19 +28,19 @@ class SatNavLogger:
         self.file.write(str(data))
         self.file.write("\n")
 
-    def time_since_start(self)
+    def time_since_start(self):
         return time.time() - self.timestart
 
-    def llhposCb(self, data)
+    def llhposCb(self, data):
         if self.isLogging:
-            self.file_llh.write(str(time_since_start) + str(data) + "\n")
+            self.file_llh.write(str(self.time_since_start()) + str(data) + "\r\n")
 
     def rposCb(self, data):
         if self.isLogging:
-            self.file_ned.write(str(time_since_start) + str(data) + "\n")
+            self.file_ned.write(str(self.time_since_start()) + str(data) + "\r\n")
 
     def listener(self):
-        rospy.init_node("SatNav Logger", anonymous=True)
+        rospy.init_node("listener", anonymous=True)
 
         # subscribe to gq7 nodes
         rospy.Subscriber("/gq7/nav/relative_pos_odom", Odometry, self.rposCb)
