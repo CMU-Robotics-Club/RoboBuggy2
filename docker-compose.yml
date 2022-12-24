@@ -18,5 +18,7 @@ services:
     tty: true        # docker run -t
     environment:
       DISPLAY: ${DISPLAY}
-    network_mode: "host"
+    # network_mode: "host"
+    ports:
+      - "3000"
     platform: "linux/amd64"
