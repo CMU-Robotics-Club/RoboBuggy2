@@ -27,7 +27,7 @@ RUN git clone https://github.com/osrf/gzweb
 WORKDIR /root/gzweb
 RUN source /usr/share/gazebo/setup.sh
 RUN export GAZEBO_MODEL_PATH=/rb_ws/src/buggy/sim_models
-RUN ./deploy.sh -m -c
+RUN ./deploy.sh -m local
 WORKDIR /
 
 ### Buggy ###
