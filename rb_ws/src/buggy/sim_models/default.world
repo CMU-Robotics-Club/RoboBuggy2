@@ -1,0 +1,19 @@
+<?xml version="1.0" ?>
+<sdf version="1.7">
+  <world name="default">
+    <!-- A global light source -->
+    <include>
+      <uri>model://sun</uri>
+    </include>
+
+    <include>
+      <uri>model://cmutopo</uri>
+      <pose>-135 165 -296 0 0 0</pose>
+    </include>
+
+    <include>
+      <uri>model://buggy</uri>
+    </include>
+
+  </world>
+</sdf>

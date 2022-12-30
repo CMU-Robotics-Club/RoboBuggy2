@@ -1,7 +1,7 @@
 <!-- Launch file to start gazebo sim -->
 <launch>
-    <arg name="world" default="$(find buggy)/worlds/buggy.world"/>
-    <arg name="paused" default="false"/>
+    <arg name="world" default="$(find buggy)/sim_models/default.world"/>
+    <arg name="paused" default="true"/>
     <arg name="use_sim_time" default="true"/>
     <arg name="gui" default="false"/>
     <arg name="headless" default="true"/>
@@ -14,8 +14,8 @@
         <arg name="gui" value="$(arg gui)"/>
         <arg name="headless" value="$(arg headless)"/>
         <arg name="debug" value="$(arg debug)"/>
+        <env name="GAZEBO_MODEL_PATH" value="$(find buggy)/sim_models:$GAZEBO_MODEL_PATH"/>
     </include>
 
-    <node name="spawn_buggy" pkg="gazebo_ros" type="spawn_model" respawn="false" output="screen" args="-urdf -model buggy -param robot_description"/>
-
+    <node name="gzweb" pkg="buggy" type="run_gzweb.sh" output="screen" />
 </launch>

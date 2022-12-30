@@ -1,0 +1,145 @@
+<?xml version='1.0'?>
+<sdf version="1.7">
+  <model name="buggy">
+    <pose>0 0 0.125 0 -1.57079633 0</pose>
+    <static>false</static>
+    <link name="chassis">
+      <inertial>
+        <mass>34.0</mass>
+        <inertia>          <!-- inertias are tricky to compute -->
+          <!-- http://gazebosim.org/tutorials?tut=inertia&cat=build_robot -->
+          <ixx>18.58</ixx>          <!-- for a box: ixx = 0.083 * mass * (y*y + z*z) -->
+          <ixy>0.0</ixy>          <!-- for a box: ixy = 0 -->
+          <ixz>0.0</ixz>          <!-- for a box: ixz = 0 -->
+          <iyy>3.093</iyy>          <!-- for a box: iyy = 0.083 * mass * (x*x + z*z) -->
+          <iyz>0.0</iyz>          <!-- for a box: iyz = 0 -->
+          <izz>15.543</izz>          <!-- for a box: izz = 0.083 * mass * (x*x + y*y) -->
+        </inertia>
+      </inertial>
+      <collision name="collision">
+        <pose>
+          0.16 0.0 0.54 0.0 0.0 0.0
+        </pose>
+        <geometry>
+          <box>
+            <size>0.24 0.29 1.84</size>
+          </box>
+        </geometry>
+      </collision>
+      <visual name="frame_visual">
+        <geometry>
+          <mesh>
+            <uri>model://buggy/buggy.dae</uri>
+            <submesh>
+              <name>frame</name>
+            </submesh>
+          </mesh>
+        </geometry>
+      </visual>
+      <visual name="shell_visual">
+        <geometry>
+          <mesh>
+            <uri>model://buggy/buggy.dae</uri>
+            <submesh>
+              <name>shell</name>
+            </submesh>
+          </mesh>
+        </geometry>
+      </visual>
+    </link>
+    <link name="left_wheel">
+      <pose>0.0857 -0.301 -0.0159 0.0 0.0 0.0</pose>
+      <collision name="collision">
+        <pose>0.0 0.0 0.0 -1.57079633 0.0 0.0</pose>
+        <geometry>
+          <cylinder>
+            <radius>0.09</radius>
+            <length>0.03</length>
+          </cylinder>
+        </geometry>
+      </collision>
+      <visual name="visual">
+        <geometry>
+          <mesh>
+            <uri>model://buggy/buggy.dae</uri>
+            <submesh>
+              <name>leftwheel</name>
+              <center>true</center>
+            </submesh>
+          </mesh>
+        </geometry>
+      </visual>
+    </link>
+    <link name="right_wheel">
+      <pose>0.0857 0.301 -0.0159 0.0 0.0 0.0</pose>
+      <collision name="collision">
+        <pose>0.0 0.0 0.0 -1.57079633 0.0 0.0</pose>
+        <geometry>
+          <cylinder>
+            <radius>0.09</radius>
+            <length>0.03</length>
+          </cylinder>
+        </geometry>
+      </collision>
+      <visual name="visual">
+        <geometry>
+          <mesh>
+            <uri>model://buggy/buggy.dae</uri>
+            <submesh>
+              <name>rightwheel</name>
+              <center>true</center>
+            </submesh>
+          </mesh>
+        </geometry>
+      </visual>
+    </link>
+    <link name="front_wheel">
+      <!-- <pose>0.0789 0 1.18 0.0 0.0 0.0</pose> -->
+      <pose>0.0789 0 1.18 0.01 0.0 0.0</pose>
+      <collision name="collision">
+        <pose>0.0 0.0 0.0 -1.57079633 0.0 0.0</pose>
+        <geometry>
+          <cylinder>
+            <radius>0.09</radius>
+            <length>0.03</length>
+          </cylinder>
+        </geometry>
+      </collision>
+      <visual name="visual">
+        <geometry>
+          <mesh>
+            <uri>model://buggy/buggy.dae</uri>
+            <submesh>
+              <name>frontwheel</name>
+              <center>true</center>
+            </submesh>
+          </mesh>
+        </geometry>
+      </visual>
+    </link>
+    <joint type="revolute" name="left_wheel_hinge">
+      <pose>0 0 0 0 0 0</pose>
+      <child>left_wheel</child>
+      <parent>chassis</parent>
+      <axis>
+        <xyz>0 1 0</xyz>
+      </axis>
+    </joint>
+    <joint type="revolute" name="right_wheel_hinge">
+      <pose>0 0 0 0 0 0</pose>
+      <child>right_wheel</child>
+      <parent>chassis</parent>
+      <axis>
+        <xyz>0 1 0</xyz>
+      </axis>
+    </joint>
+    <joint type="revolute" name="front_wheel_hinge">
+      <pose>0 0 0 0 0 0</pose>
+      <child>front_wheel</child>
+      <parent>chassis</parent>
+      <axis>
+        <xyz>0 1 0</xyz>
+      </axis>
+    </joint>
+  </model>
+</sdf>
