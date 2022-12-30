@@ -36,14 +36,15 @@ A complete re-write of the old RoboBuggy.
 - Open another terminal window and use `rostopic` (http://wiki.ros.org/rostopic) to check everything is working correctly.
 
 ### Simulator
-- We're using the Robotis's TurtleBot for our simulator because I (Christian) don't want to create a URDF of the Buggy from our CAD model.
+- This repo contains a basic gazebo environment for testing. It contains a model of the buggy and a somewhat accurate satellite map of CMU's campus (with topographical information accurate to 2.5ft).
+- Because the docker container doesn't have a display, we use `gzweb` (a web client for gazebo) to view the simulation. 
 
-- Run the following to run Gazebo and the Command Server:
+- Run the following to run Gazebo and the Command Server (from within the `rb_ws` workspace):
+        
+        source devel/setup.bash
+        roslaunch src/buggy/launch/sim.launch
 
-        export TURTLEBOT3_MODEL=burger
-        roslaunch turtlebot3_gazebo turtlebot3_empty_world.launch
-
-- Publishing messages to `/cmd_vel` as in `test_gazebo_publisher.py` will command the turtle bot to move.
+- Then, open your web browser (preferably Google Chrome) to `http://localhost:3000` and click the play button to start the simulation.
 
 ### Notes about our ROS Workspace
 /rb_ws/src/buggy is the package for our project
