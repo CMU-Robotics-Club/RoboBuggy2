@@ -8,6 +8,9 @@
  * http://docs.ros.org/en/api/sensor_msgs/html/msg/BatteryState.html
  */
 
+#define USE_TEENSY_HW_SERIAL
+#define ROS_BAUD 4608000L
+
 #include <math.h>
 
 #include <ros.h>
@@ -20,6 +23,7 @@ ros::Publisher p("BatteryIn_T", &battery_msg);
 void setup()
 { 
   pinMode(13, OUTPUT);
+  nh.getHardware()->setBaud(ROS_BAUD);
   nh.initNode();
 
   // The charging status as reported

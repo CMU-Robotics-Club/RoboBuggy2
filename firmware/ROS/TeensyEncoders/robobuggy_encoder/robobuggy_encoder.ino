@@ -8,6 +8,9 @@
  * 2. rosserial ADC Example
  */
 
+#define USE_TEENSY_HW_SERIAL
+#define ROS_BAUD 4608000L
+
 #include <ros.h>
 #include "buggy/EncoderStatus.h"
 #include <Encoder.h>
@@ -29,6 +32,7 @@ void setup() {
   //Serial.begin(115200);
   pinMode(13, OUTPUT);
   
+  nh.getHardware()->setBaud(ROS_BAUD);
   nh.initNode();
   nh.advertise(p);
 }
