@@ -1,14 +1,17 @@
 #include "DynamixelInterface.h"
 
 
-DynamixelInterface::DynamixelInterface(HardwareSerial &aStream, uint8_t aDirectionPin, DirPinMode aDirPinMode) :
-	mStream(aStream), mDirectionPin(aDirectionPin), mDirPinMode(aDirPinMode)
+DynamixelInterface::DynamixelInterface(HardwareSerial &aStream, uint8_t aDirectionPin, uint8_t aDirectionPinInv, DirPinMode aDirPinMode) :
+	mStream(aStream), mDirectionPin(aDirectionPin), mDirectionPinInv(aDirectionPinInv), mDirPinMode(aDirPinMode)
 {
 	if (mDirectionPin != NO_DIR_PORT)
 	{
-		digitalWrite(33, (mDirPinMode == DirPinMode::ReadLoWriteHi) ? HIGH : LOW); 
+		if (mDirectionPinInv != NO_DIR_PORT)
+			digitalWrite(mDirectionPinInv, (mDirPinMode == DirPinMode::ReadLoWriteHi) ? HIGH : LOW); 
 		digitalWrite(mDirectionPin, (mDirPinMode == DirPinMode::ReadLoWriteHi) ? LOW : HIGH);
-		pinMode(33, OUTPUT);
+		
+		if (mDirectionPinInv != NO_DIR_PORT)
+			pinMode(mDirectionPinInv, OUTPUT);
 		pinMode(mDirectionPin, OUTPUT);
 	}
 }
@@ -19,21 +22,22 @@ void DynamixelInterface::begin(unsigned long aBaud, unsigned long timeout)
 	
 	if (mDirectionPin == NO_DIR_PORT)
 	{
-		volatile uint32_t *UART7_C1 = (uint32_t *)(0x40184000 + 0x18);
-		*UART7_C1 &= ~((1 << 7 /* LOOPS */) | (1 << 5 /* RSRC */));
-
 #if defined(ARDUINO_TEENSY41) // Teensy 4.1
-		if (&mStream == &Serial7)
-		{
-			volatile uint32_t *UART7_C1 = (uint32_t *)(0x40184000 + 0x18);
-			*UART7_C1 |= (1 << 7 /* LOOPS */) | (1 << 5 /* RSRC */);
+		// volatile uint32_t *UART7_C1 = (uint32_t *)(0x40184000 + 0x18);
+		// *UART7_C1 &= ~((1 << 7 /* LOOPS */) | (1 << 5 /* RSRC */));
 
-			*UART7_C1 |= (1 << 7 /* LOOPS */) | (1 << 5 /* RSRC */);
+		// if (&mStream == &Serial7)
+		// {
+		// 	volatile uint32_t *UART7_C1 = (uint32_t *)(0x40184000 + 0x18);
+		// 	//LPUART_CTRL_LOOPS, LPUART_CTRL_RSRC
+		// 	*UART7_C1 |= (1 << 7 /* LOOPS */) | (1 << 5 /* RSRC */);
+
+		// 	*UART7_C1 |= (1 << 7 /* LOOPS */) | (1 << 5 /* RSRC */);
 
 
-			//UART7_C1 |= UART_C7_LOOPS | UART_C7_RSRC;
-			//CORE_PIN29_CONFIG |= PORT_PCR_PE | PORT_PCR_PS;
-		}
+		// 	//UART7_C1 |= UART_C7_LOOPS | UART_C7_RSRC;
+		// 	//CORE_PIN29_CONFIG |= PORT_PCR_PE | PORT_PCR_PS;
+		// }
 #elif defined(__MK20DX128__) || defined(__MK20DX256__) || defined(__MK64FX512__) || defined(__MK66FX1M0__) // Teensy 3.0 3.1 3.2 3.5 3.6
 		if (&mStream == &Serial1)
 		{
@@ -71,6 +75,7 @@ void DynamixelInterface::begin(unsigned long aBaud, unsigned long timeout)
 #error Dynamixel lib : unsupported hardware
 #endif
 	}
+
 	mStream.setTimeout(timeout); //warning : response delay seems much higher than expected for some operation (eg writing eeprom)
 	readMode();
 }
@@ -238,7 +243,8 @@ void DynamixelInterface::readMode()
 {
 	if (mDirectionPin != NO_DIR_PORT)
 	{
-		digitalWrite(33, (mDirPinMode == DirPinMode::ReadLoWriteHi) ? HIGH : LOW); 
+		if (mDirectionPinInv != NO_DIR_PORT)
+			digitalWrite(mDirectionPinInv, (mDirPinMode == DirPinMode::ReadLoWriteHi) ? HIGH : LOW); 
 		digitalWrite(mDirectionPin, (mDirPinMode == DirPinMode::ReadLoWriteHi) ? LOW : HIGH);
 	}
 	else
@@ -251,7 +257,8 @@ void DynamixelInterface::writeMode()
 {
 	if (mDirectionPin != NO_DIR_PORT)
 	{
-		digitalWrite(33, (mDirPinMode == DirPinMode::ReadLoWriteHi) ? LOW : HIGH); 
+		if (mDirectionPinInv != NO_DIR_PORT)
+			digitalWrite(mDirectionPinInv, (mDirPinMode == DirPinMode::ReadLoWriteHi) ? LOW : HIGH); 
 		digitalWrite(mDirectionPin, (mDirPinMode == DirPinMode::ReadLoWriteHi) ? HIGH : LOW);
 	}
 	else
@@ -263,10 +270,10 @@ void DynamixelInterface::writeMode()
 void DynamixelInterface::setReadMode(HardwareSerial & aSerial)
 {
 #if defined(ARDUINO_TEENSY41)
-	if (&mStream == &Serial7) {
-		volatile uint32_t *UART7_C1 = (uint32_t *)(0x40184000 + 0x18);
-		*UART7_C1 &= ~(1 << 29 /* TXDIR */);
-	}
+	// if (&mStream == &Serial7) {
+	// 	volatile uint32_t *UART7_C1 = (uint32_t *)(0x40184000 + 0x18);
+	// 	*UART7_C1 &= ~(1 << 29 /* TXDIR */);
+	// }
 #elif defined(__MK20DX128__) || defined(__MK20DX256__) || defined(__MK64FX512__) || defined(__MK66FX1M0__) // Teensy 3.0 3.1 3.2 3.5 3.6
 	if (&mStream == &Serial1)
 	{
@@ -302,10 +309,10 @@ void DynamixelInterface::setReadMode(HardwareSerial & aSerial)
 void DynamixelInterface::setWriteMode(HardwareSerial & aSerial)
 {
 #if defined(ARDUINO_TEENSY41)
-	if (&mStream == &Serial7) {
-		volatile uint32_t *UART7_C1 = (uint32_t *)(0x40184000 + 0x18);
-		*UART7_C1 |= (1 << 29 /* TXDIR */);
-	}
+	// if (&mStream == &Serial7) {
+	// 	volatile uint32_t *UART7_C1 = (uint32_t *)(0x40184000 + 0x18);
+	// 	*UART7_C1 |= (1 << 29 /* TXDIR */);
+	// }
 #elif defined(__MK20DX128__) || defined(__MK20DX256__) || defined(__MK64FX512__) || defined(__MK66FX1M0__) // Teensy 3.0 3.1 3.2 3.5 3.6
 	if (&mStream == &Serial1)
 	{

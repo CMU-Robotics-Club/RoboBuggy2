@@ -3,6 +3,31 @@
 #include "DynamixelMotor.h"
 
 /* ============= */
+/* Board Config  */
+/* ============= */
+
+#define BOARD_V1
+#ifdef BOARD_V1
+
+#define DYNAMIXEL_SERIAL Serial5
+#define DYNAMIXEL_RXEN 14
+#define DYNAMIXEL_TXEN 15
+
+#define BRAKE_RELAY_PIN 25
+#define INTERRUPT_PIN 41
+
+#else // Breadboard
+
+#define DYNAMIXEL_SERIAL Serial7
+#define DYNAMIXEL_RXEN 27
+#define DYNAMIXEL_TXEN 33
+
+#define BRAKE_RELAY_PIN 25
+#define INTERRUPT_PIN 41
+
+#endif
+
+/* ============= */
 /* RC Controller */
 /* ============= */
 
@@ -35,7 +60,7 @@ volatile unsigned long rc_last_edge[NUM_RC_CHANNELS] = { 0 };
       if (10 <= new_width && new_width <= 2000) { \
         rc_width[ RC ] = new_width;               \
       }                                           \
-      if (new_width > 2000) { digitalWrite(41, HIGH); digitalWrite(41, LOW); } \
+      if (new_width > 2000) { digitalWrite(INTERRUPT_PIN, HIGH); digitalWrite(INTERRUPT_PIN, LOW); } \
     }                                             \
   } while (0);
 
@@ -87,9 +112,9 @@ void setup() {
     attachInterrupt(digitalPinToInterrupt(rc_pins[i]), rc_interrupt_handlers[i], CHANGE);
   }
 
-  pinMode(25, OUTPUT);
-  digitalWrite(25, LOW);
-  pinMode(41, OUTPUT);
+  pinMode(BRAKE_RELAY_PIN, OUTPUT);
+  digitalWrite(BRAKE_RELAY_PIN, LOW);
+  pinMode(INTERRUPT_PIN, OUTPUT);
 }
 
 
@@ -101,7 +126,7 @@ void loop()
 {
   Serial.println("foobar");
   
-  DynamixelInterface dInterface(Serial7, 27, DirPinMode::ReadHiWriteLo); // Stream
+  DynamixelInterface dInterface(DYNAMIXEL_SERIAL, DYNAMIXEL_RXEN, DYNAMIXEL_TXEN, DirPinMode::ReadHiWriteLo); // Stream
   dInterface.begin(1000000, 50); // baudrate, timeout
   DynamixelMotor motor(dInterface, 5);  // Interface , ID
 
@@ -124,7 +149,6 @@ void loop()
   while (true)
   {
     t += 5.0;
-
     unsigned long currentMillis = millis();
 
     for (int i = 0; i < NUM_RC_CHANNELS; ++i) {
@@ -223,9 +247,9 @@ void loop()
         // TODO: Autonomomous
       }
 
-      digitalWrite(25, HIGH);
+      digitalWrite(BRAKE_RELAY_PIN, HIGH);
     } else {
-      digitalWrite(25, LOW);
+      digitalWrite(BRAKE_RELAY_PIN, LOW);
     }
 
     delay(1);

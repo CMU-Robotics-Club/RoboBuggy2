@@ -27,7 +27,7 @@ public:
 	* \param[in] aDirectionPin : direction pin, use NO_DIR_PORT if you do not one (default)
 	* \param[in] aTranferOwnership : if true, the stream will be deleted in the destructor
 	*/
-	DynamixelInterface(HardwareSerial &aStream, uint8_t aDirectionPin = NO_DIR_PORT, DirPinMode aDirPinMode = DirPinMode::ReadLoWriteHi);
+	DynamixelInterface(HardwareSerial &aStream, uint8_t aDirectionPin = NO_DIR_PORT, uint8_t aDirectionPinInv = NO_DIR_PORT, DirPinMode aDirPinMode = DirPinMode::ReadLoWriteHi);
 
 	/**
 	* \brief Start interface
@@ -93,6 +93,7 @@ private:
 	static const uint8_t NO_DIR_PORT = 255;
 	HardwareSerial &mStream;
 	const uint8_t mDirectionPin;
+	const uint8_t mDirectionPinInv;
 	const DirPinMode mDirPinMode;
 };
 
