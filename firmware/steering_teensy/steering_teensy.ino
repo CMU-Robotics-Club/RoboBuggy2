@@ -2,6 +2,14 @@
 #include "DynamixelInterface.h"
 #include "DynamixelMotor.h"
 
+#define USE_TEENSY_HW_SERIAL
+#define ROS_BAUD 1000000L
+
+#include <ros.h>
+#include <std_msgs/Float32.h>
+#include <std_msgs/Bool.h>
+#include <std_msgs/UInt32.h>
+
 /* ============= */
 /* Board Config  */
 /* ============= */
@@ -9,38 +17,63 @@
 #define BOARD_V1
 #ifdef BOARD_V1
 
+// Dynamixel Pins
 #define DYNAMIXEL_SERIAL Serial5
 #define DYNAMIXEL_RXEN 14
 #define DYNAMIXEL_TXEN 15
 
+// Control Pins
 #define BRAKE_RELAY_PIN 25
 #define INTERRUPT_PIN 41
 
+// Radio PWM Pins
 #define STEER_PIN 26
 #define BRAKE_PIN 27
 
 #else // Breadboard
 
+// Dynamixel Pins
 #define DYNAMIXEL_SERIAL Serial7
 #define DYNAMIXEL_RXEN 27
 #define DYNAMIXEL_TXEN 33
 
+// Control Pins
 #define BRAKE_RELAY_PIN 25
 #define INTERRUPT_PIN 41
 
+// Radio PWM Pins
 #define STEER_PIN 40
 #define BRAKE_PIN 7
 
 #endif
 
-#define NUM_RC_CHANNELS 2
+/* ============= */
+/* ROS Serial    */
+/* ============= */
 
-#define RC_STEER 0
-#define RC_BRAKE 1
+volatile float ros_servo_angle = 0.0;
+volatile bool ros_brake = false;
+
+void steer_cb(const std_msgs::Float32& cmd_msg){
+  ros_servo_angle = cmd_msg.data;
+}
+
+void brake_cb(const std_msgs::Bool& cmd_msg){
+  ros_brake = cmd_msg.data;
+}
+
+ros::NodeHandle nh;
+ros::Subscriber<std_msgs::Float32> steer("SteerOut_T", steer_cb);
+ros::Subscriber<std_msgs::Bool> brake("BrakeOut_T", brake_cb);
 
 /* ============= */
 /* RC Controller */
 /* ============= */
+
+#define NUM_RC_CHANNELS 2
+
+#define RC_STEER 0
+#define RC_BRAKE 1
 
 typedef void (*interrupt_handler)(void);
 
@@ -114,6 +147,11 @@ void setup() {
 
     attachInterrupt(digitalPinToInterrupt(rc_pins[i]), rc_interrupt_handlers[i], CHANGE);
   }
+
+  nh.getHardware()->setBaud(ROS_BAUD);
+  nh.initNode();
+  nh.subscribe(steer);
+  nh.subscribe(brake);
 
   pinMode(BRAKE_RELAY_PIN, OUTPUT);
   digitalWrite(BRAKE_RELAY_PIN, LOW);
@@ -248,6 +286,7 @@ void loop()
         motor.goalPositionDegree(90 + (range - 0.5) * 2.0 * 90.0);
       } else if (throttleAuto) {
         // TODO: Autonomomous
+        motor.goalPositionDegree(90 + ros_servo_angle);
       }
 
       digitalWrite(BRAKE_RELAY_PIN, HIGH);
