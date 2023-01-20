@@ -16,6 +16,9 @@
 #define BRAKE_RELAY_PIN 25
 #define INTERRUPT_PIN 41
 
+#define STEER_PIN 26
+#define BRAKE_PIN 27
+
 #else // Breadboard
 
 #define DYNAMIXEL_SERIAL Serial7
@@ -25,19 +28,19 @@
 #define BRAKE_RELAY_PIN 25
 #define INTERRUPT_PIN 41
 
-#endif
+#define STEER_PIN 40
+#define BRAKE_PIN 7
 
-/* ============= */
-/* RC Controller */
-/* ============= */
+#endif
 
 #define NUM_RC_CHANNELS 2
 
 #define RC_STEER 0
 #define RC_BRAKE 1
 
-#define STEER_PIN 40
-#define BRAKE_PIN 7
+/* ============= */
+/* RC Controller */
+/* ============= */
 
 typedef void (*interrupt_handler)(void);
 
