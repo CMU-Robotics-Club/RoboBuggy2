@@ -1,28 +1,18 @@
 #!/usr/bin/python3
-# import rospy
-# rospy.init_node("command", anonymous=False)
 
-
-from buggy_steer import *
-from buggy_brake import *
 import numpy as np
 import rospy
-rospy.init_node("buggy_commands", anonymous=False)
+from buggy_commands import *
 
-
-def autonomy():
-    for i in range(0, 100):
-        set_steering_angle(i)
-    
-    for i in range(0,100):
-        set_brake(np.random.rand()*100.0)
-
+def main_autonomy():
+    for i in range(0, 100000000):
+        set_steer_angle(i)
+        set_brake(-i)
+        set_light("Running")
     rospy.spin()
 
-
-if __name__ == '__main__':
-    try:
-        autonomy()
-
-    except rospy.ROSInterruptException:
-        pass
+try:
+    main_autonomy()
+#capture the Interrupt signals
+except rospy.ROSInterruptException:
+    pass
