@@ -3,10 +3,10 @@
 #include "DynamixelMotor.h"
 
 #define USE_TEENSY_HW_SERIAL
-#define ROS_BAUD 1000000L
+#define ROS_BAUD 1000000
 
 #include <ros.h>
-#include <std_msgs/Float32.h>
+#include <std_msgs/Float64.h>
 #include <std_msgs/Bool.h>
 #include <std_msgs/UInt32.h>
 
@@ -51,20 +51,20 @@
 /* ROS Serial    */
 /* ============= */
 
-volatile float ros_servo_angle = 0.0;
-volatile bool ros_brake = false;
+volatile double ros_servo_angle = 0.0;
+volatile double ros_brake = 1.0;
 
-void steer_cb(const std_msgs::Float32& cmd_msg){
+void steer_cb(const std_msgs::Float64& cmd_msg){
   ros_servo_angle = cmd_msg.data;
 }
 
-void brake_cb(const std_msgs::Bool& cmd_msg){
+void brake_cb(const std_msgs::Float64& cmd_msg){
   ros_brake = cmd_msg.data;
 }
 
 ros::NodeHandle nh;
-ros::Subscriber<std_msgs::Float32> steer("SteerOut_T", steer_cb);
-ros::Subscriber<std_msgs::Bool> brake("BrakeOut_T", brake_cb);
+ros::Subscriber<std_msgs::Float64> steer("SteerOut_T", steer_cb);
+ros::Subscriber<std_msgs::Float64> brake("BrakeOut_T", brake_cb);
 
 /* ============= */
 /* RC Controller */
@@ -284,16 +284,21 @@ void loop()
         double angle = (0 ? sin(t / 100.0) : 0);
       
         motor.goalPositionDegree(90 + (range - 0.5) * 2.0 * 90.0);
+
+        digitalWrite(BRAKE_RELAY_PIN, HIGH);
       } else if (throttleAuto) {
         // TODO: Autonomomous
-        motor.goalPositionDegree(90 + ros_servo_angle);
+        motor.goalPositionDegree(90 + ros_servo_angle / PI * 180);
+        bool engage_brakes = abs(ros_brake - 1.0) < 1e-6;
+        digitalWrite(BRAKE_RELAY_PIN, !engage_brakes);
       }
 
-      digitalWrite(BRAKE_RELAY_PIN, HIGH);
+      
     } else {
       digitalWrite(BRAKE_RELAY_PIN, LOW);
     }
 
     delay(1);
+    nh.spinOnce();
   }
 }
