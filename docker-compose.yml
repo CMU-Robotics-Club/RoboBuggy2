@@ -3,8 +3,6 @@ services:
     build: .
     volumes:
       - ./rb_ws:/rb_ws
-      - /tmp/.X11-unix:/tmp/.X11-unix
-      - ~/.XAuthority:/root/.XAuthority
     devices:
       - "${GPS_PORT:-/dev/null}:/dev/ttyUSB0"
       - "${WEBCAM_PORT:-/dev/null}:/dev/ttyUSB1"
