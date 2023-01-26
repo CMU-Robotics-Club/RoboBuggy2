@@ -1,0 +1,4 @@
+<launch>
+    <node name="buggy_braking_node" pkg="buggy" type="buggy_brake.py" />
+    <node name="buggy_steering_node" pkg="buggy" type="buggy_steering.py" />
+</launch>
