@@ -1,4 +1,4 @@
-#!/usr/bin/python3
+#!/usr/bin/env python3
 import rospy
 import time
 from std_msgs.msg import String
@@ -14,19 +14,16 @@ from nav_msgs.msg import Odometry
 
 class SatNavLogger:
     def __init__(self):
-        self.file_llh = open("ned_relative_positon_log.txt", "w+")
-        self.file_ned = open("llh_global_position_log.txt", "w+")
+        self.file_llh = open("ned_relative_positon_log.txt", "w")
+        self.file_ned = open("llh_global_position_log.txt", "w")
         self.isLogging = False
         self.timestart = 0
+        self.start()
 
     def start(self):
         self.isLogging = True
         self.listener()
         self.timestart = time.time()
-
-    def writeLine(self, data):
-        self.file.write(str(data))
-        self.file.write("\n")
 
     def time_since_start(self):
         return time.time() - self.timestart
@@ -43,8 +40,8 @@ class SatNavLogger:
         rospy.init_node("listener", anonymous=True)
 
         # subscribe to gq7 nodes
-        rospy.Subscriber("/gq7/nav/relative_pos_odom", Odometry, self.rposCb)
-        rospy.Subscriber("/gq7/nav/odom", Odometry, self.llhposCb)
+        rospy.Subscriber("/nav/relative_pos_odom", Odometry, self.rposCb)
+        rospy.Subscriber("/nav/odom", Odometry, self.llhposCb)
 
         # spin() simply keeps python from exiting until this node is stopped
         rospy.spin()
@@ -58,3 +55,4 @@ class SatNavLogger:
 if __name__ == '__main__':
     logger = SatNavLogger()
     logger.start()
+    
