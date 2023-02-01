@@ -181,7 +181,7 @@ void loop()
   // Status packet delay = 20us
   motor.write(5, (byte)250);
 
-  motor.jointMode(); // Set the angular limits of the servo. Set to [min, max] by default
+  motor.jointMode(10, 530); // Set the angular limits of the servo. Set to [min, max] by default
   motor.enableTorque();
 
   int rc_pin_widths[NUM_RC_CHANNELS] = { 0 };
