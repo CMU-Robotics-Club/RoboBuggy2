@@ -4,8 +4,10 @@ import trimesh
 import resource_retriever
 import threading
 import numpy as np
-from std_msgs.msg import Float32, Bool
-from geometry_msgs.msg import Pose2D, Point
+from std_msgs.msg import Float32, Bool, Header
+from geometry_msgs.msg import PoseStamped, Point, Quaternion, Pose
+from tf.transformations import quaternion_from_euler
+
 
 class MeshQuery:
   THROW_HEIGHT = 10000.0
@@ -71,7 +73,7 @@ class Simulator:
     
     self.position, self.direction = np.array(self.START_POSITION), np.array(self.START_DIRECTION)
     self.elevation = 0.0
-    self.velocity = 0.0
+    self.speed = 0.0
 
     self.brake = False # On/Off
     self.steering = 0.0 # angle from neutral. Positive is right, negative is left
@@ -82,8 +84,9 @@ class Simulator:
     rospy.Subscriber("simulator/input/brake", Bool, self.set_brake)
     rospy.Subscriber("simulator/input/push", Float32, self.set_push) # Forces, in newtons
 
-    rospy.Publisher("simulator/output/pose", Pose2D, queue_size=10)
-    rospy.Publisher("simulator/output/speed", Float32, queue_size=10)
+    self.pose_pub = rospy.Publisher("simulator/output/pose", PoseStamped, queue_size=10)
+    self.speed_pub = rospy.Publisher("simulator/output/speed", Float32, queue_size=10)
+    # self.mesh_pub = rospy.Publisher("simulator/output/mesh", PoseStamped, queue_size=10)
 
   def compute_drag_force(self):
     """ Calculate the drag force on the buggy
@@ -92,7 +95,7 @@ class Simulator:
         float: drag force
     """
     # magnitude = 0.5 pAv^2
-    magnitude = 0.5 * self.drag_coefficient * self.CROSS_SECTION_AREA * (self.velocity ** 2)
+    magnitude = 0.5 * self.DRAG_COEFF * self.CROSS_SECTION_AREA * (self.speed ** 2)
 
     # Apply in opposite direction of self.direction
     return -magnitude * self.direction
@@ -108,7 +111,11 @@ class Simulator:
     magnitude = self.GRAVITY * self.WEIGHT * np.linalg.norm(cross)
 
     # compute the direction of the force
-    direction = surface_normal / np.linalg.norm(surface_normal)
+    denom = np.linalg.norm(surface_normal[:2])
+    if denom == 0.0:
+      direction = np.array([0.0, 0.0])
+    else:
+      direction = surface_normal[:2] / denom
 
     return magnitude * direction
 
@@ -150,10 +157,15 @@ class Simulator:
     force_along_direction = np.dot(force, self.direction)
 
     # Calculate new velocity
-    self.velocity += force_along_direction / self.WEIGHT
+    self.speed += force_along_direction / self.WEIGHT
+    if self.brake:
+      self.speed = 0.0
+
+    if not -2.0 < self.speed < 2.0:
+      self.speed = np.sign(self.speed) * 2.0
 
     # Calculate new position
-    distance = self.velocity / self.RATE
+    distance = np.linalg.norm(self.speed) / self.RATE
     if self.steering == 0.0:
       # Straight
       self.position += distance * self.direction
@@ -178,6 +190,10 @@ class Simulator:
 
       self.position = self.position + rotated_disp
 
+    # Calculate z position
+    location, _ = self.topo.query_mesh_slope(self.position[0], self.position[1])
+    self.elevation = location[2]
+
   def set_brake(self, msg: Bool):
     with self.lock:
       self.brake = msg.data
@@ -190,20 +206,36 @@ class Simulator:
     with self.lock:
       self.push_force = msg.data
 
+  def publish(self):
+    location = Pose()
+    location.position.x = self.position[0]
+    location.position.y = self.position[1]
+    location.position.z = self.elevation
+    # convert direction to angle around z axis
+    angle = np.arctan2(self.direction[1], self.direction[0]) # passed in as y, x, returned in radians
+    location.orientation = Quaternion(*quaternion_from_euler(0, 0, angle))
+    stamped_pose = PoseStamped()
+    stamped_pose.header.stamp = rospy.Time.now()
+    stamped_pose.header.frame_id = "base"
+    stamped_pose.pose = location
+    self.pose_pub.publish(stamped_pose)
+    speed = Float32()
+    speed.data = self.speed
+    self.speed_pub.publish(speed)
+
 
   def run(self):
     rate = rospy.Rate(self.RATE)
     while not rospy.is_shutdown():
       with self.lock:
+        print("Step")
         self.step()
+        self.publish()
       rate.sleep()
 
 
 if __name__ == "__main__":
   rospy.init_node("simulator")
   # Centered at 40.441687, -79.944276
-  x = MeshQuery("package://buggy/meshes/cmutopo.stl")
-  y = x.query_mesh_slope(0.0, 0.0)
-  breakpoint()
-  
-  
+  sim = Simulator("package://buggy/meshes/cmutopo.stl")
+  sim.run()  
