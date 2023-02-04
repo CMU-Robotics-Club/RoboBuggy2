@@ -82,8 +82,8 @@ class Simulator:
   # Simulaton
   RATE = 50.0                   # Hz
   GRAVITY = 9.81
-  START_POSITION = [-30.0, -257.0]   # change later to hill 1, 2, 3, 4, 5
-  START_DIRECTION = [1.0, 0.0]  # change later to hill 1, 2, 3, 4, 5
+  START_POSITION = [-50.0, -257.0]   # change later to hill 1, 2, 3, 4, 5
+  START_DIRECTION = [0.0, -1.0]  # change later to hill 1, 2, 3, 4, 5
   # Coordinate system:
   #   x: +east/-west     == longitude
   #   y: +north/-south   == latitude
@@ -111,7 +111,7 @@ class Simulator:
     self.speed = 0.0
 
     self.brake = False # On/Off
-    self.steering = 2.0 # angle from neutral. Positive is right, negative is left
+    self.steering = 1.0 # angle from neutral. Positive is right, negative is left
     self.push_force = 0.0 # Newtons
 
     # Setup Subscriber/Publisher Hooks
@@ -206,9 +206,8 @@ class Simulator:
       self.speed = 0.0
 
     # NOTE: Remove this later
-    if not -5.0 < self.speed < 5.0:
-      self.speed = np.sign(self.speed) * 5.0
-
+    # if not -5.0 < self.speed < 5.0:
+      # self.speed = np.sign(self.speed) * 5.0
     distance = self.speed / self.RATE
 
 
@@ -306,9 +305,10 @@ class Simulator:
     marker.action = 0
 
     # Note: Must set mesh_resource to a valid URL for a model to appear
-    marker.mesh_resource = "file:///Users/josephli/Desktop/cmutopo.dae"
+    # marker.mesh_resource = "file:///Users/josephli/Desktop/cmutopo.dae"
+    marker.mesh_resource = "http://127.0.0.1:8760/cmutopo.dae"
     # marker.mesh_resource = "package://buggy/meshes/cmutopo.dae"
-    marker.mesh_use_embedded_materials = False
+    marker.mesh_use_embedded_materials = True
 
     # Scale
     marker.scale.x = 1.0
@@ -317,7 +317,7 @@ class Simulator:
 
     # Color
     marker.color.r = 0.0
-    marker.color.g = 1.0
+    marker.color.g = 0.0
     marker.color.b = 0.0
     marker.color.a = 1.0
 
