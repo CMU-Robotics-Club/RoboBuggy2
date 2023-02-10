@@ -1,4 +1,13 @@
+<!-- roslaunch buggy main.launch simulation:=true -->
+<!-- roslaunch buggy main.launch simulation:=false -->
+
 <launch>
-    <node name="buggy_braking_node" pkg="buggy" type="buggy_brake.py" />
-    <node name="buggy_steering_node" pkg="buggy" type="buggy_steering.py" />
+    <param name="simulation" value="$(arg simulation)" />
+    <group if="$(arg simulation)">
+        <node name="simulator" pkg="buggy" type="simulator.py" />
+    </group>
+    <group unless="$(arg simulation)">
+    </group>
+    <node name="foxglove" pkg="foxglove_bridge" type="foxglove_bridge" />
+    <node name="asset_server" pkg="buggy" type="asset_server.py" args="--directory='/rb_ws/src/buggy/assets'"/>
 </launch>

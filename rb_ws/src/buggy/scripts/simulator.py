@@ -1,24 +1,34 @@
 #! /usr/bin/env python3
+# ROS imports
 import rospy
-import trimesh
 import resource_retriever
-import threading
-import numpy as np
 
-# Message imports
+# ROS message imports
 from std_msgs.msg import Float32, Bool, Header
 from geometry_msgs.msg import PoseStamped, Point, Quaternion, Pose
 from tf.transformations import quaternion_from_euler
 from visualization_msgs.msg import Marker
 
+# Utility imports
+import numpy as np
+import threading
+import trimesh
+
+
 
 
 class MeshQuery:
-  THROW_HEIGHT = 10000.0
-  def __init__(self, mesh_uri, center_lat, center_long) -> None:
-    # load the mesh
-    # use resource_retriever to get filepath to uri
+  THROW_HEIGHT = 10000.0 # meters
+  def __init__(self, mesh_uri, center_lat, center_long):
+    """ Load the mesh from a given URI. The URI is resolved using ROS's 
+    resource_retriever. The center of the mesh should be at the given
+    latitude and longitude.
 
+    Args:
+        mesh_uri (string): URI to the mesh
+        center_lat (float): latitude of the center of the mesh
+        center_long (float): longitude of the center of the mesh
+    """
     filename = resource_retriever.get_filename(mesh_uri)
     self.mesh = trimesh.load_mesh(filename[7:])
     self.intersector = trimesh.ray.ray_pyembree.RayMeshIntersector(self.mesh)
@@ -79,20 +89,22 @@ class MeshQuery:
 
 
 class Simulator:
-  # Simulaton
-  RATE = 50.0                   # Hz
-  GRAVITY = 9.81
-  START_POSITION = [-50.0, -257.0]   # change later to hill 1, 2, 3, 4, 5
-  START_DIRECTION = [0.0, -1.0]  # change later to hill 1, 2, 3, 4, 5
   # Coordinate system:
   #   x: +east/-west     == longitude
   #   y: +north/-south   == latitude
   #   z: +up/-down       == elevation
   #   angle: +cw/-ccw    == heading(compass)
 
-  # Rotation matrix in these coordinates
-    
+  # Rotation matrix in these coordinates is the transpose 
+  # of the rotation matrix in the standard coordinate system
+  
+  # ===== CONSTANTS =====
 
+  # Simulaton
+  RATE = 50.0          # Hz
+  GRAVITY = 9.81       # m/s^2
+  START_POSITION = [-50.0, -257.0]    # change later to hill 1, 2, 3, 4, 5
+  START_DIRECTION = [0.0, -1.0]       # change later to hill 1, 2, 3, 4, 5
 
   # Buggy Intrinsics
   CROSS_SECTION_AREA = 0.3      # m^2
@@ -101,8 +113,9 @@ class Simulator:
   WHEELBASE = 1.3               # m
   STEERING_MAX = 30             # degrees to left and degrees to right
   ROLLING_RESISTANCE = 0.03     # ~passenger car
+  HEIGHT = 0.1                  # m, (distance btw ground and center of wheels)
 
-  def __init__(self, map_uri, map_center_lat, map_center_long) -> None:
+  def __init__(self, map_uri, map_center_lat, map_center_long):
     self.topo = MeshQuery(map_uri, map_center_lat, map_center_long)
     self.lock = threading.Lock()
     
@@ -252,7 +265,7 @@ class Simulator:
 
     # Refresh z position
     location, _ = self.topo.query_mesh(self.position[0], self.position[1])
-    self.elevation = location[2] + 1.0
+    self.elevation = location[2] + self.HEIGHT
 
   def set_brake(self, msg: Bool):
     with self.lock:
@@ -290,47 +303,44 @@ class Simulator:
     speed = Float32()
     speed.data = self.speed
     self.speed_pub.publish(speed)
-    if iter_ct % 100 != 0:
-      return
-    # Publish Mesh
-    marker = Marker()
+    if iter_ct % (2 * self.RATE) == 0:
+      # Publish Mesh infrequently
+      marker = Marker()
 
-    marker.header.frame_id = "base"
-    marker.header.stamp = rospy.Time.now()
-    marker.ns = ""
+      marker.header.frame_id = "base"
+      marker.header.stamp = rospy.Time.now()
+      marker.ns = ""
 
-    # Shape (resource type = 10 (mesh))
-    marker.type = 10
-    marker.id = 0
-    marker.action = 0
+      # Shape (resource type = 10 (mesh))
+      marker.type = 10
+      marker.id = 0
+      marker.action = 0
 
-    # Note: Must set mesh_resource to a valid URL for a model to appear
-    # marker.mesh_resource = "file:///Users/josephli/Desktop/cmutopo.dae"
-    marker.mesh_resource = "http://127.0.0.1:8760/cmutopo.dae"
-    # marker.mesh_resource = "package://buggy/meshes/cmutopo.dae"
-    marker.mesh_use_embedded_materials = True
+      # Note: Must set mesh_resource to a valid URL for a model to appear
+      marker.mesh_resource = "http://127.0.0.1:8760/cmutopo.dae"
+      marker.mesh_use_embedded_materials = True
 
-    # Scale
-    marker.scale.x = 1.0
-    marker.scale.y = 1.0
-    marker.scale.z = 1.0
+      # Scale
+      marker.scale.x = 1.0
+      marker.scale.y = 1.0
+      marker.scale.z = 1.0
 
-    # Color
-    marker.color.r = 0.0
-    marker.color.g = 0.0
-    marker.color.b = 0.0
-    marker.color.a = 1.0
+      # Color
+      marker.color.r = 0.0
+      marker.color.g = 0.0
+      marker.color.b = 0.0
+      marker.color.a = 1.0
 
-    # Pose
-    marker.pose.position.x = 0
-    marker.pose.position.y = 0
-    marker.pose.position.z = 0
-    marker.pose.orientation.x = 0.0
-    marker.pose.orientation.y = 0.0
-    marker.pose.orientation.z = 0.0
-    marker.pose.orientation.w = 0.0
+      # Pose
+      marker.pose.position.x = 0
+      marker.pose.position.y = 0
+      marker.pose.position.z = 0
+      marker.pose.orientation.x = 0.0
+      marker.pose.orientation.y = 0.0
+      marker.pose.orientation.z = 0.0
+      marker.pose.orientation.w = 0.0
 
-    self.mesh_pub.publish(marker)
+      self.mesh_pub.publish(marker)
 
 
 
@@ -347,5 +357,5 @@ class Simulator:
 
 if __name__ == "__main__":
   rospy.init_node("simulator")
-  sim = Simulator("package://buggy/meshes/cmutopo.stl", 40.441687, -79.944276)
+  sim = Simulator("package://buggy/assets/cmutopo.stl", 40.441687, -79.944276)
   sim.run()  
