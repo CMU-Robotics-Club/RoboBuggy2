@@ -7,7 +7,7 @@ RUN apt-get install -y -qq \
   python3-pip \
   x11-apps xauth \
   vim git tmux \
-  ros-noetic-turtlebot3-msgs ros-noetic-turtlebot3 ros-noetic-rosserial ros-noetic-foxglove-bridge
+  ros-noetic-rosserial ros-noetic-foxglove-bridge ros-noetic-microstrain-inertial-driver
 
 RUN pip3 install -r python-requirements.txt
 RUN echo 'source "/opt/ros/$ROS_DISTRO/setup.bash" --' >> ~/.bashrc
