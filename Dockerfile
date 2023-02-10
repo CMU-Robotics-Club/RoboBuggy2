@@ -12,6 +12,6 @@ RUN apt-get install -y -qq \
   ros-noetic-turtlebot3 \
   ros-noetic-rosserial \
   ros-noetic-foxglove-bridge \
-  apt-get install ros-noetic-microstrain-inertial-driver
+  ros-noetic-microstrain-inertial-driver
   
 RUN echo 'source "/opt/ros/$ROS_DISTRO/setup.bash" --' >> ~/.bashrc
