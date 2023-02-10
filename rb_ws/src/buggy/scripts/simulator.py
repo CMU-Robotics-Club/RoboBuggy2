@@ -4,8 +4,8 @@ import rospy
 import resource_retriever
 
 # ROS message imports
-from std_msgs.msg import Float32, Bool, Header
-from geometry_msgs.msg import PoseStamped, Point, Quaternion, Pose
+from std_msgs.msg import Float32, Bool
+from geometry_msgs.msg import PoseStamped, Quaternion, Pose
 from tf.transformations import quaternion_from_euler
 from visualization_msgs.msg import Marker
 
@@ -128,13 +128,13 @@ class Simulator:
     self.push_force = 0.0 # Newtons
 
     # Setup Subscriber/Publisher Hooks
-    rospy.Subscriber("simulator/input/steering", Float32, self.set_steering)
-    rospy.Subscriber("simulator/input/brake", Bool, self.set_brake)
-    rospy.Subscriber("simulator/input/push", Float32, self.set_push) # Forces, in newtons
+    rospy.Subscriber("buggy/input/steering", Float32, self.set_steering)
+    rospy.Subscriber("buggy/input/brake", Bool, self.set_brake)
+    rospy.Subscriber("foxglove/input/push", Float32, self.set_push) # Forces, in newtons
 
-    self.pose_pub = rospy.Publisher("simulator/output/pose", PoseStamped, queue_size=10)
-    self.speed_pub = rospy.Publisher("simulator/output/speed", Float32, queue_size=10)
-    self.mesh_pub = rospy.Publisher("simulator/output/mesh", Marker, queue_size=10)
+    self.pose_pub = rospy.Publisher("state/pose", PoseStamped, queue_size=10)
+    self.speed_pub = rospy.Publisher("state/speed", Float32, queue_size=10)
+    self.mesh_pub = rospy.Publisher("foxglove/mesh", Marker, queue_size=10)
 
   @staticmethod
   def rotate(vec, theta):
@@ -218,12 +218,7 @@ class Simulator:
     if self.brake:
       self.speed = 0.0
 
-    # NOTE: Remove this later
-    # if not -5.0 < self.speed < 5.0:
-      # self.speed = np.sign(self.speed) * 5.0
     distance = self.speed / self.RATE
-
-
 
     # Calculate new position
     if self.steering == 0.0:
