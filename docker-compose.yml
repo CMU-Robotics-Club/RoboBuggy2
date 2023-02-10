@@ -20,5 +20,5 @@ services:
        - "8760:8760"      # Asset server for loading stuff into foxglove
     # environment:
     #   DISPLAY: ${DISPLAY}
-    network_mode: "host"
+    # network_mode: "host"
     platform: "linux/amd64"
