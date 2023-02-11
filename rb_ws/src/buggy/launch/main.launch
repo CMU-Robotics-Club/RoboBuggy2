@@ -1,5 +1,6 @@
 <!-- roslaunch buggy main.launch simulation:=true -->
 <!-- roslaunch buggy main.launch simulation:=false -->
+<!-- <arg name="name" value="INS" /> -->
 
 <launch>
     <param name="simulation" value="$(arg simulation)" />
@@ -7,6 +8,7 @@
         <node name="simulator" pkg="buggy" type="simulator.py" />
     </group>
     <group unless="$(arg simulation)">
+        <include file="$(find microstrain_inertial_driver)/launch/microstrain.launch" />
     </group>
     <node name="foxglove" pkg="foxglove_bridge" type="foxglove_bridge" />
     <node name="asset_server" pkg="buggy" type="asset_server.py" args="--directory='/rb_ws/src/buggy/assets'"/>

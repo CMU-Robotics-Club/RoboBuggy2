@@ -8,7 +8,7 @@ PORT = 8760
 
 parser = argparse.ArgumentParser(description='Run a simple HTTP server')
 parser.add_argument('--directory', type=str, help='Directory to serve')
-parsed_args, _unknown = parser.parse_known_args()
+parsed_args, _ = parser.parse_known_args()
 
 class DirectoryHandler(http.server.SimpleHTTPRequestHandler):
   def __init__(self, *args, **kwargs):

@@ -4,20 +4,12 @@ services:
     volumes:
       - ./rb_ws:/rb_ws
     devices:
-      - "/dev/ttyACM0:/dev/ttyACM0"
-      - "${WEBCAM_PORT:-/dev/null}:/dev/ttyUSB1"
-      - "${RLSENSE_PORT:-/dev/null}:/dev/ttyUSB2"
-      - "${TEENSY1_PORT:-/dev/null}:/dev/ttyACM1"
-      - "${TEENSY2_PORT:-/dev/null}:/dev/ttyACM2"
-      - "${TEENSY3_PORT:-/dev/null}:/dev/ttyACM3"
-      - "${TEENSY4_PORT:-/dev/null}:/dev/ttyACM4"
+      - “/dev/ttyACM0:/dev/ttyACM0” # INS
+      - “/dev/ttyACM1:/dev/ttyACM1” # INS RTK Correction
     stdin_open: true # docker run -i
     tty: true        # docker run -t
     ports:
        - "11311:11311"    # ROS master
        - "8765:8765"      # foxglove bridge
        - "8760:8760"      # Asset server for loading stuff into foxglove
-    # environment:
-    #   DISPLAY: ${DISPLAY}
-    # network_mode: "host"
     platform: "linux/amd64"
