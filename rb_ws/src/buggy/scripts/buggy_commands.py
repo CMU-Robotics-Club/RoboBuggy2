@@ -1,13 +1,14 @@
 #!/usr/bin/python3
+import rospy
+from std_msgs.msg import Float64, String
 
 import numpy as np
-import rospy
-from std_msgs.msg import Float64
-from std_msgs.msg import String 
 
-buggy_steer_publisher = rospy.Publisher("SteeringOut_T", Float64, queue_size=10)
-buggy_brake_publisher = rospy.Publisher("BrakingOut_T", Float64, queue_size=10)
-buggy_lights_publisher = rospy.Publisher("LightsOut_T", String, queue_size = 10)
+
+
+buggy_steer_publisher = rospy.Publisher("buggy/in/steering", Float64, queue_size=10)
+buggy_brake_publisher = rospy.Publisher("buggy/in/brake", Float64, queue_size=10)
+buggy_lights_publisher = rospy.Publisher("buggy/in/led", String, queue_size = 10)
 rospy.init_node("buggy_commands", anonymous=True)
 
 def set_steer_angle(angle: Float64): # angle is a float

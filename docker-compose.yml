@@ -13,7 +13,11 @@ services:
       - "${TEENSY4_PORT:-/dev/null}:/dev/ttyACM4"
     stdin_open: true # docker run -i
     tty: true        # docker run -t
-    environment:
-      DISPLAY: ${DISPLAY}
-    network_mode: "host"
+    ports:
+       - "11311:11311"    # ROS master
+       - "8765:8765"      # foxglove bridge
+       - "8760:8760"      # Asset server for loading stuff into foxglove
+    # environment:
+    #   DISPLAY: ${DISPLAY}
+    # network_mode: "host"
     platform: "linux/amd64"
