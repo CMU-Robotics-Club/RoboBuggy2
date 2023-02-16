@@ -134,6 +134,8 @@ class Pure_Pursuit(Controller):
             pose = self.pose
         if (Utils.calculate_lateral_accel(speed, steering_angle) > Buggy.MAX_LATERAL_ACCEL):
             self.cmd_braking(True)
+        else:
+            self.cmd_braking(False)
         
         next_pose = self.get_next_coord(5.0, 45.0)
         
