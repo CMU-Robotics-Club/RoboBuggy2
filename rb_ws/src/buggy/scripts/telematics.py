@@ -5,7 +5,10 @@ from nav_msgs.msg import Odometry
 from sensor_msgs.msg import NavSatFix
 from geometry_msgs.msg import PoseStamped
 from std_msgs.msg import Float64MultiArray
+from std_msgs.msg import String
+from std_msgs.msg import Int8
 
+from microstrain_inertial_msgs.msg import GNSSFixInfo
 
 class Telematics:
     def __init__(self):
@@ -22,8 +25,14 @@ class Telematics:
         self.gnss2_covariance_publisher = rospy.Publisher("/gnss2/fix_FloatArray_Covariance", Float64MultiArray, queue_size=10)
         self.gnss2_subscriber = rospy.Subscriber("/gnss2/fix", NavSatFix, self.convert_navsatfix_to_pose_covariance, (self.gnss2_pose_publisher, self.gnss2_covariance_publisher))
 
-
-    
+        self.gnss1_fixinfo_publisher = rospy.Publisher("/gnss1/fix_info_republished", String, queue_size=10)
+        self.gnss1_fixinfo_int_publisher = rospy.Publisher("/gnss1/fix_info_republished_int", Int8, queue_size=10)
+        self.gnss1_fixinfo_subscriber = rospy.Subscriber("/gnss1/fix_info", GNSSFixInfo, self.republish_fixinfo, (self.gnss1_fixinfo_publisher, self.gnss1_fixinfo_int_publisher))
+        
+        self.gnss2_fixinfo_publisher = rospy.Publisher("/gnss2/fix_info_republished", String, queue_size=10)
+        self.gnss2_fixinfo_int_publisher = rospy.Publisher("/gnss2/fix_info_republished_int", Int8, queue_size=10)
+        self.gnss2_fixinfo_subscriber = rospy.Subscriber("/gnss2/fix_info", GNSSFixInfo, self.republish_fixinfo, (self.gnss1_fixinfo_publisher, self.gnss2_fixinfo_int_publisher))
+        
     def convert_odometry_to_navsatfix(self, msg):
         """Convert Odometry-type to NavSatFix-type for plotting on Foxglove
 
@@ -58,6 +67,37 @@ class Telematics:
         covariance = Float64MultiArray()
         covariance.data = [msg.position_covariance[0], msg.position_covariance[4], msg.position_covariance[8]]
         publishers[1].publish(covariance)
+    
+    def republish_fixinfo(self, msg, publishers):
+        """
+        convert gnss/fixinfo to a string for visualization in foxglove
+        """
+        fix_type = msg.fix_type
+        fix_string = "fix type: "
+        
+        if (fix_type == 0):
+            fix_string += "FIX_3D"
+        elif (fix_type == 1):
+            fix_string += "FIX_2D"
+        elif (fix_type == 2):
+            fix_string += "FIX_TIME_ONLY"
+        elif (fix_type == 3):
+            fix_string += "FIX_NONE"
+        elif (fix_type == 4):
+            fix_string += "FIX_INVALID"
+        elif (fix_type == 5):
+            fix_string += "FIX_RTK_FLOAT"
+        else:
+            fix_string += "FIX_RTK_FIXED"
+   
+     
+        fix_string += " sbas_used: "  + str(msg.sbas_used)      
+        fix_string += " dngss_used: " + str(msg.dngss_used)
+        publishers[0].publish(fix_string)
+        publishers[1].publish(fix_type)
+        
+         
+            
 
 if __name__ == "__main__":
   rospy.init_node("telematics")
