@@ -11,5 +11,6 @@
         <include file="$(find microstrain_inertial_driver)/launch/microstrain.launch" />
     </group>
     <node name="foxglove" pkg="foxglove_bridge" type="foxglove_bridge" />
+    <node name="telematics" pkg="buggy" type="telematics.py" />
     <node name="asset_server" pkg="buggy" type="asset_server.py" args="--directory='/rb_ws/src/buggy/assets'"/>
 </launch>
