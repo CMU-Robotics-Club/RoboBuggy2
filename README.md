@@ -16,7 +16,7 @@ A complete re-write of the old RoboBuggy.
 - Once installed, the Docker image can be built as follows from the repository's root directory:
 
         docker compose build --no-cache
-        docker compose up
+        docker compose --env-file .env.dev up
 
 - Then in another terminal window, in order to access the running Docker's CLI, run:
 
@@ -30,6 +30,10 @@ A complete re-write of the old RoboBuggy.
         
         catkin_make
         source /rb_ws/devel/setup.bash  # sets variables so that our package is visible to ROS commands
+
+### Alternate Shortcut
+- In the main directory, just run `./setup_dev.sh` or `./setup_prod.sh` as appropriate.
+- Run `exec_docker` to get into Docker environment and setup all the aliases.
         
 
 ---
