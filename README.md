@@ -16,7 +16,7 @@ A complete re-write of the old RoboBuggy.
 - Once installed, the Docker image can be built as follows from the repository's root directory:
 
         docker compose build --no-cache
-        docker compose up
+        docker compose --env-file .env.dev up
 
 - Then in another terminal window, in order to access the running Docker's CLI, run:
 
