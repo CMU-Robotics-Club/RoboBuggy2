@@ -1,0 +1,6 @@
+<launch>  
+	<arg name="bag_file_name" value="feb_11_run"/>
+  	<node pkg="rosbag" type="play" name="rosbag_play" output="screen" args="--clock $(find buggy)/bags/$(arg bag_file_name).bag"/>
+    	<node name="foxglove" pkg="foxglove_bridge" type="foxglove_bridge" />
+	<node name="telematics" pkg="buggy" type="telematics.py" />
+</launch>

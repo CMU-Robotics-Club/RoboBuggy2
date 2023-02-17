@@ -4,10 +4,10 @@ services:
     volumes:
       - ./rb_ws:/rb_ws
     devices:
-      - "${GPS_PORT:-/dev/null}:/dev/ttyUSB0"
+      - "${TEENSY0_PORT:-/dev/null}:/dev/ttyUSB0"
       - "${WEBCAM_PORT:-/dev/null}:/dev/ttyUSB1"
       - "${RLSENSE_PORT:-/dev/null}:/dev/ttyUSB2"
-      - "${TEENSY0_PORT:-/dev/null}:/dev/ttyACM0"
+      - "${GPS_PORT:-/dev/null}:/dev/ttyACM0"
       - "${TEENSY1_PORT:-/dev/null}:/dev/ttyACM1"
       - "${TEENSY2_PORT:-/dev/null}:/dev/ttyACM2"
       - "${TEENSY3_PORT:-/dev/null}:/dev/ttyACM3"
@@ -15,7 +15,6 @@ services:
     stdin_open: true # docker run -i
     tty: true        # docker run -t
     ports:
-       - "11311:11311"    # ROS master
-       - "8765:8765"      # foxglove bridge
-       - "8760:8760"      # Asset server for loading stuff into foxglove
+       - "0.0.0.0:8765:8765"      # foxglove bridge
+       - "0.0.0.0:8760:8760"      # Asset server for loading stuff into foxglove
     platform: "linux/amd64"
