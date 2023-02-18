@@ -109,11 +109,11 @@ class Simulator:
   # Buggy Intrinsics
   CROSS_SECTION_AREA = 0.3      # m^2
   DRAG_COEFF = 0.3              # ~passenger car
-  MASS = 31.0                   # kg
-  WHEELBASE = 1.3               # m
+  MASS = 49.8                   # kg <measured>
+  WHEELBASE = 1.17              # m  <measured>
   STEERING_MAX = 30             # degrees to left and degrees to right
   ROLLING_RESISTANCE = 0.03     # ~passenger car
-  HEIGHT = 0.1                  # m, (distance btw ground and center of wheels)
+  HEIGHT = 0.1                  # m, (distance btw ground and axle of wheels)
 
   def __init__(self, map_uri, map_center_lat, map_center_long):
     self.topo = MeshQuery(map_uri, map_center_lat, map_center_long)
