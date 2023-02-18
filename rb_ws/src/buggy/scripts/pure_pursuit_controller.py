@@ -28,7 +28,7 @@ class Pure_Pursuit(Controller):
         Args:
             path_file (str): Path to the csv file to load the waypoints for GPS coordinates
         """
-        Controller.__init__()
+        Controller.__init__(self)
         self.path = pd.read_csv(path_file)
         print("Loaded Path File: " + str(path_file))
         
@@ -156,3 +156,7 @@ class Pure_Pursuit(Controller):
         self.cmd_steering(steering_cmd)
 
 
+if __name__ == '__main__':
+  rospy.init_node("pure_pursuit_controller")
+  controller = Pure_Pursuit("/rb_ws/src/buggy/paths/run1.csv")
+  controller.run()

@@ -135,7 +135,7 @@ gnss1_rf_error_detection_data_rate : -1  # Rate of gnss1/rf_error_detection topi
 #     For all other models - in the IMU frame wrt IMU origin (meters)
 #     Note: Make this as accurate as possible for good performance
 gnss1_antenna_offset : [-0.127, 0.127, 0.0]
-`
+
 # GNSS2 settings are only applicable for multi-GNSS systems (e.g. GQ7) 
 gnss2_data_rate : 2
 
