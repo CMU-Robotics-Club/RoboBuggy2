@@ -134,7 +134,7 @@ gnss1_rf_error_detection_data_rate : -1  # Rate of gnss1/rf_error_detection topi
 #     For GQ7 - in the vehicle frame wrt IMU origin (meters)
 #     For all other models - in the IMU frame wrt IMU origin (meters)
 #     Note: Make this as accurate as possible for good performance
-gnss1_antenna_offset : [-0.13, 0.12, 0.0]
+gnss1_antenna_offset : [-0.127, 0.127, 0.0]
 `
 # GNSS2 settings are only applicable for multi-GNSS systems (e.g. GQ7) 
 gnss2_data_rate : 2
@@ -154,7 +154,7 @@ gnss2_rf_error_detection_data_rate : -1  # Rate of gnss1/rf_error_detection topi
 
 # Antenna #2 lever arm offset vector (In the vehicle frame wrt IMU origin (meters) )
 # Note: Make this as accurate as possible for good performance 
-gnss2_antenna_offset : [0.62, 0.12, 0.0]
+gnss2_antenna_offset : [0.597, 0.127, 0.0]
 
 # (GQ7 Only) Enable RTK dongle interface
 # Note: Enabling this will cause the node to publish on one of two topics depending
