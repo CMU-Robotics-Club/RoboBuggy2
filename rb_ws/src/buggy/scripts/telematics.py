@@ -31,7 +31,7 @@ class Telematics:
         
         self.gnss2_fixinfo_publisher = rospy.Publisher("/gnss2/fix_info_republished", String, queue_size=10)
         self.gnss2_fixinfo_int_publisher = rospy.Publisher("/gnss2/fix_info_republished_int", Int8, queue_size=10)
-        self.gnss2_fixinfo_subscriber = rospy.Subscriber("/gnss2/fix_info", GNSSFixInfo, self.republish_fixinfo, (self.gnss1_fixinfo_publisher, self.gnss2_fixinfo_int_publisher))
+        self.gnss2_fixinfo_subscriber = rospy.Subscriber("/gnss2/fix_info", GNSSFixInfo, self.republish_fixinfo, (self.gnss2_fixinfo_publisher, self.gnss2_fixinfo_int_publisher))
         
     def convert_odometry_to_navsatfix(self, msg):
         """Convert Odometry-type to NavSatFix-type for plotting on Foxglove
@@ -65,7 +65,10 @@ class Telematics:
         publishers[0].publish(pose)
 
         covariance = Float64MultiArray()
-        covariance.data = [msg.position_covariance[0], msg.position_covariance[4], msg.position_covariance[8]]
+        covariance.data = [
+            round(msg.position_covariance[0], 4),
+            round(msg.position_covariance[4], 4),
+            round(msg.position_covariance[8], 4)]
         publishers[1].publish(covariance)
     
     def republish_fixinfo(self, msg, publishers):
@@ -89,10 +92,9 @@ class Telematics:
             fix_string += "FIX_RTK_FLOAT"
         else:
             fix_string += "FIX_RTK_FIXED"
-   
      
-        fix_string += " sbas_used: "  + str(msg.sbas_used)      
-        fix_string += " dngss_used: " + str(msg.dngss_used)
+        fix_string += "\nsbas_used: "  + str(msg.sbas_used)      
+        fix_string += "\ndngss_used: " + str(msg.dngss_used)
         publishers[0].publish(fix_string)
         publishers[1].publish(fix_type)
         
