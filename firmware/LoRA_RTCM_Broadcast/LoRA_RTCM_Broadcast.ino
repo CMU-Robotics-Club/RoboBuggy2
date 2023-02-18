@@ -23,6 +23,19 @@
 
 #include <RadioLib.h>
 #include <CircularBuffer.h>
+#include <rtcmstreamsplitter.h>
+
+#define LORA_HEADER "W3VC/1"
+#define LORA_HEADER_LENGTH 6
+#define LORA_PAYLOAD_LENGTH 248
+// #define LORA_FREQUENCY_HOP
+
+typedef struct {
+  byte length;
+  char count;
+  byte header[LORA_HEADER_LENGTH];
+  byte data[LORA_PAYLOAD_LENGTH];
+} RadioMessage;
 
 // SX1276 has the following connections:
 // NSS pin:   10
@@ -32,7 +45,10 @@
 SX1276 radio = new Module(10, 26, 25, 27);
 
 // Create circular buffer to dispatch data
-CircularBuffer<byte, 1024> cbuffer;
+CircularBuffer<RadioMessage, 8> cbuffer;
+
+// RTCM Stream Splitter
+RTCMStreamSplitter splitter;
 
 // flag to indicate that tx is in use
 volatile bool transmittingFlag = false;
@@ -73,15 +89,13 @@ unsigned long lastByteMicros = 0;
 // timestamp of start of last transmission
 unsigned long lastTxMillis = 0;
 
-// cache for transmitting over radio
-byte packetCache[255];
-
 //declare reset function at address 0
 void(* resetFunc) (void) = 0;
 
 // this function is called when a complete packet
 // is transmitted by the module
 void setTxFlag(void) {
+  radio.finishTransmit();
   transmittingFlag = false;
 }
 
@@ -95,7 +109,7 @@ void setup_radio() {
 
   // begin radio on home channel
   Serial.print(F("[SX1276] Initializing ... "));
-  int state = radio.begin(channels[channel_indices[0]], 125.0, 7, 5, RADIOLIB_SX127X_SYNC_WORD, 17, 8, 0);
+  int state = radio.begin(channels[channel_indices[0]], 125.0, 7, 5, RADIOLIB_SX127X_SYNC_WORD, 10, 8, 0);
   if (state == RADIOLIB_ERR_NONE) {
     Serial.println(F("success!"));
   } else {
@@ -107,10 +121,12 @@ void setup_radio() {
   // set output power to 10 dBm (accepted range is -3 - 17 dBm)
   // NOTE: 20 dBm value allows high power operation, but transmission
   //       duty cycle MUST NOT exceed 1%
-  if (radio.setOutputPower(20) == RADIOLIB_ERR_INVALID_OUTPUT_POWER) {
+  /*
+  if (radio.setOutputPower(10) == RADIOLIB_ERR_INVALID_OUTPUT_POWER) {
     Serial.println(F("Selected output power is invalid for this module!"));
     while (true);
   }
+  */
 
   // set the CRC to be used
   state = radio.setCRC(true);
@@ -124,7 +140,8 @@ void setup_radio() {
 
   // set hop period in symbols
   // this will also enable FHSS
-  state = radio.setFHSSHoppingPeriod(8);
+  #ifdef LORA_FREQUENCY_HOP
+  state = radio.setFHSSHoppingPeriod(9);
   if (state == RADIOLIB_ERR_NONE) {
     Serial.println(F("success!"));
   } else {
@@ -132,6 +149,7 @@ void setup_radio() {
     Serial.println(state);
     while (true);
   }
+  #endif
 
   // set the function to call when transmission is finished
   radio.setDio0Action(setTxFlag);
@@ -152,25 +170,53 @@ void setup() {
 
   // generate LFSR indexes (psuedorandom non-repeating [0, 63])
   memset(&channel_indices[0], 0, sizeof(channel_indices));
-  channel_indices[0] = 29; // seed value
-  for (int i = 1; i < numberOfChannels-1; i++) {
+  channel_indices[1] = 29;
+  for (int i = 2; i < numberOfChannels; i++) {
     bool mask = channel_indices[i-1] & 0x1;
     channel_indices[i] = channel_indices[i-1] >> 1;
     if (mask)
       channel_indices[i] ^= 0x30;
   }
-  
+
+  radio.reset();
+  delay(1000);
   setup_radio();
+}
+
+void parse_rtcm(byte nextByte) {
+  unsigned int type = splitter.inputByte(nextByte);
+  if (type > 0) {
+    unsigned int length = splitter.outputStreamLength;
+    char count = 0;
+    while (length > 0) {
+      unsigned int local_length = length;
+      if (length > LORA_PAYLOAD_LENGTH) {
+        local_length = LORA_PAYLOAD_LENGTH;
+        count += 1;
+      }
+      length -= local_length;
+
+      RadioMessage message = {
+        .length = (byte) local_length,
+        .count = (length > 0) ? count : -count,
+      };
+      memcpy(&message.header, (uint8_t*)LORA_HEADER, LORA_HEADER_LENGTH);
+      memcpy(&message.data, &splitter.outputStream, local_length);
+      cbuffer.push(message);
+      Serial.print(F("[SX1276] Message Received: "));
+      Serial.println(local_length);
+    }
+  }
 }
 
 void loop() {
 
   // check if the serial input has given bytes
-  while (Serial.available() > 0){
+  while (Serial.available() > 0) {
     char tempByte;
     int numBytesRead = Serial.readBytes(&tempByte, 1);
     if (numBytesRead > 0) {
-      cbuffer.push((byte) tempByte);
+      parse_rtcm(tempByte);
       lastByteMicros = micros();
     }
   }
@@ -186,12 +232,18 @@ void loop() {
   }
   
   // check if the transmission flag is set
-  bool packetTimeout = (micros() - lastByteMicros > 300) && (cbuffer.size() > 0);
-  bool bufferFilled = cbuffer.size() >= 255;
-  if (!transmittingFlag && (packetTimeout || bufferFilled)) {
+  if (!transmittingFlag && (cbuffer.size() > 0)) {
     // reset flag
     lastTxMillis = millis();
     transmittingFlag = true;
+
+    if (transmissionState == RADIOLIB_ERR_NONE) {
+      // packet was successfully sent
+      Serial.println(F("transmission finished!"));
+    } else {
+      Serial.print(F("failed, code "));
+      Serial.println(transmissionState);
+    }
 
     // The channel is automatically reset to 0 upon completion
     Serial.print(F("[SX1276] Radio is on channel: "));
@@ -205,36 +257,25 @@ void loop() {
     hopsCompleted = 0;
 
     // return to home channel before the next transaction
-    radio.setFrequency(channels[channel_indices[radio.getFHSSChannel() % numberOfChannels]]);
+    radio.setFrequency(channels[radio.getFHSSChannel() % numberOfChannels]);
 
     // increment the packet counter
     packetCounter++;
 
     // load packet
-    unsigned int packetLength = cbuffer.size();
-    Serial.printf("Buffer %d\n", packetLength);
-    if (packetLength > 255)
-      packetLength = 255;
-    for (unsigned int i = 0; i < packetLength; i++)
-      packetCache[i] = cbuffer.shift();
+    RadioMessage message = cbuffer.shift();
 
     // send another packet
-    Serial.print(F("[SX1276] Sending another packet ... "));
-    transmissionState = radio.startTransmit(&packetCache[0], packetLength);
-
-    if (transmissionState == RADIOLIB_ERR_NONE) {
-      // packet was successfully sent
-      Serial.println(F("transmission finished!"));
-    } else {
-      Serial.print(F("failed, code "));
-      Serial.println(transmissionState);
-    }
+    Serial.print(F("[SX1276] Sending another packet of size "));
+    Serial.print(message.length+LORA_HEADER_LENGTH+1);
+    Serial.print(" ...");
+    transmissionState = radio.startTransmit((uint8_t*)&message.count, message.length+LORA_HEADER_LENGTH+1);
   }
 
   // check if we need to do another frequency hop
   if (fhssChangeFlag == true) {
     // we do, change it now
-    int state = radio.setFrequency(channels[channel_indices[radio.getFHSSChannel() % numberOfChannels]]);
+    int state = radio.setFrequency(channels[radio.getFHSSChannel() % numberOfChannels]);
     if (state != RADIOLIB_ERR_NONE) {
       Serial.print(F("[SX1276] Failed to change frequency, code "));
       Serial.println(state);
