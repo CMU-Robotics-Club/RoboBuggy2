@@ -3,6 +3,8 @@ import rospy
 
 from visualization_msgs.msg import Marker
 
+rospy.init_node("asset_publish")
+
 mesh_pub = rospy.Publisher("foxglove/mesh", Marker, queue_size=10)
 
 # Publish Mesh infrequently
