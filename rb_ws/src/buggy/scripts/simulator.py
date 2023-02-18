@@ -7,7 +7,7 @@ import resource_retriever
 from std_msgs.msg import Float32, Bool
 from geometry_msgs.msg import PoseStamped, Quaternion, Pose
 from tf.transformations import quaternion_from_euler
-from visualization_msgs.msg import Marker
+
 
 # Utility imports
 import numpy as np
@@ -109,11 +109,11 @@ class Simulator:
   # Buggy Intrinsics
   CROSS_SECTION_AREA = 0.3      # m^2
   DRAG_COEFF = 0.3              # ~passenger car
-  MASS = 31.0                   # kg
-  WHEELBASE = 1.3               # m
+  MASS = 49.8                   # kg <measured>
+  WHEELBASE = 1.17              # m  <measured>
   STEERING_MAX = 30             # degrees to left and degrees to right
   ROLLING_RESISTANCE = 0.03     # ~passenger car
-  HEIGHT = 0.1                  # m, (distance btw ground and center of wheels)
+  HEIGHT = 0.1                  # m, (distance btw ground and axle of wheels)
 
   def __init__(self, map_uri, map_center_lat, map_center_long):
     self.topo = MeshQuery(map_uri, map_center_lat, map_center_long)
@@ -134,7 +134,7 @@ class Simulator:
 
     self.pose_pub = rospy.Publisher("state/pose", PoseStamped, queue_size=10)
     self.speed_pub = rospy.Publisher("state/speed", Float32, queue_size=10)
-    self.mesh_pub = rospy.Publisher("foxglove/mesh", Marker, queue_size=10)
+    
 
   @staticmethod
   def rotate(vec, theta):
@@ -279,7 +279,7 @@ class Simulator:
     with self.lock:
       self.push_force = msg.data
 
-  def publish(self, iter_ct):
+  def publish(self):
     # Publish 3d Pose
     location = Pose()
     location.position.x = self.position[0]
@@ -298,56 +298,16 @@ class Simulator:
     speed = Float32()
     speed.data = self.speed
     self.speed_pub.publish(speed)
-    if iter_ct % (2 * self.RATE) == 0:
-      # Publish Mesh infrequently
-      marker = Marker()
-
-      marker.header.frame_id = "base"
-      marker.header.stamp = rospy.Time.now()
-      marker.ns = ""
-
-      # Shape (resource type = 10 (mesh))
-      marker.type = 10
-      marker.id = 0
-      marker.action = 0
-
-      # Note: Must set mesh_resource to a valid URL for a model to appear
-      marker.mesh_resource = "http://127.0.0.1:8760/cmutopo.dae"
-      marker.mesh_use_embedded_materials = True
-
-      # Scale
-      marker.scale.x = 1.0
-      marker.scale.y = 1.0
-      marker.scale.z = 1.0
-
-      # Color
-      marker.color.r = 0.0
-      marker.color.g = 0.0
-      marker.color.b = 0.0
-      marker.color.a = 1.0
-
-      # Pose
-      marker.pose.position.x = 0
-      marker.pose.position.y = 0
-      marker.pose.position.z = 0
-      marker.pose.orientation.x = 0.0
-      marker.pose.orientation.y = 0.0
-      marker.pose.orientation.z = 0.0
-      marker.pose.orientation.w = 0.0
-
-      self.mesh_pub.publish(marker)
 
 
 
   def run(self):
     rate = rospy.Rate(self.RATE)
-    count = 0
     while not rospy.is_shutdown():
       with self.lock:
         self.step()
-        self.publish(count)
+        self.publish()
       rate.sleep()
-      count += 1
 
 
 if __name__ == "__main__":
