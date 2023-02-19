@@ -28,8 +28,8 @@
 #define LORA_PAYLOAD_LENGTH 248
 //#define LORA_FREQUENCY_HOP
 
-#define DEBUG_SERIAL Serial1
-#define DATA_SERIAL Serial
+#define DEBUG_SERIAL Serial
+#define DATA_SERIAL Serial1
 
 typedef struct {
   byte length;
@@ -92,7 +92,7 @@ void setFHSSFlag(void) {
 
 void setup() {
   DEBUG_SERIAL.begin(57600);
-  DATA_SERIAL.begin(57600);
+  DATA_SERIAL.begin(115200);
 
   delay(5000);
 
