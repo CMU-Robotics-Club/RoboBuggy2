@@ -34,18 +34,17 @@ class Pure_Pursuit(Controller):
         
         self.curr_path_idx = 0 # idx we're currently looking at in the path file
 
-    def get_next_coord(self, look_ahead_dist, look_ahead_angle) -> My_Pose:
+    def get_next_coord(self, pose, look_ahead_dist, look_ahead_angle) -> My_Pose:
         """Get the next coordinates the buggy needs to look at.
 
         Args:
+            pose (Pose): pose in ROS format
             look_ahead_dist (float): distance in meters
             look_ahead_angle (float): angle range in which we should look ahead (each side)
         
         Returns:
             My_Pose: custom pose object of the lookahead coordinates
         """
-        with self.lock:
-            pose = self.pose
         
         q_x = pose.orientation.x
         q_y = pose.orientation.y
@@ -121,7 +120,8 @@ class Pure_Pursuit(Controller):
 
         return np.arctan(2.0*L_WB*np.sin(alpha)/l_d)
     
-    def calculate_look_ahead_dist(self, speed):
+    @staticmethod
+    def calculate_look_ahead_dist(speed):
         dist = speed * Pure_Pursuit.LOOK_AHEAD_DIST_CONST
         return np.clip(dist, Pure_Pursuit.MIN_LOOK_AHEAD_DIST, Pure_Pursuit.MAX_LOOK_AHEAD_DIST)
     
@@ -137,7 +137,7 @@ class Pure_Pursuit(Controller):
         else:
             self.cmd_braking(False)
         
-        next_pose = self.get_next_coord(5.0, 45.0)
+        next_pose = self.get_next_coord(pose, Pure_Pursuit.calculate_look_ahead_dist(speed), 45.0)
         
         q_x = pose.orientation.x
         q_y = pose.orientation.y
