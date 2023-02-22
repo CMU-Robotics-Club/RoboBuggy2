@@ -3,10 +3,10 @@ services:
     build: .
     volumes:
       - ./rb_ws:/rb_ws
+      - "${RLSENSE_PORT:-/dev/null}:/dev/bus/usb"
     devices:
       - "${TEENSY0_PORT:-/dev/null}:/dev/ttyUSB0"
       - "${WEBCAM_PORT:-/dev/null}:/dev/ttyUSB1"
-      - "${RLSENSE_PORT:-/dev/null}:/dev/ttyUSB2"
       - "${GPS_PORT:-/dev/null}:/dev/ttyACM0"
       - "${TEENSY1_PORT:-/dev/null}:/dev/ttyACM1"
       - "${TEENSY2_PORT:-/dev/null}:/dev/ttyACM2"
@@ -18,3 +18,5 @@ services:
        - "0.0.0.0:8765:8765"      # foxglove bridge
        - "0.0.0.0:8760:8760"      # Asset server for loading stuff into foxglove
     platform: "linux/amd64"
+    device_cgroup_rules:
+       - "c *:* rmw"
