@@ -2,6 +2,8 @@
 #include "DynamixelInterface.h"
 #include "DynamixelMotor.h"
 
+//#include <XBee.h>
+
 #define USE_TEENSY_HW_SERIAL
 #define ROS_BAUD 1000000
 
@@ -132,8 +134,19 @@ enum class BuggyState {
   Stopped2,
 };
 
-BuggyState buggy_state = BuggyState::Stopped0;
+BuggyState buggy_state = BuggyState::Armed;
 int buggy_arming_timer_ms = 0;
+
+const char *get_buggy_state_str() {
+  switch (buggy_state) {
+    case BuggyState::Armed:    return "Armed   ";
+    case BuggyState::Moving:   return "Moving  ";
+    case BuggyState::Stopped0: return "Stopped0";
+    case BuggyState::Stopped1: return "Stopped1";
+    case BuggyState::Stopped2: return "Stopped2";
+    default:                   return "UNKNOWN ";
+  }
+}
 
 #define ARM_TIME_MS 1000
 
@@ -158,21 +171,115 @@ void setup() {
   pinMode(INTERRUPT_PIN, OUTPUT);
 }
 
+/*#define ANGLE_LIMIT_LO 880
+#define ANGLE_LIMIT_HI 1440
+#define ANGLE_RANGE (ANGLE_LIMIT_HI - ANGLE_LIMIT_LO)
+#define ANGLE_CENTER ((ANGLE_LIMIT_HI + ANGLE_LIMIT_LO) / 2)*/
 
 int i = 0;
 
 double t = 0.0;
 
+int left_angle_limit = 1460;
+int right_angle_limit = 890;
+
+void recenterWheel(DynamixelMotor &motor) {
+
+  int a = 0;
+
+  uint16_t start = -1;
+  a = motor.currentPosition(start);
+
+  Serial.printf("Start position is %d %d\n", start, a);
+
+  if (start == -1) {
+    return;
+  }
+
+  a = motor.goalPosition(start - 100);
+  Serial.println(a);
+
+  int offset = 0;
+  while (true) {
+    a = motor.goalPosition(start - offset);
+    Serial.println(a);
+    offset += 5;
+
+    delay(100);
+
+    uint16_t current_pos;
+    a = motor.currentPosition(current_pos);
+
+    Serial.printf("offset %d, current position is %d %d\n", start - offset, current_pos, a);
+
+    if (abs((int)current_pos - (int)(start - offset)) > 100) {
+      left_angle_limit = current_pos + 10;
+      Serial.printf("Stopping left limit at %d\n", left_angle_limit);
+      break;
+    }
+  }
+
+  offset = 0;
+  while (true) {
+    motor.goalPosition(start + offset);
+    offset += 5;
+
+    delay(100);
+
+    uint16_t current_pos;
+    motor.currentPosition(current_pos);
+    if (abs((int)current_pos - (int)(start + offset)) > 100) {
+      right_angle_limit = current_pos - 10;
+      Serial.printf("Stopping right limit at %d\n", right_angle_limit);
+      break;
+    }
+  }
+}
+
+double map_pin_width(int pin_width) {
+  float range = (pin_width - 1000.0) / 650.0; // 0 to 1
+
+  float midpoint = 0.61;
+
+  if (range > midpoint) {
+    return (range - midpoint) / (1.0 - midpoint) * 0.5 + 0.5;
+  } else {
+    return 0.5 - (midpoint - range) / (midpoint) * 0.5;
+  }
+}
+
 void loop()
 {
-  Serial.println("foobar");
+  delay(3000);
+
+  Serial.println("hello, world");
+
+  Serial2.begin(115200);
+
+  /*XBee xbee = XBee();
+  xbee.setSerial(Serial1);
+
+  char payload[] = "HELLO, WORLD!\n";
+
+  while (true) {
+    Tx16Request tx = Tx16Request(0x0002, payload, sizeof(payload));
+
+    TxStatusResponse txStatus = TxStatusResponse();
+
+    Serial.println("Response!");
+    Serial.println(txStatus.isSuccess());
+
+    delay(1000);
+  }*/
   
   DynamixelInterface dInterface(DYNAMIXEL_SERIAL, DYNAMIXEL_RXEN, DYNAMIXEL_TXEN, DirPinMode::ReadHiWriteLo); // Stream
   dInterface.begin(1000000, 50); // baudrate, timeout
   DynamixelMotor motor(dInterface, 5);  // Interface , ID
 
+
   motor.init(); // This will get the returnStatusLevel of the servo
   Serial.printf("Status return level = %u\n", motor.statusReturnLevel());
+  
 
   motor.statusReturnLevel(1);
 
@@ -180,15 +287,49 @@ void loop()
 
   // Status packet delay = 20us
   motor.write(5, (byte)250);
+  
+  motor.enableTorque(false);
 
-  motor.jointMode(10, 530); // Set the angular limits of the servo. Set to [min, max] by default
+  /*while (1) {
+    uint16_t currentPos = 0;
+    motor.currentPosition(currentPos);
+
+    delay(500);
+
+    Serial.println(currentPos);
+  }*/
+
+
+  /*motor.wheelMode();
+  motor.jointMode(0, 0x3FF);
+  motor.enableTorque();
+
+  recenterWheel(motor);*/
+
+  //motor.wheelMode();
+  //motor.enableTorque();
+  //recenterWheel(motor);
+
+  motor.jointMode(right_angle_limit, left_angle_limit); // Set the angular limits of the servo. Set to [min, max] by default
   motor.enableTorque();
 
   int rc_pin_widths[NUM_RC_CHANNELS] = { 0 };
   bool rc_pin_timed_out[NUM_RC_CHANNELS] = { false };
 
+  /*while (true) {
+    uint16_t pos = 0;
+    motor.currentPosition(pos);
+    Serial.println(pos);
+    motor.goalPosition(1250);
+    //motor.goalPositionDegree(90 + (0.7 - 0.5) * 2.0 * 90.0);
+    delay(100);
+  }*/
+
+  int log_timer = 0;
+
   while (true)
   {
+
     t += 5.0;
     unsigned long currentMillis = millis();
 
@@ -212,7 +353,7 @@ void loop()
         if (throttleAuto) {
           if (millis() - buggy_arming_timer_ms > ARM_TIME_MS) {
             buggy_arming_timer_ms = millis();
-            buggy_state = BuggyState::Stopped1;
+
           }
         } else {
           buggy_arming_timer_ms = millis();
@@ -257,12 +398,29 @@ void loop()
         if (throttleNeutral) {
           if (millis() - buggy_arming_timer_ms > BRAKE_TIME_MS) {
             buggy_arming_timer_ms = millis();
-            buggy_state = BuggyState::Stopped0;
+
+            buggy_state = BuggyState::Armed;
           }
         } else {
           buggy_arming_timer_ms = millis();
         }
         break;
+    }
+
+    
+    ++log_timer;
+    if (log_timer == 100) {
+      log_timer = 0;
+
+      Serial2.printf("state: %s   ", get_buggy_state_str());
+      int steer_age = currentMillis - rc_last_edge[RC_STEER];
+      int brake_age = currentMillis - rc_last_edge[RC_BRAKE];
+      Serial2.printf("str wdt/tmt: %4d %d   ", rc_pin_widths[RC_STEER], steer_age);
+      Serial2.printf("thr wdt/tmt: %4d %d   ", rc_pin_widths[RC_BRAKE], brake_age);
+
+      uint16_t current_pos = 65535;
+      motor.currentPosition(current_pos);
+      Serial2.printf("dyna pos %4d\n", current_pos);
     }
 
     //uint16_t currentPos = 0;
@@ -277,25 +435,33 @@ void loop()
       Serial.printf("buggy state: %d\n", (int)buggy_state);
     }
 
-    if (buggy_state == BuggyState::Moving) {
-      if (throttleTele) {
-        float range = (rc_pin_widths[RC_STEER] - 1000.0) / 1000.0;
+    bool autoSteer = (buggy_state == BuggyState::Moving && throttleAuto);
 
-        double angle = (0 ? sin(t / 100.0) : 0);
-      
-        motor.goalPositionDegree(90 + (range - 0.5) * 2.0 * 90.0);
+    if (autoSteer) {
+      // TODO: Autonomomous
+      int angle_center = (left_angle_limit + right_angle_limit) / 2.0;
+      motor.goalPosition(angle_center + ros_servo_angle * 3.41);
 
-        digitalWrite(BRAKE_RELAY_PIN, HIGH);
-      } else if (throttleAuto) {
-        // TODO: Autonomomous
-        motor.goalPositionDegree(90 + ros_servo_angle / PI * 180);
-        bool engage_brakes = abs(ros_brake - 1.0) < 1e-6;
-        digitalWrite(BRAKE_RELAY_PIN, !engage_brakes);
-      }
-
-      
+      float ros_brake = 1.0;
+      bool engage_brakes = abs(ros_brake - 1.0) < 1e-6;
+      digitalWrite(BRAKE_RELAY_PIN, !engage_brakes);
     } else {
-      digitalWrite(BRAKE_RELAY_PIN, LOW);
+      float range = map_pin_width(rc_pin_widths[RC_STEER]);
+      
+      range = (range * 2.0) - 1.0; // -1 to 1
+
+      /*if (range > 0.5) {
+        range = (range - 0.5) * 2.0 + 0.5;
+      }*/
+
+      int angle_center = (left_angle_limit + right_angle_limit) / 2.0;
+      int angle_range = (right_angle_limit - left_angle_limit);
+
+      motor.goalPosition(angle_center + angle_range * range * 0.5);
+    
+      //motor.goalPositionDegree(90 + (range - 0.5) * 2.0 * 90.0);
+
+      digitalWrite(BRAKE_RELAY_PIN, (buggy_state == BuggyState::Moving));
     }
 
     delay(1);
