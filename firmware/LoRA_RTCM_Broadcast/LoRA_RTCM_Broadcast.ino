@@ -27,12 +27,11 @@
 
 #define LORA_HEADER "W3VC/1"
 #define LORA_HEADER_LENGTH 6
-#define LORA_PAYLOAD_LENGTH 248
+#define LORA_PAYLOAD_LENGTH 249
 // #define LORA_FREQUENCY_HOP
 
 typedef struct {
   byte length;
-  char count;
   byte header[LORA_HEADER_LENGTH];
   byte data[LORA_PAYLOAD_LENGTH];
 } RadioMessage;
@@ -187,25 +186,19 @@ void parse_rtcm(byte nextByte) {
   unsigned int type = splitter.inputByte(nextByte);
   if (type > 0) {
     unsigned int length = splitter.outputStreamLength;
-    char count = 0;
-    while (length > 0) {
-      unsigned int local_length = length;
-      if (length > LORA_PAYLOAD_LENGTH) {
-        local_length = LORA_PAYLOAD_LENGTH;
-        count += 1;
-      }
-      length -= local_length;
-
-      RadioMessage message = {
-        .length = (byte) local_length,
-        .count = (length > 0) ? count : -count,
-      };
-      memcpy(&message.header, (uint8_t*)LORA_HEADER, LORA_HEADER_LENGTH);
-      memcpy(&message.data, &splitter.outputStream, local_length);
-      cbuffer.push(message);
-      Serial.print(F("[SX1276] Message Received: "));
-      Serial.println(local_length);
+    if (length > LORA_PAYLOAD_LENGTH) {
+      Serial.println(F("[SX1276] RTCM Packet Larger than Max Packet"));
+      return;
     }
+
+    RadioMessage message = {
+      .length = (byte) length,
+    };
+    memcpy(&message.header, (uint8_t*)LORA_HEADER, LORA_HEADER_LENGTH);
+    memcpy(&message.data, &splitter.outputStream, length);
+    cbuffer.push(message);
+    // Serial.print(F("[SX1276] Message Received: "));
+    // Serial.println(length);
   }
 }
 
@@ -245,6 +238,9 @@ void loop() {
       Serial.println(transmissionState);
     }
 
+    Serial.print(F("[SX1276] Items waiting in queue: "));
+    Serial.println(cbuffer.size());
+
     #ifdef LORA_FREQUENCY_HOP
     // The channel is automatically reset to 0 upon completion
     Serial.print(F("[SX1276] Radio is on channel: "));
@@ -269,9 +265,9 @@ void loop() {
 
     // send another packet
     Serial.print(F("[SX1276] Sending another packet of size "));
-    Serial.print(message.length+LORA_HEADER_LENGTH+1);
-    Serial.print(" ...");
-    transmissionState = radio.startTransmit((uint8_t*)&message.count, message.length+LORA_HEADER_LENGTH+1);
+    Serial.print(message.length+LORA_HEADER_LENGTH);
+    Serial.println(F("... "));
+    transmissionState = radio.startTransmit(&message.data[0], message.length+LORA_HEADER_LENGTH);
   }
 
   // check if we need to do another frequency hop

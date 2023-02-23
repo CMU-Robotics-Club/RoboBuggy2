@@ -25,7 +25,7 @@
 
 #define LORA_HEADER "W3VC/1"
 #define LORA_HEADER_LENGTH 6
-#define LORA_PAYLOAD_LENGTH 248
+#define LORA_PAYLOAD_LENGTH 249
 //#define LORA_FREQUENCY_HOP
 
 #define DEBUG_SERIAL Serial
@@ -33,7 +33,6 @@
 
 typedef struct {
   byte length;
-  char count;
   byte header[LORA_HEADER_LENGTH];
   byte data[LORA_PAYLOAD_LENGTH];
 } RadioMessage;
@@ -74,9 +73,6 @@ int hopsCompleted = 0;
 
 // cache for transmitting over radio
 RadioMessage message;
-byte hold_data[1024];
-char hold_count = 0;
-unsigned int hold_len = 0;
 
 // this function is called when a complete packet
 // is received by the module
@@ -107,7 +103,7 @@ void setup() {
   }
 
   // begin radio on home channel
-  // DEBUG_SERIAL.println("[SX1276] Initializing ... ");
+  DEBUG_SERIAL.println("[SX1276] Initializing ... ");
   int state = radio.begin(channels[channel_indices[0]], 125.0, 7, 5, RADIOLIB_SX127X_SYNC_WORD, 17, 8, 0);
   if (state == RADIOLIB_ERR_NONE) {
     DEBUG_SERIAL.println("success!");
@@ -144,7 +140,9 @@ void setup() {
   radio.setDio0Action(setRxFlag);
 
   // set the function to call when we need to change frequency
+  #ifdef LORA_FREQUENCY_HOP
   radio.setDio1Action(setFHSSFlag);
+  #endif
 
   // start listening for LoRa packets
   DEBUG_SERIAL.print("[SX1276] Starting to listen ... ");
@@ -163,39 +161,16 @@ void loop() {
   if (receivedFlag == true) {
     // you can read received data
     unsigned int length = radio.getPacketLength();
-    int state = radio.readData((uint8_t*) &message.count, min(LORA_PAYLOAD_LENGTH+1, length));
-    message.length = length > LORA_HEADER_LENGTH + 1 ? length -(LORA_HEADER_LENGTH + 1) : 0;
+    int state = radio.readData(&message.header[0], length);
+    message.length = length > LORA_HEADER_LENGTH ? length - LORA_HEADER_LENGTH : 0;
 
-    if (state == RADIOLIB_ERR_NONE) {
+    if (state == RADIOLIB_ERR_NONE && message.length > 0) {
       // packet was successfully received
-      if (message.count != 0) {
-        if (abs(message.count) == hold_count+1) {
-          if (message.count > 0 && hold_len+message.length < sizeof(hold_data)) {
-            memcpy(&hold_data[hold_len], &message.data[0], message.length);
-            hold_len += message.length;
-            hold_count = message.count;
-          } else {
-            DEBUG_SERIAL.print("[SX1276] Data:\t\t");
-            DEBUG_SERIAL.printf("%d\n", hold_len);
-            DATA_SERIAL.write(&hold_data[0], hold_len);
-            DATA_SERIAL.flush();
-
-            hold_len = 0;
-            hold_count = 0;
-          }
-        }
-        hold_len = 0;
-        hold_count = 0;
-      } else {
-        // print data of the packet
-        DEBUG_SERIAL.print("[SX1276] Data:\t\t");
-        DEBUG_SERIAL.printf("%d\n", message.length);
-        DATA_SERIAL.write(&message.data[0], message.length);
-        DATA_SERIAL.flush();
-        
-        hold_len = 0;
-        hold_count = 0;
-      }
+      // print data of the packet
+      DEBUG_SERIAL.print("[SX1276] Data:\t\t");
+      // DEBUG_SERIAL.printf("%d\n", message.length);
+      DATA_SERIAL.write(&message.data[0], message.length);
+      DATA_SERIAL.flush();
     } else if (state == RADIOLIB_ERR_CRC_MISMATCH) {
       // packet was received, but is malformed
       DEBUG_SERIAL.println("[SX1276] CRC error!");
@@ -215,13 +190,14 @@ void loop() {
     #endif
 
     // put the module back to listen mode
-    DEBUG_SERIAL.printf("[SX1276] SnR %f RSSI %f\n",radio.getSNR(), radio.getRSSI());
+    // DEBUG_SERIAL.printf("[SX1276] SnR %f RSSI %f\n",radio.getSNR(), radio.getRSSI());
     radio.startReceive();
 
     // we're ready to receive more packets, clear the flag
     receivedFlag = false;
   }
 
+  #ifdef LORA_FREQUENCY_HOP
   // check if we need to do another frequency hop
   if (fhssChangeFlag == true) {    
     // we do, change it now
@@ -240,4 +216,5 @@ void loop() {
     // we're ready to do another hop, clear the flag
     fhssChangeFlag = false;
   }
+  #endif
 }
