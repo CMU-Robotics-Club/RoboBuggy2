@@ -35,7 +35,7 @@ class Telematics:
         
     def convert_odometry_to_navsatfix(self, msg):
         """Convert Odometry-type to NavSatFix-type for plotting on Foxglove
-
+x`
         Args:
             msg (Odometry): odometry as per INS
         """

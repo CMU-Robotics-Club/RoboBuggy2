@@ -5,6 +5,8 @@ import resource_retriever
 
 # ROS message imports
 from std_msgs.msg import Float32, Bool
+from nav_msgs.msg import Odometry
+from sensor_msgs.msg import NavSatFix
 from geometry_msgs.msg import PoseStamped, Quaternion, Pose
 from tf.transformations import quaternion_from_euler
 
@@ -14,8 +16,8 @@ import numpy as np
 import threading
 import trimesh
 
-
-
+LATITUDE_OFFSET = 40.441687
+LONGITUDE_OFFSET = -79.944276
 
 class MeshQuery:
   THROW_HEIGHT = 10000.0 # meters
@@ -134,7 +136,7 @@ class Simulator:
 
     self.pose_pub = rospy.Publisher("state/pose", PoseStamped, queue_size=10)
     self.speed_pub = rospy.Publisher("state/speed", Float32, queue_size=10)
-    
+    self.navsatfix_pub = rospy.Publisher("state/navsatfix", NavSatFix, queue_size=10)
 
   @staticmethod
   def rotate(vec, theta):
@@ -279,6 +281,22 @@ class Simulator:
     with self.lock:
       self.push_force = msg.data
 
+  def convert_pose_to_navsatfix(self, msg):
+    """Convert Pose-type to NavSatFix-type for plotting on Foxglove
+    Args:
+        msg (Pose): pose in NED coordinates
+    Returns: new_msg(NavSatFix): pose in LLH cooridnates
+    """
+
+    latitude, longitude = self.topo.get_gps(msg.position.x, msg.position.y)
+    new_msg = NavSatFix()
+    new_msg.header.stamp = rospy.Time.now()
+    new_msg.header.frame_id = "navsatfix"
+    new_msg.latitude = latitude
+    new_msg.longitude = longitude
+    new_msg.altitude = self.elevation
+    return new_msg
+
   def publish(self):
     # Publish 3d Pose
     location = Pose()
@@ -293,6 +311,8 @@ class Simulator:
     stamped_pose.header.frame_id = "base"
     stamped_pose.pose = location
     self.pose_pub.publish(stamped_pose)
+    fix_msg = self.convert_pose_to_navsatfix(location)
+    self.navsatfix_pub.publish(fix_msg)
     
     # Publish speed
     speed = Float32()
