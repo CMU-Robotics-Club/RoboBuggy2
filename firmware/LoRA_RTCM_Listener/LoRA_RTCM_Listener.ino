@@ -168,7 +168,6 @@ void loop() {
 
     if (state == RADIOLIB_ERR_NONE) {
       // packet was successfully received
-
       if (message.count != 0) {
         if (abs(message.count) == hold_count+1) {
           if (message.count > 0 && hold_len+message.length < sizeof(hold_data)) {
@@ -198,25 +197,25 @@ void loop() {
         hold_count = 0;
       }
     } else if (state == RADIOLIB_ERR_CRC_MISMATCH) {
-      // packet was received, bu  //radio.explicitHeader();t is malformed
+      // packet was received, but is malformed
       DEBUG_SERIAL.println("[SX1276] CRC error!");
-
     } else {
       // some other error occurred
       DEBUG_SERIAL.print("[SX1276] Failed, code ");
       DEBUG_SERIAL.println(state);
-
     }
 
+    #ifdef LORA_FREQUENCY_HOP    
     // print the number of hops it took
     DEBUG_SERIAL.print("[SX1276] Hops completed: ");
     DEBUG_SERIAL.println(hopsCompleted);
-    DEBUG_SERIAL.printf("[SX1276] SnR %f RSSI %f\n",radio.getSNR(), radio.getRSSI());
 
     // reset the counter
     hopsCompleted = 0;
+    #endif
 
     // put the module back to listen mode
+    DEBUG_SERIAL.printf("[SX1276] SnR %f RSSI %f\n",radio.getSNR(), radio.getRSSI());
     radio.startReceive();
 
     // we're ready to receive more packets, clear the flag

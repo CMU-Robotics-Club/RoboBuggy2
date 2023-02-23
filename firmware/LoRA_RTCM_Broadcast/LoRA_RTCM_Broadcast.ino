@@ -245,6 +245,7 @@ void loop() {
       Serial.println(transmissionState);
     }
 
+    #ifdef LORA_FREQUENCY_HOP
     // The channel is automatically reset to 0 upon completion
     Serial.print(F("[SX1276] Radio is on channel: "));
     Serial.println(radio.getFHSSChannel());
@@ -258,6 +259,7 @@ void loop() {
 
     // return to home channel before the next transaction
     radio.setFrequency(channels[radio.getFHSSChannel() % numberOfChannels]);
+    #endif
 
     // increment the packet counter
     packetCounter++;
