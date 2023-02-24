@@ -94,7 +94,7 @@ raw_file_directory : "/home/your_name"
 # ****************************************************************** 
 # IMU Settings 
 # ****************************************************************** 
-imu_data_rate : 100
+imu_data_rate : 30
 
 # The speed at which the individual IMU publishers will publish at.
 #      If set to -1, will use imu_data_rate to determine the rate at which to stream and publish
@@ -114,7 +114,7 @@ imu_angular_cov     : [0.01, 0, 0, 0, 0.01, 0, 0, 0, 0.01]
 # ****************************************************************** 
 # GNSS Settings (only applicable for devices with GNSS) 
 # ****************************************************************** 
-gnss1_data_rate : 2
+gnss1_data_rate : 30
 
 # The speed at which the individual GNSS1 publishers will publish at.
 #      If set to -1, will use gnss1_data_rate to determine the rate at which to stream and publish
@@ -137,7 +137,7 @@ gnss1_rf_error_detection_data_rate : -1  # Rate of gnss1/rf_error_detection topi
 gnss1_antenna_offset : [-0.127, 0.127, 0.0]
 
 # GNSS2 settings are only applicable for multi-GNSS systems (e.g. GQ7) 
-gnss2_data_rate : 2
+gnss2_data_rate : 30
 
 # The speed at which the individual GNSS2 publishers will publish at.
 #      If set to -1, will use gnss2_data_rate to determine the rate at which to stream and publish
@@ -163,7 +163,7 @@ gnss2_antenna_offset : [0.597, 0.127, 0.0]
 rtk_dongle_enable : False
 
 # Speed at which RTK data will be published if an individual topic data rate is not specified
-rtk_data_rate: 1
+rtk_data_rate: 30
 
 # The speed at which the individual RTK publishers will publish at.
 #      If set to 0, the stream will be turned off and the publisher will not be created
@@ -183,7 +183,7 @@ publish_nmea   : False
 # ****************************************************************** 
 # Kalman Filter Settings (only applicable for devices with a Kalman Filter) 
 # ****************************************************************** 
-filter_data_rate : 10
+filter_data_rate : 30
 
 # The speed at which the individual Filter publishers will publish at.
 #      If set to -1, will use filter_data_rate to determine the rate at which to stream and publish
@@ -343,7 +343,6 @@ gpio3_pin_mode : 0
 gpio4_feature  : 0
 gpio4_behavior : 0
 gpio4_pin_mode : 0
-
 
 # (GQ7 only) Filter Initialization control
 
