@@ -3,6 +3,7 @@ import rosbag
 from geometry_msgs.msg import Point
 import pandas as pd
 import numpy as np
+import pymap3d as pm
 from tf.transformations import euler_from_quaternion
 
 bag = rosbag.Bag('/rb_ws/src/buggy/bags/feb_11_run.bag')
@@ -44,16 +45,17 @@ for topic, msg, t in bag.read_messages(topics=topic):
     x = (latitude - LATITUDE_OFFSET) * 111111.0
     y = (longitude - LONGITUDE_OFFSET) * np.cos(longitude) * 111111.0
     z = down # NOTE: NEED TO CHANGE <-------------------------------------------
-
+    
+    (e, n, u) = pm.geodetic2enu(lat, lon, h, lat0, lon0, h0, ell=None, deg=True)
 
     time_array.append(current_time)
     latitude_array.append(latitude)
     longitude_array.append(longitude)
     down_array.append(down)
     heading_array.append(heading)
-    x_array.append(x)
-    y_array.append(y)
-    z_array.append(z)
+    x_array.append(e)
+    y_array.append(n)
+    z_array.append(u)
 
 df = pd.DataFrame(
         {'time': time_array,

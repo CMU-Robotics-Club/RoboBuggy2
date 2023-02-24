@@ -29,7 +29,7 @@ class Utils:
         if (len(vec) != 2):
             raise Exception("Vector input size != 2 (should just be x - East and y - North)")
         
-        return np.arctan2(vec[0], vec[1]) # atypical bc our X is pointing East, NOT North
+        return np.rad2deg(np.arctan2(vec[0], vec[1])) # atypical bc our X is pointing East, NOT North
     
     @staticmethod
     def calculate_lateral_accel(linear_speed, steering_angle):

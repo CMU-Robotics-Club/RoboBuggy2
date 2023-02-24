@@ -118,8 +118,8 @@ class Pure_Pursuit(Controller):
         l_d = (delta_x**2 + delta_y**2 + delta_z**2)**0.5
 
         L_WB = Buggy.WHEELBASE
-
-        return np.arctan(2.0*L_WB*np.sin(alpha)/l_d)
+        
+        return np.rad2deg(np.arctan(2.0*L_WB*np.sin(alpha)/l_d))
     
     @staticmethod
     def calculate_look_ahead_dist(speed):
@@ -154,7 +154,7 @@ class Pure_Pursuit(Controller):
         current_pose = My_Pose(x, y, z, heading)
 
         steering_cmd = self.calculate_steering_angle(current_pose, next_pose)
-
+        print("steering cmd:", steering_cmd)
         self.cmd_steering(steering_cmd)
     
     def run(self):

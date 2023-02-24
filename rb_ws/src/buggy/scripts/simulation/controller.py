@@ -39,15 +39,13 @@ class Controller:
   def cmd_steering(self, angle):
     msg = Float32(angle)
     self.steer_publisher.publish(msg)
-    with self.lock:
-      self.steering_angle = angle
+    print(angle)
+    self.steering_angle = angle
   
   def cmd_braking(self, is_brake):
     msg = Bool(is_brake)
     self.brake_publisher.publish(msg)
-    with self.lock:
-      print("c")
-      self.brake = is_brake
+    self.brake = is_brake
 
   # def step(self):
   #   # TODO: Fill in this function
