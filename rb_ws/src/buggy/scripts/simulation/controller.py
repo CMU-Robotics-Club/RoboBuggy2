@@ -21,7 +21,7 @@ class Controller:
     self.steering_angle = 0
     self.brake = 0
 
-    self.steer_publisher = rospy.Publisher("buggy/inpyt/steering", Float32, queue_size=10)
+    self.steer_publisher = rospy.Publisher("buggy/input/steering", Float32, queue_size=10)
     self.brake_publisher = rospy.Publisher("buggy/input/brake", Bool, queue_size=10)
 
     rospy.Subscriber("state/pose", PoseStamped, self.set_pose)
@@ -30,7 +30,7 @@ class Controller:
 
   def set_pose(self, msg):
     with self.lock:
-      self.pose = msg.data
+      self.pose = msg.pose
   
   def set_speed(self, msg):
     with self.lock:
@@ -46,19 +46,13 @@ class Controller:
     msg = Bool(is_brake)
     self.brake_publisher.publish(msg)
     with self.lock:
+      print("c")
       self.brake = is_brake
 
-  def step(self):
-    # TODO: Fill in this function
-    pass
-    # Use 
-
-  def run(self):
-    rate = rospy.Rate(self.RATE)
-    while not rospy.is_shutdown():
-      with self.lock:
-        self.step()
-      rate.sleep()
+  # def step(self):
+  #   # TODO: Fill in this function
+  #   pass
+  #   # Use 
 
 
 if __name__ == '__main__':

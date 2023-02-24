@@ -11,6 +11,7 @@ import numpy as np
 import pandas as pd
 from tf.transformations import euler_from_quaternion
 from utils import *
+import time
 
 from controller import Controller
 
@@ -52,9 +53,9 @@ class Pure_Pursuit(Controller):
         q_w = pose.orientation.w
         (_, _, heading) = np.rad2deg(euler_from_quaternion([q_x, q_y, q_z, q_w]))
 
-        x = pose.x
-        y = pose.y
-        z = pose.z # NOTE: Check NED frame of INS, what's the Units for DOWN?
+        x = pose.position.x
+        y = pose.position.y
+        z = pose.position.z # NOTE: Check NED frame of INS, what's the Units for DOWN?
         
         next_coord = self.path.iloc[self.curr_path_idx]
         next_x = next_coord["x"]
@@ -64,7 +65,7 @@ class Pure_Pursuit(Controller):
         delta_y = next_y - y
         delta_z = next_z - z
 
-        delta_heading = Utils.get_angle_from_vec([delta_x, delta_y])
+        delta_heading = Utils.get_heading_from_vec([delta_x, delta_y])
 
         dist = ((next_x - x)**2 + (next_y - y)**2 + (next_z - z)**2)**0.5
 
@@ -81,7 +82,7 @@ class Pure_Pursuit(Controller):
             delta_y = next_y - y
             delta_z = next_z - z
 
-            delta_heading = Utils.get_angle_from_vec([delta_x, delta_y])
+            delta_heading = Utils.get_heading_from_vec([delta_x, delta_y])
 
             dist = (delta_x**2 + delta_y**2 + delta_z**2)**0.5
             
@@ -112,7 +113,7 @@ class Pure_Pursuit(Controller):
 
         # Following https://www.ri.cmu.edu/pub_files/2009/2/Automatic_Steering_Methods_for_Autonomous_Automobile_Path_Tracking.pdf
 
-        alpha = Pure_Pursuit.get_heading_from_vec([delta_x, delta_y])
+        alpha = Utils.get_heading_from_vec([delta_x, delta_y])
 
         l_d = (delta_x**2 + delta_y**2 + delta_z**2)**0.5
 
@@ -128,8 +129,9 @@ class Pure_Pursuit(Controller):
     def step(self):
         """Preliminary control loop. Call this at a set frequency
         """
+        print("pure pursuit step")
         with self.lock:
-            speed = self.speed
+            speed = self.speed        
             steering_angle = self.steering_angle
             pose = self.pose
         if (Utils.calculate_lateral_accel(speed, steering_angle) > Buggy.MAX_LATERAL_ACCEL):
@@ -145,15 +147,23 @@ class Pure_Pursuit(Controller):
         q_w = pose.orientation.w
         (_, _, heading) = np.rad2deg(euler_from_quaternion([q_x, q_y, q_z, q_w]))
 
-        x = pose.x
-        y = pose.y
-        z = pose.z # NOTE: Check NED frame of INS, what's the Units for DOWN?
+        x = pose.position.x
+        y = pose.position.y
+        z = pose.position.z # NOTE: Check NED frame of INS, what's the Units for DOWN?
 
         current_pose = My_Pose(x, y, z, heading)
 
         steering_cmd = self.calculate_steering_angle(current_pose, next_pose)
 
         self.cmd_steering(steering_cmd)
+    
+    def run(self):
+        rate = rospy.Rate(self.RATE)
+        time.sleep(5)
+        while not rospy.is_shutdown():
+            print("HELLO")
+            self.step()
+            rate.sleep()
 
 
 if __name__ == '__main__':
