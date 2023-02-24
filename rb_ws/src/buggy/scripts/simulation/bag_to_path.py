@@ -1,10 +1,11 @@
+#! /usr/bin/env python3
 import rosbag
 from geometry_msgs.msg import Point
 import pandas as pd
 import numpy as np
 from tf.transformations import euler_from_quaternion
 
-bag = rosbag.Bag('/my_desktop/2023-02-12-11-39-27.bag')
+bag = rosbag.Bag('/rb_ws/src/buggy/bags/feb_11_run.bag')
 topic = '/nav/odom'
 
 LATITUDE_OFFSET = 40.441687
