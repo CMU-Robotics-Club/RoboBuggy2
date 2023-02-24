@@ -11,6 +11,8 @@
 #include <std_msgs/Float64.h>
 #include <std_msgs/Bool.h>
 #include <std_msgs/UInt32.h>
+#include <diagnostic_msgs/DiagnosticStatus.h>
+#include <diagnostic_msgs/KeyValue.h>
 
 /* ============= */
 /* Board Config  */
@@ -67,6 +69,10 @@ void brake_cb(const std_msgs::Float64& cmd_msg){
 ros::NodeHandle nh;
 ros::Subscriber<std_msgs::Float64> steer("SteerOut_T", steer_cb);
 ros::Subscriber<std_msgs::Float64> brake("BrakeOut_T", brake_cb);
+
+diagnostic_msgs::DiagnosticStatus teensy_status;
+diagnostic_msgs::KeyValue status_values[6];
+ros::Publisher debug("TeensyStateIn_T", &teensy_status);
 
 /* ============= */
 /* RC Controller */
@@ -165,6 +171,7 @@ void setup() {
   nh.initNode();
   nh.subscribe(steer);
   nh.subscribe(brake);
+  nh.advertise(debug);
 
   pinMode(BRAKE_RELAY_PIN, OUTPUT);
   digitalWrite(BRAKE_RELAY_PIN, LOW);
@@ -421,6 +428,37 @@ void loop()
       uint16_t current_pos = 65535;
       motor.currentPosition(current_pos);
       Serial2.printf("dyna pos %4d\n", current_pos);
+      
+      char steer_width[32];
+      char steer_time[32];
+      char brake_width[32];
+      char brake_time[32];
+      char pos_str[32];
+
+      String(rc_pin_widths[RC_STEER], DEC).toCharArray(&steer_width[0], 32);
+      String(steer_age, DEC).toCharArray(&steer_time[0], 32);
+      String(rc_pin_widths[RC_BRAKE], DEC).toCharArray(&brake_width[0], 32);
+      String(brake_age, DEC).toCharArray(&brake_time[0], 32);
+      String(current_pos, DEC).toCharArray(&pos_str[0], 32);
+
+      teensy_status.name = "Drive Teensy";
+      teensy_status.level = diagnostic_msgs::DiagnosticStatus::OK;
+      teensy_status.message = "Logging Status";
+      teensy_status.values = &status_values[0];
+      status_values[0].key = "state";
+      status_values[0].value = get_buggy_state_str();
+      status_values[1].key = "str wdt";
+      status_values[1].value = steer_width;
+      status_values[2].key = "str tmt";
+      status_values[2].value = steer_time;
+      status_values[3].key = "thr wdt";
+      status_values[3].value = brake_width;
+      status_values[4].key = "thr tmt";
+      status_values[4].value = brake_time;
+      status_values[5].key = "dyna pos";
+      status_values[5].value = pos_str;
+      teensy_status.values_length = sizeof(status_values)/sizeof(diagnostic_msgs::KeyValue);
+      debug.publish(&teensy_status);
     }
 
     //uint16_t currentPos = 0;
