@@ -11,7 +11,7 @@ RUN apt-get install -y -qq \
   ros-noetic-rosserial \
   ros-noetic-foxglove-bridge \
   ros-noetic-microstrain-inertial-driver \
-  ros-noetic-realsense2-camera
+  ros-noetic-realsense2-camera \
   ros-noetic-realsense2-description
 
 RUN pip3 install -r python-requirements.txt

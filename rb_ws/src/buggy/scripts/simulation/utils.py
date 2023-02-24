@@ -10,7 +10,7 @@ class My_Pose:
 
 class Buggy:
     WHEELBASE = 1.3
-    MAX_LATERAL_ACCEL = 9.81 # m/s^2
+    MAX_LATERAL_ACCEL = 9.81/2 # m/s^2
 
 class Utils:
     @staticmethod
