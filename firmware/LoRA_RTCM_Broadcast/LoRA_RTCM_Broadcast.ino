@@ -271,7 +271,7 @@ void loop() {
     Serial.print(F("[SX1276] Sending another packet of size "));
     Serial.print(message.length+LORA_HEADER_LENGTH);
     Serial.println(F("... "));
-    transmissionState = radio.startTransmit(&message.data[0], message.length+LORA_HEADER_LENGTH);
+    transmissionState = radio.startTransmit(&message.header[0], message.length+LORA_HEADER_LENGTH);
   }
 
   #ifndef LORA_FIXED_FREQ
