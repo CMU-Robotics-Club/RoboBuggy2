@@ -18,6 +18,10 @@
             <arg name="enable_accel"        value="false"/>            
             <arg name="tf_prefix" value="d455" />
         </include>
+	<node name="serial_node"        pkg="rosserial_python"      type="serial_node.py">
+            <param name="port"              type="string"               value="/dev/ttyUSB0"/>
+            <param name="baud"              type="int"                  value="1000000"/>
+        </node>
     </group>
     <node name="foxglove" pkg="foxglove_bridge" type="foxglove_bridge" />
     <node name="asset_server" pkg="buggy" type="asset_server.py" args="--directory='/rb_ws/src/buggy/assets'" />

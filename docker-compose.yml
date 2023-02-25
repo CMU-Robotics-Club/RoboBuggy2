@@ -5,13 +5,9 @@ services:
       - ./rb_ws:/rb_ws
       - "${RLSENSE_PORT:-/dev/null}:/dev/bus/usb"
     devices:
-      - "${TEENSY0_PORT:-/dev/null}:/dev/ttyUSB0"
+      - "${TEENSY_PORT:-/dev/null}:/dev/ttyUSB0"
       - "${WEBCAM_PORT:-/dev/null}:/dev/ttyUSB1"
       - "${GPS_PORT:-/dev/null}:/dev/ttyACM0"
-      - "${TEENSY1_PORT:-/dev/null}:/dev/ttyACM1"
-      - "${TEENSY2_PORT:-/dev/null}:/dev/ttyACM2"
-      - "${TEENSY3_PORT:-/dev/null}:/dev/ttyACM3"
-      - "${TEENSY4_PORT:-/dev/null}:/dev/ttyACM4"
     stdin_open: true # docker run -i
     tty: true        # docker run -t
     ports:
