@@ -26,7 +26,7 @@
 #define LORA_HEADER "W3VC/1"
 #define LORA_HEADER_LENGTH 6
 #define LORA_PAYLOAD_LENGTH 249
-//#define LORA_FREQUENCY_HOP
+#define LORA_FIXED_FREQ 902.5
 
 #define DEBUG_SERIAL Serial
 #define DATA_SERIAL Serial1
@@ -104,7 +104,11 @@ void setup() {
 
   // begin radio on home channel
   DEBUG_SERIAL.println("[SX1276] Initializing ... ");
+  #ifndef LORA_FIXED_FREQ
   int state = radio.begin(channels[channel_indices[0]], 125.0, 7, 5, RADIOLIB_SX127X_SYNC_WORD, 17, 8, 0);
+  #else
+  int state = radio.begin(LORA_FIXED_FREQ, 250.0, 7, 8, RADIOLIB_SX127X_SYNC_WORD, 17, 8, 0);
+  #endif
   if (state == RADIOLIB_ERR_NONE) {
     DEBUG_SERIAL.println("success!");
   } else {
@@ -125,7 +129,7 @@ void setup() {
 
   // set hop period in symbols
   // this will also enable FHSS
-  #ifdef LORA_FREQUENCY_HOP
+  #ifndef LORA_FIXED_FREQ
   state = radio.setFHSSHoppingPeriod(9);
   if (state == RADIOLIB_ERR_NONE) {
     DEBUG_SERIAL.println("success!");
@@ -140,7 +144,7 @@ void setup() {
   radio.setDio0Action(setRxFlag);
 
   // set the function to call when we need to change frequency
-  #ifdef LORA_FREQUENCY_HOP
+  #ifndef LORA_FIXED_FREQ
   radio.setDio1Action(setFHSSFlag);
   #endif
 
@@ -168,7 +172,7 @@ void loop() {
       // packet was successfully received
       // print data of the packet
       DEBUG_SERIAL.print("[SX1276] Data:\t\t");
-      // DEBUG_SERIAL.printf("%d\n", message.length);
+      DEBUG_SERIAL.printf("%d\n", message.length);
       DATA_SERIAL.write(&message.data[0], message.length);
       DATA_SERIAL.flush();
     } else if (state == RADIOLIB_ERR_CRC_MISMATCH) {
@@ -180,7 +184,7 @@ void loop() {
       DEBUG_SERIAL.println(state);
     }
 
-    #ifdef LORA_FREQUENCY_HOP    
+    #ifndef LORA_FIXED_FREQ    
     // print the number of hops it took
     DEBUG_SERIAL.print("[SX1276] Hops completed: ");
     DEBUG_SERIAL.println(hopsCompleted);
@@ -197,7 +201,7 @@ void loop() {
     receivedFlag = false;
   }
 
-  #ifdef LORA_FREQUENCY_HOP
+  #ifndef LORA_FIXED_FREQ
   // check if we need to do another frequency hop
   if (fhssChangeFlag == true) {    
     // we do, change it now
