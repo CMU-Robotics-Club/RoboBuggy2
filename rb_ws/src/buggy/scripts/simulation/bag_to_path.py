@@ -38,7 +38,7 @@ for topic, msg, t in bag.read_messages(topics=topic):
     q_y = msg.pose.pose.orientation.y
     q_z = msg.pose.pose.orientation.z
     q_w = msg.pose.pose.orientation.w
-    (_, _, heading) = np.rad2deg(euler_from_quaternion([q_x, q_y, q_z, q_w]))
+    (_, _, heading) = euler_from_quaternion([q_x, q_y, q_z, q_w])
 
     # 111,111 m per degree of latitude
     # 111,111 * cos(latitude) m per degree of longitude
@@ -46,7 +46,14 @@ for topic, msg, t in bag.read_messages(topics=topic):
     y = (longitude - LONGITUDE_OFFSET) * np.cos(longitude) * 111111.0
     z = down # NOTE: NEED TO CHANGE <-------------------------------------------
     
-    (e, n, u) = pm.geodetic2enu(lat, lon, h, lat0, lon0, h0, ell=None, deg=True)
+    (e, n, u) = pm.geodetic2enu(latitude,
+        longitude, 
+        -down, 
+        LATITUDE_OFFSET, 
+        LONGITUDE_OFFSET, 
+        0, 
+        ell=None, 
+        deg=True)
 
     time_array.append(current_time)
     latitude_array.append(latitude)
