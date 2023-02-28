@@ -18,7 +18,7 @@ class Controller:
     self.pose = None
     self.speed = None
 
-    self.steering_angle = 0
+    self.steering_angle_deg = 0
     self.brake = 0
 
     self.steer_publisher = rospy.Publisher("buggy/input/steering", Float32, queue_size=10)
@@ -37,10 +37,11 @@ class Controller:
       self.speed = msg.data
   
   def cmd_steering(self, angle):
+    print("publishing: ", angle)
     msg = Float32(angle)
     self.steer_publisher.publish(msg)
     print(angle)
-    self.steering_angle = angle
+    self.steering_angle_deg = angle
   
   def cmd_braking(self, is_brake):
     msg = Bool(is_brake)

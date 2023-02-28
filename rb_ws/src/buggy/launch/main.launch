@@ -5,7 +5,7 @@
 <launch>
     <param name="simulation" value="$(arg simulation)" />
     <group if="$(arg simulation)"> <!-- if simulation is true -->
-        <node name="simulator" pkg="buggy" type="simulator.py" />
+        <node name="simulator" pkg="buggy" type="simulator.py" output="screen" />
     </group>
     <group unless="$(arg simulation)"> <!-- if simulation is false -->
         <include file="$(find microstrain_inertial_driver)/launch/microstrain.launch">

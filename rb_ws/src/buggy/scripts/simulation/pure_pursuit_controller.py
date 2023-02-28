@@ -35,27 +35,28 @@ class Pure_Pursuit(Controller):
         
         self.curr_path_idx = 0 # idx we're currently looking at in the path file
 
-    def get_next_coord(self, pose, look_ahead_dist, look_ahead_angle) -> My_Pose:
+    def get_next_coord(self, pose, look_ahead_dist, look_ahead_angle_deg) -> My_Pose:
         """Get the next coordinates the buggy needs to look at.
 
         Args:
-            pose (Pose): pose in ROS format
+            pose (Pose): pose in ROS format, ENU frame
             look_ahead_dist (float): distance in meters
-            look_ahead_angle (float): angle range in which we should look ahead (each side)
+            look_ahead_angle_deg (float): angle range in which we should look ahead (each side)
         
         Returns:
             My_Pose: custom pose object of the lookahead coordinates
         """
-        
+        # GET ENU heading
         q_x = pose.orientation.x
         q_y = pose.orientation.y
         q_z = pose.orientation.z
         q_w = pose.orientation.w
-        (_, _, heading) = np.rad2deg(euler_from_quaternion([q_x, q_y, q_z, q_w]))
+        (_, _, heading_deg) = np.rad2deg(euler_from_quaternion([q_x, q_y, q_z, q_w]))
+        heading_deg = heading_deg - 90
 
         x = pose.position.x
         y = pose.position.y
-        z = pose.position.z # NOTE: Check NED frame of INS, what's the Units for DOWN?
+        z = pose.position.z
         
         next_coord = self.path.iloc[self.curr_path_idx]
         next_x = next_coord["x"]
@@ -65,13 +66,15 @@ class Pure_Pursuit(Controller):
         delta_y = next_y - y
         delta_z = next_z - z
 
-        delta_heading = Utils.get_heading_from_vec([delta_x, delta_y])
+        next_target_heading = Utils.get_heading_from_vec_deg([delta_x, delta_y])
+        delta_heading_deg = next_target_heading - heading_deg
 
-        dist = ((next_x - x)**2 + (next_y - y)**2 + (next_z - z)**2)**0.5
+        # ignore z in dist calculations
+        dist = (delta_x**2 + delta_y**2)**0.5
 
         # Loop until found appropriate next pose that satisfies look_ahead_angle and
         # look_ahead_dist
-        while (dist <= look_ahead_dist and delta_heading <= look_ahead_angle):
+        while (dist <= look_ahead_dist and delta_heading_deg <= heading_deg + look_ahead_angle_deg):
             self.curr_path_idx += 1
             next_coord = self.path.iloc[self.curr_path_idx]
             next_x = next_coord["x"]
@@ -79,16 +82,29 @@ class Pure_Pursuit(Controller):
             next_z = next_coord["z"]
 
             delta_x = next_x - x
+
             delta_y = next_y - y
             delta_z = next_z - z
 
-            delta_heading = Utils.get_heading_from_vec([delta_x, delta_y])
+            next_target_heading = Utils.get_heading_from_vec_deg([delta_x, delta_y])
+            delta_heading_deg = next_target_heading - heading_deg
 
-            dist = (delta_x**2 + delta_y**2 + delta_z**2)**0.5
+            dist = (delta_x**2 + delta_y**2)**0.5
+
+        print("dist: ", dist)
+        print("LH_dist: ", look_ahead_dist)
+        print("cur heading:", heading_deg)
+        print("next heading:",  next_coord["heading"])
+        print("heading to go to next target: ", next_target_heading)
+        print("delta heading: ", delta_heading_deg)
+        print("LH angle: ", look_ahead_angle_deg)
+        print("cur_path_idx, ", self.curr_path_idx)
+        print("this coord:", pose)
+        print("next coord:", next_coord)
             
         return My_Pose(next_x, next_y, next_z, next_coord["heading"])
     
-    def calculate_steering_angle(self, current_pose: My_Pose, next_pose: My_Pose) -> float:
+    def calculate_steering_angle_deg(self, current_pose: My_Pose, next_pose: My_Pose) -> float:
         """Calculate the steering angle for the buggy given our current position and where we
         would like to go next.
 
@@ -113,13 +129,13 @@ class Pure_Pursuit(Controller):
 
         # Following https://www.ri.cmu.edu/pub_files/2009/2/Automatic_Steering_Methods_for_Autonomous_Automobile_Path_Tracking.pdf
 
-        alpha = Utils.get_heading_from_vec([delta_x, delta_y])
+        alpha_rad = np.deg2rad(Utils.get_heading_from_vec_deg([delta_x, delta_y]))
 
         l_d = (delta_x**2 + delta_y**2 + delta_z**2)**0.5
 
         L_WB = Buggy.WHEELBASE
-        
-        return np.rad2deg(np.arctan(2.0*L_WB*np.sin(alpha)/l_d))
+
+        return np.rad2deg(np.arctan(2.0*L_WB*np.sin(alpha_rad)/l_d))
     
     @staticmethod
     def calculate_look_ahead_dist(speed):
@@ -132,9 +148,11 @@ class Pure_Pursuit(Controller):
         print("pure pursuit step")
         with self.lock:
             speed = self.speed        
-            steering_angle = self.steering_angle
+            steering_angle_deg = self.steering_angle_deg
             pose = self.pose
-        if (Utils.calculate_lateral_accel(speed, steering_angle) > Buggy.MAX_LATERAL_ACCEL):
+
+        # only calculate lateral accel for nonzero steering angle
+        if (steering_angle_deg == 0 or Utils.calculate_lateral_accel(speed, steering_angle_deg) > Buggy.MAX_LATERAL_ACCEL):
             self.cmd_braking(True)
         else:
             self.cmd_braking(False)
@@ -145,21 +163,21 @@ class Pure_Pursuit(Controller):
         q_y = pose.orientation.y
         q_z = pose.orientation.z
         q_w = pose.orientation.w
-        (_, _, heading) = np.rad2deg(euler_from_quaternion([q_x, q_y, q_z, q_w]))
+        (_, _, heading_deg) = np.rad2deg(euler_from_quaternion([q_x, q_y, q_z, q_w]))
 
         x = pose.position.x
         y = pose.position.y
         z = pose.position.z # NOTE: Check NED frame of INS, what's the Units for DOWN?
 
-        current_pose = My_Pose(x, y, z, heading)
+        current_pose = My_Pose(x, y, z, heading_deg)
 
-        steering_cmd = self.calculate_steering_angle(current_pose, next_pose)
+        steering_cmd = self.calculate_steering_angle_deg(current_pose, next_pose)
         print("steering cmd:", steering_cmd)
         self.cmd_steering(steering_cmd)
     
     def run(self):
         rate = rospy.Rate(self.RATE)
-        time.sleep(5)
+        time.sleep(1)
         while not rospy.is_shutdown():
             print("HELLO")
             self.step()
@@ -168,5 +186,5 @@ class Pure_Pursuit(Controller):
 
 if __name__ == '__main__':
   rospy.init_node("pure_pursuit_controller")
-  controller = Pure_Pursuit("/rb_ws/src/buggy/paths/run1.csv")
+  controller = Pure_Pursuit("/rb_ws/src/buggy/paths/out.csv")
   controller.run()

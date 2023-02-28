@@ -15,6 +15,7 @@ from tf.transformations import quaternion_from_euler
 import numpy as np
 import threading
 import trimesh
+import pymap3d as pm
 
 LATITUDE_OFFSET = 40.441687
 LONGITUDE_OFFSET = -79.944276
@@ -69,7 +70,7 @@ class MeshQuery:
 
     return location, normal
 
-  def get_gps(self, x, y):
+  def get_gps(self, x, y, z):
     """ Get the GPS coordinates of a point on the map
 
     Args:
@@ -83,8 +84,19 @@ class MeshQuery:
     # Use the center of the map as the origin
     # 111,111 m per degree of latitude
     # 111,111 * cos(latitude) m per degree of longitude
-    lat = self.center_lat + y / 111111.0
-    long = self.center_long + x / (111111.0 * np.cos(self.center_lat / 180.0 * np.pi))
+    # (lat, long, h) = pm.enu2geodetic(x, y, )
+    # lat = self.center_lat + y / 111111.0
+    # long = self.center_long + x / (111111.0 * np.cos(self.center_lat / 180.0 * np.pi))
+
+    lat, long, down = pm.enu2geodetic(x,
+                                      y, 
+                                      z, 
+                                      LATITUDE_OFFSET, 
+                                      LONGITUDE_OFFSET, 
+                                      0, 
+                                      ell=None, 
+                                      deg=True)
+  
     return (lat, long)
 
 
@@ -105,7 +117,7 @@ class Simulator:
   # Simulaton
   RATE = 50.0          # Hz
   GRAVITY = 9.81       # m/s^2
-  START_POSITION = [-50.0, -257.0]    # change later to hill 1, 2, 3, 4, 5
+  START_POSITION = [179.5948892, -139] 
   START_DIRECTION = [0.0, -1.0]       # change later to hill 1, 2, 3, 4, 5
 
   # Buggy Intrinsics
@@ -113,7 +125,7 @@ class Simulator:
   DRAG_COEFF = 0.3              # ~passenger car
   MASS = 49.8                   # kg <measured>
   WHEELBASE = 1.17              # m  <measured>
-  STEERING_MAX = 30             # degrees to left and degrees to right
+  STEERING_MAX_DEG = 30             # degrees to left and degrees to right
   ROLLING_RESISTANCE = 0.03     # ~passenger car
   HEIGHT = 0.1                  # m, (distance btw ground and axle of wheels)
 
@@ -121,12 +133,12 @@ class Simulator:
     self.topo = MeshQuery(map_uri, map_center_lat, map_center_long)
     self.lock = threading.Lock()
     
-    self.position, self.direction = np.array(self.START_POSITION), np.array(self.START_DIRECTION)
+    self.position, self.direction_vec = np.array(self.START_POSITION), np.array(self.START_DIRECTION)
     self.elevation = 0.0
     self.speed = 0.0
 
     self.brake = False # On/Off
-    self.steering = 1.0 # angle from neutral. Positive is right, negative is left
+    self.steering_deg = 1.0 # angle from neutral. Positive is right, negative is left
     self.push_force = 0.0 # Newtons
 
     # Setup Subscriber/Publisher Hooks
@@ -139,7 +151,7 @@ class Simulator:
     self.navsatfix_pub = rospy.Publisher("state/navsatfix", NavSatFix, queue_size=10)
 
   @staticmethod
-  def rotate(vec, theta):
+  def rotate_by_rad(vec, theta):
     """ Rotate a vector by theta radians"""
     matrix = np.array(
       [[np.cos(theta), np.sin(theta)],
@@ -161,7 +173,7 @@ class Simulator:
     magnitude += self.ROLLING_RESISTANCE * self.GRAVITY * self.MASS
 
     # Apply in opposite direction of self.speed, along self.direction
-    return (-1.0 if self.speed > 0 else 1.0) * magnitude * self.direction
+    return (-1.0 if self.speed > 0 else 1.0) * magnitude * self.direction_vec
 
   def compute_gravity_force(self):
     # compute horizontal forces on the buggy due to gravity
@@ -184,8 +196,7 @@ class Simulator:
 
   def compute_push_force(self):
     # Place force along direction
-    return self.push_force * self.direction
-
+    return self.push_force * self.direction_vec
 
   def get_steering_arc(self):
     # calculate the radius of the steering arc
@@ -193,10 +204,10 @@ class Simulator:
     #   2) Otherwise, return radius of arc
     # If turning right, steering radius is positive
     # If turning left, steering radius is negative
-    if self.steering == 0.0:
+    if self.steering_deg == 0.0:
       return np.inf
 
-    return self.WHEELBASE / np.tan(np.deg2rad(self.steering))
+    return self.WHEELBASE / np.tan(np.deg2rad(self.steering_deg))
 
 
 
@@ -213,7 +224,7 @@ class Simulator:
 
     force = self.compute_drag_force() + self.compute_gravity_force() + self.compute_push_force()
 
-    force_along_direction = np.dot(force, self.direction)
+    force_along_direction = np.dot(force, self.direction_vec)
 
     # Calculate new velocity
     self.speed += force_along_direction / self.MASS / self.RATE
@@ -223,9 +234,9 @@ class Simulator:
     distance = self.speed / self.RATE
 
     # Calculate new position
-    if self.steering == 0.0:
+    if self.steering_deg == 0.0:
       # Straight
-      self.position += distance * self.direction
+      self.position += distance * self.direction_vec
     else:
       # steering radius
       radius = self.get_steering_arc()
@@ -235,9 +246,9 @@ class Simulator:
       # Forward, Left : -delta_h  -r, +d
       # Backwrd, Right: -delta_h  +r, -d
       # Backwrd, Left : +delta_h  -r, -d
-      delta_heading = distance / radius
+      delta_heading_rad = distance / radius
 
-      arc_traveled = delta_heading # These are the same
+      arc_traveled = delta_heading_rad # These are the same
 
       # Calculate the displacement vector due to travel along arc
 
@@ -253,12 +264,12 @@ class Simulator:
       # Can just transpose the direction vector to get the correct angle
       # arctan2 asks for y-axis as first argument, x-axis as second
       # so we provide the direction vector as [x, y] (transposed)
-      rotated_disp = self.rotate(displacement, np.arctan2(self.direction[0], self.direction[1]))
+      rotated_disp = self.rotate_by_rad(displacement, np.arctan2(self.direction_vec[0], self.direction_vec[1]))
       
       self.position = self.position + rotated_disp
     
       # Calculate the angle change of the heading 
-      self.direction = self.rotate(self.direction, delta_heading)
+      self.direction_vec = self.rotate_by_rad(self.direction_vec, delta_heading_rad)
 
     # Refresh z position
     location, _ = self.topo.query_mesh(self.position[0], self.position[1])
@@ -266,29 +277,32 @@ class Simulator:
 
   def set_brake(self, msg: Bool):
     with self.lock:
+      print("lock: setbrake")
       self.brake = msg.data
 
   def set_steering(self, msg: Float32):
     with self.lock:
-      self.steering = msg.data
+      print("lock: set steer")
+      self.steering_deg = msg.data
       # Steering limits
-      if self.steering > self.STEERING_MAX:
-        self.steering = self.STEERING_MAX
-      elif self.steering < -self.STEERING_MAX:
-        self.steering = -self.STEERING_MAX
+      if self.steering_deg > self.STEERING_MAX_DEG:
+        self.steering_deg = self.STEERING_MAX_DEG
+      elif self.steering_deg < -self.STEERING_MAX_DEG:
+        self.steering_deg = -self.STEERING_MAX_DEG
 
   def set_push(self, msg: Float32):
     with self.lock:
+      print("lock: setpush")
       self.push_force = msg.data
 
   def convert_pose_to_navsatfix(self, msg):
     """Convert Pose-type to NavSatFix-type for plotting on Foxglove
     Args:
-        msg (Pose): pose in NED coordinates
+        msg (Pose): pose in ENU coordinates
     Returns: new_msg(NavSatFix): pose in LLH cooridnates
     """
 
-    latitude, longitude = self.topo.get_gps(msg.position.x, msg.position.y)
+    latitude, longitude = self.topo.get_gps(msg.position.x, msg.position.y, msg.position.z)
     new_msg = NavSatFix()
     new_msg.header.stamp = rospy.Time.now()
     new_msg.header.frame_id = "navsatfix"
@@ -304,7 +318,7 @@ class Simulator:
     location.position.y = self.position[1]
     location.position.z = self.elevation
     # convert direction to angle around z axis
-    angle = np.arctan2(self.direction[1], self.direction[0]) # passed in as y, x, returned in radians
+    angle = np.arctan2(self.direction_vec[1], self.direction_vec[0]) # passed in as y, x, returned in radians
     location.orientation = Quaternion(*quaternion_from_euler(0, 0, angle))
     stamped_pose = PoseStamped()
     stamped_pose.header.stamp = rospy.Time.now()
@@ -325,9 +339,11 @@ class Simulator:
     rate = rospy.Rate(self.RATE)
     while not rospy.is_shutdown():
       with self.lock:
-        self.step()
+        print("lock: run")
         self.publish()
+        self.step()
       rate.sleep()
+
 
 
 if __name__ == "__main__":
