@@ -12,8 +12,9 @@
             <arg name="params_file" value="/rb_ws/src/buggy/INS_params.yml"/>
         </include>
 	<include file="$(find realsense2_camera)/launch/rs_aligned_depth.launch">
-            <arg name="color_width"         value="1280"/>
+        <arg name="color_width"         value="1280"/>
    	    <arg name="color_height"        value="800"/>
+	    <arg name="color_fps"        value="30"/>
             <arg name="enable_gyro"         value="false"/>
             <arg name="enable_accel"        value="false"/>            
             <arg name="tf_prefix" value="d455" />

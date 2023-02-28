@@ -159,7 +159,7 @@ gnss2_antenna_offset : [0.597, 0.127, 0.0]
 # (GQ7 Only) Enable RTK dongle interface
 # Note: Enabling this will cause the node to publish on one of two topics depending
 #       on the version of the RTK dongle connected to the GQ7
-# Note: This is also required to be True in order to publish NMEA from the aux port
+# Note: This is also reiquired to be True in order to publish NMEA from the aux port
 rtk_dongle_enable : False
 
 # Speed at which RTK data will be published if an individual topic data rate is not specified
@@ -385,7 +385,7 @@ filter_speed_lever_arm : [0.0, 0.0, 0.0]
 # (GQ7 only) Wheeled Vehicle Constraint Control
 #    Note: When enabled, the filter uses the assumption that velocity is constrained to the primary vehicle axis.
 #          By convention, the primary vehicle axis is the vehicle X-axis
-filter_enable_wheeled_vehicle_constraint : False
+filter_enable_wheeled_vehicle_constraint : True
 
 # (GQ7 only) Vertical Gyro Constraint Control
 #    Note: When enabled and no valid GNSS measurements are available, the filter uses the accelerometers to track
