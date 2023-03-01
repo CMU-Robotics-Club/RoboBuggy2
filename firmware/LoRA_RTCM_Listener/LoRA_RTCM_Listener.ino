@@ -21,15 +21,28 @@
    is changed to the next channel.
 */
 
-#include <RadioLib.h>
-
 #define LORA_HEADER "W3VC/1"
 #define LORA_HEADER_LENGTH 6
 #define LORA_PAYLOAD_LENGTH 249
 #define LORA_FIXED_FREQ 902.5
+//#define LORA_ROS_NODE "rtcm"
 
 #define DEBUG_SERIAL Serial
 #define DATA_SERIAL Serial1
+
+#include <RadioLib.h>
+
+#ifdef LORA_ROS_NODE
+#include <ros.h>
+#include <ros/time.h>
+#include <mavros_msgs/RTCM.h>
+
+ros::NodeHandle nh;
+
+mavros_msgs::RTCM rtcm;
+ros::Publisher p(LORA_ROS_NODE, &rtcm);
+
+#endif
 
 typedef struct {
   byte length;
@@ -88,7 +101,17 @@ void setFHSSFlag(void) {
 
 void setup() {
   DEBUG_SERIAL.begin(57600);
-  DATA_SERIAL.begin(115200);
+
+  #ifndef LORA_ROS_NODE
+    DATA_SERIAL.begin(115200);
+  #else  
+    nh.getHardware()->setBaud(115200);
+    #if DATA_SERIAL != Serial
+      nh.getHardware()->setPort(&DATA_SERIAL);
+    #endif
+    nh.initNode();
+    nh.advertise(p);
+  #endif
 
   delay(5000);
 
@@ -168,14 +191,30 @@ void loop() {
     int state = radio.readData(&message.header[0], length);
     message.length = length > LORA_HEADER_LENGTH ? length - LORA_HEADER_LENGTH : 0;
 
+    // put the module back to listen mode
+    // DEBUG_SERIAL.printf("[SX1276] SnR %f RSSI %f\n",radio.getSNR(), radio.getRSSI());
+    radio.startReceive();
+
+    // we're ready to receive more packets, clear the flag
+    receivedFlag = false;
+
     if (state == RADIOLIB_ERR_NONE && message.length > 0) {
       // packet was successfully received
       // print data of the packet
       DEBUG_SERIAL.print("[SX1276] Data:\t\t");
       DEBUG_SERIAL.printf("%d\n", message.length);
+      #ifndef LORA_ROS_NODE
       DATA_SERIAL.write(&message.data[0], message.length);
-      DATA_SERIAL.flush();
-    } else if (state == RADIOLIB_ERR_CRC_MISMATCH) {
+      //DATA_SERIAL.flush();
+      #else 
+      rtcm.header.frame_id = "odom";
+      rtcm.header.stamp = nh.now();      
+      rtcm.data = &message.data[0];
+      rtcm.data_length = message.length;
+      p.publish(&rtcm);
+      #endif
+    } 
+    else if (state == RADIOLIB_ERR_CRC_MISMATCH) {
       // packet was received, but is malformed
       DEBUG_SERIAL.println("[SX1276] CRC error!");
     } else {
@@ -192,13 +231,6 @@ void loop() {
     // reset the counter
     hopsCompleted = 0;
     #endif
-
-    // put the module back to listen mode
-    // DEBUG_SERIAL.printf("[SX1276] SnR %f RSSI %f\n",radio.getSNR(), radio.getRSSI());
-    radio.startReceive();
-
-    // we're ready to receive more packets, clear the flag
-    receivedFlag = false;
   }
 
   #ifndef LORA_FIXED_FREQ
@@ -220,5 +252,9 @@ void loop() {
     // we're ready to do another hop, clear the flag
     fhssChangeFlag = false;
   }
+  #endif
+
+  #ifdef LORA_ROS_NODE
+  nh.spinOnce();
   #endif
 }
