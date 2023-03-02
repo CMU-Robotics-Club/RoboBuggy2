@@ -46,13 +46,19 @@ class Pure_Pursuit(Controller):
         Returns:
             My_Pose: custom pose object of the lookahead coordinates
         """
-        # GET ENU heading
+        # get heading from ENU position
+        # get 
         q_x = pose.orientation.x
         q_y = pose.orientation.y
         q_z = pose.orientation.z
         q_w = pose.orientation.w
         (_, _, heading_deg) = np.rad2deg(euler_from_quaternion([q_x, q_y, q_z, q_w]))
-        heading_deg = heading_deg - 90
+
+        # convert heading to north clockwise (compass)
+        if (heading_deg >= -90):
+            heading_deg = 90 - heading_deg 
+        else:
+            heading_deg = -270 - heading_deg
 
         x = pose.position.x
         y = pose.position.y
@@ -66,15 +72,15 @@ class Pure_Pursuit(Controller):
         delta_y = next_y - y
         delta_z = next_z - z
 
-        next_target_heading = Utils.get_heading_from_vec_deg([delta_x, delta_y])
-        delta_heading_deg = next_target_heading - heading_deg
+        heading_to_next_pathpoint = Utils.get_heading_from_vec_deg([delta_x, delta_y])
+        delta_heading_deg = np.abs(next_coord["heading"] - heading_deg)
 
         # ignore z in dist calculations
         dist = (delta_x**2 + delta_y**2)**0.5
 
         # Loop until found appropriate next pose that satisfies look_ahead_angle and
         # look_ahead_dist
-        while (dist <= look_ahead_dist and delta_heading_deg <= heading_deg + look_ahead_angle_deg):
+        while (dist <= look_ahead_dist and delta_heading_deg <= look_ahead_angle_deg):
             self.curr_path_idx += 1
             next_coord = self.path.iloc[self.curr_path_idx]
             next_x = next_coord["x"]
@@ -86,8 +92,8 @@ class Pure_Pursuit(Controller):
             delta_y = next_y - y
             delta_z = next_z - z
 
-            next_target_heading = Utils.get_heading_from_vec_deg([delta_x, delta_y])
-            delta_heading_deg = next_target_heading - heading_deg
+            heading_to_next_pathpoint = Utils.get_heading_from_vec_deg([delta_x, delta_y])
+            delta_heading_deg = heading_to_next_pathpoint - heading_deg
 
             dist = (delta_x**2 + delta_y**2)**0.5
 
@@ -95,7 +101,7 @@ class Pure_Pursuit(Controller):
         print("LH_dist: ", look_ahead_dist)
         print("cur heading:", heading_deg)
         print("next heading:",  next_coord["heading"])
-        print("heading to go to next target: ", next_target_heading)
+        print("heading to go to next target: ", heading_to_next_pathpoint)
         print("delta heading: ", delta_heading_deg)
         print("LH angle: ", look_ahead_angle_deg)
         print("cur_path_idx, ", self.curr_path_idx)
@@ -177,11 +183,11 @@ class Pure_Pursuit(Controller):
     
     def run(self):
         rate = rospy.Rate(self.RATE)
-        time.sleep(1)
+        time.sleep(2)
         while not rospy.is_shutdown():
             print("HELLO")
-            self.step()
             rate.sleep()
+            self.step()
 
 
 if __name__ == '__main__':

@@ -118,7 +118,7 @@ class Simulator:
   RATE = 50.0          # Hz
   GRAVITY = 9.81       # m/s^2
   START_POSITION = [179.5948892, -139] 
-  START_DIRECTION = [0.0, -1.0]       # change later to hill 1, 2, 3, 4, 5
+  START_DIRECTION = [-0.1, -1.0]       # change later to hill 1, 2, 3, 4, 5
 
   # Buggy Intrinsics
   CROSS_SECTION_AREA = 0.3      # m^2
