@@ -5,7 +5,8 @@ COPY python-requirements.txt python-requirements.txt
 RUN apt update
 RUN apt-get install -y -qq \
   python3-pip \
-  vim git tmux tree sl htop
+  python3-tk \
+  vim git tmux tree sl htop x11-apps
 
 RUN apt-get install -y -qq \
   ros-noetic-rosserial \
@@ -20,5 +21,9 @@ RUN echo 'cd rb_ws' >> ~/.bashrc
 RUN echo 'catkin_make >/dev/null' >> ~/.bashrc
 RUN echo 'source devel/setup.bash' >> ~/.bashrc
 
+# RUN echo "exec firefox" > ~/.xinitrc && chmod +x ~/.xinitrc
+# CMD ["x11vnc", "-create", "-forever"]
+
 # add mouse to tmux
 RUN echo 'set -g mouse on' >> ~/.tmux.conf
+
