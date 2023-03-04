@@ -16,8 +16,8 @@ class Simulator:
         self.plot_publisher = rospy.Publisher("sim_2d/utm", Pose, queue_size=10)
         self.steering_subscriber = rospy.Subscriber("sim_2d/steering", Float32, self.update_steering_angle)
 
-        self.e_utm = Simulator.UTM_EAST_ZERO
-        self.n_utm = Simulator.UTM_NORTH_ZERO
+        self.e_utm = Simulator.UTM_EAST_ZERO + 15
+        self.n_utm = Simulator.UTM_NORTH_ZERO - 10
         self.heading = heading # degrees
         self.velocity = 10 # m/s
 
@@ -77,5 +77,5 @@ class Simulator:
 
 if __name__ == "__main__":
     rospy.init_node("sim_2d_engine")
-    sim = Simulator(-90)
+    sim = Simulator(-175)
     sim.loop()
