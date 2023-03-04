@@ -31,6 +31,6 @@ if __name__ == "__main__":
     rate = rospy.Rate(5)
     i = 0
     while not rospy.is_shutdown():
-        controller.set_steering(1.8)
+        controller.set_steering(3.6)
         rate.sleep()
 

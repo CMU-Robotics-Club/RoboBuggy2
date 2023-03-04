@@ -2,12 +2,17 @@
 import rospy
 from geometry_msgs.msg import Pose
 from std_msgs.msg import Float32
+from sensor_msgs.msg import NavSatFix
 import threading
 import numpy as np
+import utm
+import time
 
 class Simulator:
-    UTM_EAST_ZERO = 589702.62
-    UTM_NORTH_ZERO = 4477172.17
+    UTM_EAST_ZERO = 589702.87
+    UTM_NORTH_ZERO = 4477172.947
+    UTM_ZONE_NUM = 17
+    UTM_ZONE_LETTER = "T"
     def __init__(self, heading: float):
         """
         Args:
@@ -15,6 +20,8 @@ class Simulator:
         """
         self.plot_publisher = rospy.Publisher("sim_2d/utm", Pose, queue_size=10)
         self.steering_subscriber = rospy.Subscriber("sim_2d/steering", Float32, self.update_steering_angle)
+        self.velocity_publisher = rospy.Publisher("sim_2d/velocity", Float32, queue_size=10)
+        self.navsatfix_publisher = rospy.Publisher("sim_2d/navsatfix", NavSatFix, queue_size=10)
 
         self.e_utm = Simulator.UTM_EAST_ZERO + 15
         self.n_utm = Simulator.UTM_NORTH_ZERO - 10
@@ -60,11 +67,22 @@ class Simulator:
         """Publishes the pose the arrow in visualizer should be at
         """
         p = Pose()
+        v = Float32()
+        nsf = NavSatFix()
         with self.lock:
             p.position.x = self.e_utm
             p.position.y = self.n_utm
             p.position.z = self.heading
+            v.data = self.velocity
+        
+        (lat, long) = utm.to_latlon(p.position.x, p.position.y, Simulator.UTM_ZONE_NUM, Simulator.UTM_ZONE_LETTER)
+        nsf.latitude = lat
+        nsf.longitude = long
+        nsf.header.stamp = rospy.Time.now()
         self.plot_publisher.publish(p)
+        self.velocity_publisher.publish(v)
+        self.navsatfix_publisher.publish(nsf)
+
         
     def loop(self):
         """Loop for the main simulator engine
