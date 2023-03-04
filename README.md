@@ -59,7 +59,7 @@ Examples (from the same run):
 Control Example:
 - Foxglove output (via sending steering + velocity commands): [link](https://youtu.be/AOsecwWmqyw)
 
-
+Instructions:
 - Install the appropriate X11 server on your computer for your respective operating systems (Xming for Windows, XQuartz for Mac, etc.).
 - Mac: In XQuartz settings, ensure that the "Allow connections from network clients" under "Security" is checked.
 - Windows: Make sure that you're using WSL 2 Ubuntu and NOT command prompt.
