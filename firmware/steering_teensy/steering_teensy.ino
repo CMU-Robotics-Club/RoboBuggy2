@@ -71,7 +71,7 @@ ros::Subscriber<std_msgs::Float64> steer("SteerOut_T", steer_cb);
 ros::Subscriber<std_msgs::Float64> brake("BrakeOut_T", brake_cb);
 
 diagnostic_msgs::DiagnosticStatus teensy_status;
-diagnostic_msgs::KeyValue status_values[6];
+diagnostic_msgs::KeyValue status_values[7];
 ros::Publisher debug("TeensyStateIn_T", &teensy_status);
 
 /* ============= */
@@ -208,51 +208,69 @@ void recenterWheel(DynamixelMotor &motor) {
 
   int offset = 0;
   while (true) {
+    offset += 5;
     a = motor.goalPosition(start - offset);
     Serial.println(a);
-    offset += 5;
 
     delay(100);
 
     uint16_t current_pos;
     a = motor.currentPosition(current_pos);
 
-    Serial.printf("offset %d, current position is %d %d\n", start - offset, current_pos, a);
+    Serial.printf("right offset %d, current position is %d %d\n", start - offset, current_pos, a);
 
     if (abs((int)current_pos - (int)(start - offset)) > 100) {
-      left_angle_limit = current_pos + 10;
+      right_angle_limit = current_pos + 100;
+      Serial.printf("Stopping right limit at %d\n", right_angle_limit);
+      break;
+    }
+  }
+
+  Serial.println("Going to center");
+
+  motor.goalPosition(start);
+  delay(500);
+
+  offset = 0;
+  while (true) {
+    offset += 5;
+    motor.goalPosition(start + offset);
+
+    delay(100);
+
+    uint16_t current_pos;
+    a = motor.currentPosition(current_pos);
+    Serial.printf("offset %d, current position is %d %d\n", start + offset, current_pos, a);
+
+    if (abs((int)current_pos - (int)(start + offset)) > 100) {
+      left_angle_limit = current_pos - 100;
       Serial.printf("Stopping left limit at %d\n", left_angle_limit);
       break;
     }
   }
 
-  offset = 0;
-  while (true) {
-    motor.goalPosition(start + offset);
-    offset += 5;
-
-    delay(100);
-
-    uint16_t current_pos;
-    motor.currentPosition(current_pos);
-    if (abs((int)current_pos - (int)(start + offset)) > 100) {
-      right_angle_limit = current_pos - 10;
-      Serial.printf("Stopping right limit at %d\n", right_angle_limit);
-      break;
-    }
-  }
+  motor.goalPosition((left_angle_limit + right_angle_limit) / 2);
+  delay(500);
 }
 
 double map_pin_width(int pin_width) {
   float range = (pin_width - 1000.0) / 650.0; // 0 to 1
 
-  float midpoint = 0.61;
+  float midpoint = 0.51;
+
+  float mapped;
 
   if (range > midpoint) {
-    return (range - midpoint) / (1.0 - midpoint) * 0.5 + 0.5;
+    mapped = (range - midpoint) / (1.0 - midpoint) * 0.5 + 0.5;
   } else {
-    return 0.5 - (midpoint - range) / (midpoint) * 0.5;
+    mapped = 0.5 - (midpoint - range) / (midpoint) * 0.5;
   }
+
+  mapped = (mapped * 2.0) - 1.0;
+
+  mapped = ((mapped >= 0) ? 1 : -1) * (mapped * mapped);
+
+  return (mapped + 1.0) / 2.0;
 }
 
 void loop()
@@ -296,41 +314,16 @@ void loop()
   motor.write(5, (byte)250);
   
   motor.enableTorque(false);
-
-  /*while (1) {
-    uint16_t currentPos = 0;
-    motor.currentPosition(currentPos);
-
-    delay(500);
-
-    Serial.println(currentPos);
-  }*/
-
-
-  /*motor.wheelMode();
-  motor.jointMode(0, 0x3FF);
+  motor.jointMode(1, 0xFFF);
   motor.enableTorque();
+  recenterWheel(motor);
 
-  recenterWheel(motor);*/
-
-  //motor.wheelMode();
-  //motor.enableTorque();
-  //recenterWheel(motor);
-
+  motor.enableTorque(false);
   motor.jointMode(right_angle_limit, left_angle_limit); // Set the angular limits of the servo. Set to [min, max] by default
   motor.enableTorque();
 
   int rc_pin_widths[NUM_RC_CHANNELS] = { 0 };
   bool rc_pin_timed_out[NUM_RC_CHANNELS] = { false };
-
-  /*while (true) {
-    uint16_t pos = 0;
-    motor.currentPosition(pos);
-    Serial.println(pos);
-    motor.goalPosition(1250);
-    //motor.goalPositionDegree(90 + (0.7 - 0.5) * 2.0 * 90.0);
-    delay(100);
-  }*/
 
   int log_timer = 0;
 
@@ -349,6 +342,19 @@ void loop()
       // 50 ms is two and a half RC periods
       rc_pin_timed_out[i] = (currentMillis - rc_last_edge[i]) >= 50.0;
     }
+
+    const int steer_average_count = 5;
+    static int steer_average_samples[steer_average_count] = { 0 };
+    static int steer_average_idx = 0;
+
+    steer_average_samples[steer_average_idx++] = rc_pin_widths[RC_STEER];
+    steer_average_idx %= steer_average_count;
+    float steer_average = 0.0;
+    for (int i = 0; i < steer_average_count; ++i) {
+      steer_average += steer_average_samples[i];
+    }
+    steer_average /= steer_average_count;
+    
 
     bool throttleAuto = (1750 <= rc_pin_widths[RC_BRAKE]);
     bool throttleTele = (rc_pin_widths[RC_BRAKE] <= 1250);
@@ -434,12 +440,14 @@ void loop()
       char brake_width[32];
       char brake_time[32];
       char pos_str[32];
+      char avg_str[32];
 
       String(rc_pin_widths[RC_STEER], DEC).toCharArray(&steer_width[0], 32);
       String(steer_age, DEC).toCharArray(&steer_time[0], 32);
       String(rc_pin_widths[RC_BRAKE], DEC).toCharArray(&brake_width[0], 32);
       String(brake_age, DEC).toCharArray(&brake_time[0], 32);
       String(current_pos, DEC).toCharArray(&pos_str[0], 32);
+      String(steer_average, DEC).toCharArray(&avg_str[0], 32);
 
       teensy_status.name = "Drive Teensy";
       teensy_status.level = diagnostic_msgs::DiagnosticStatus::OK;
@@ -457,6 +465,8 @@ void loop()
       status_values[4].value = brake_time;
       status_values[5].key = "dyna pos";
       status_values[5].value = pos_str;
+      status_values[6].key = "avg_str";
+      status_values[6].value = avg_str;
       teensy_status.values_length = sizeof(status_values)/sizeof(diagnostic_msgs::KeyValue);
       debug.publish(&teensy_status);
     }
@@ -484,7 +494,7 @@ void loop()
       bool engage_brakes = abs(ros_brake - 1.0) < 1e-6;
       digitalWrite(BRAKE_RELAY_PIN, !engage_brakes);
     } else {
-      float range = map_pin_width(rc_pin_widths[RC_STEER]);
+      float range = map_pin_width(steer_average);
       
       range = (range * 2.0) - 1.0; // -1 to 1
 
