@@ -60,6 +60,19 @@ If you get an error about not finding package `buggy`, remember to run `source /
 - Run `xeyes` while INSIDE the Docker container to test X11 forwarding. If this works, we're good.
 - Run `roslaunch buggy sim_2d.launch` for the simulator.
 
+Examples (from the same run):
+- Foxglove playback of simulated file example: [link](https://youtu.be/dpa5oH69eJI)
+- Matplotlib live simulation example: [link](https://youtu.be/6Xji-FtDQfo)
+
+### Using the Simulator
+Feedback:
+- Longitude + Latitude for Foxglove visualization on map: `/sim_2d/navsatfix` (sensor_msgs/NavSatFix)
+- UTM coordinates (assume we're in Zone 17T): `/sim_2d/utm` (geometry_msgs/Pose - position.x = Easting meters , position.y = Northing meters, position.z = heading in degrees from East axis + is CCW)
+
+Commands:
+- Steering angle: `/sim_2d/steering` in degrees (std_msgs/Float32)
+- Velocity: `/sim_2d/velocity` in m/s (std_msgs/Float32)
+
 ---
 
 ## Development
