@@ -1,4 +1,5 @@
-# /usr/bin/env python3
+#!/usr/bin/env python3
+
 import rospy
 
 # ROS Message Imports
@@ -11,6 +12,7 @@ from threading import Lock
 from trajectory import Trajectory
 from world import World
 from controller import Controller
+from pure_pursuit_controller import PurePursuitController
 from pose import Pose
 
 
@@ -27,8 +29,8 @@ class AutonSystem:
     controller: Controller = None
     lock = None
 
-    pose: Pose = None
-    speed = None
+    pose: Pose = Pose(0, 0, 0)
+    speed = 0
 
     steer_publisher = None
 
@@ -42,6 +44,10 @@ class AutonSystem:
         rospy.Subscriber("state/speed", Float32, self.update_speed)
         self.steer_publisher = rospy.Publisher(
             "buggy/input/steering", Float32, queue_size=1
+        )
+
+        self.heading_publisher = rospy.Publisher(
+            "auton/debug/heading", Float32, queue_size=1
         )
 
     def update_speed(self, msg):
@@ -67,3 +73,15 @@ class AutonSystem:
         # Publish control output
         steering_angle_deg = np.rad2deg(steering_angle)
         self.steer_publisher.publish(Float32(steering_angle_deg))
+
+        # Publish debug data
+        self.heading_publisher.publish(Float32(pose.theta))
+
+
+if __name__ == "__main__":
+    rospy.init_node("auton_system")
+    auton_system = AutonSystem(
+        Trajectory("/rb_ws/src/buggy/paths/buggycourse.json"), PurePursuitController()
+    )
+    while not rospy.is_shutdown():
+        rospy.spin()

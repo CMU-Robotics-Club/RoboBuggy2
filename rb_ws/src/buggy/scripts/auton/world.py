@@ -58,7 +58,7 @@ class World:
             y (float): y in meters from some arbitrary zero point
 
         Returns:
-            tuple: (lat, lon) in degrees
+            tuple: (lat, lon)
         """
         utm_coords = utm.to_latlon(
             x + World.WORLD_EAST_ZERO, y + World.WORLD_NORTH_ZERO, 17, "T"
@@ -115,7 +115,7 @@ class World:
         Returns:
             Pose: pose with x, y coordinates
         """
-        world_coords = World.gps_to_world(pose.x, pose.y)
+        world_coords = World.gps_to_world(pose.y, pose.x)
         new_heading = pose.theta  # INS uses ENU frame so no heading conversion needed
 
         return Pose(world_coords[0], world_coords[1], new_heading)
@@ -133,4 +133,4 @@ class World:
         gps_coords = World.world_to_gps(pose.x, pose.y)
         new_heading = pose.theta
 
-        return Pose(gps_coords[0], gps_coords[1], new_heading)
+        return Pose(gps_coords[1], gps_coords[0], new_heading)

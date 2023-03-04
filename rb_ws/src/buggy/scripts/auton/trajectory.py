@@ -63,6 +63,14 @@ class Trajectory:
             dx_dt * dx_dt + dy_dt * dy_dt
         ) ** 1.5
 
+    def get_num_points(self):
+        """Gets the number of points along the trajectory
+
+        Returns:
+            int: number of points
+        """
+        return len(self.positions)
+
     def get_position_by_index(self, index):
         """Gets the position at a given index along the trajectory,
         interpolating if necessary
@@ -155,7 +163,9 @@ class Trajectory:
 
         return curvature
 
-    def get_closest_index_on_path(self, x, y, start_index=0, end_index=None):
+    def get_closest_index_on_path(
+        self, x, y, start_index=0, end_index=None, subsample_resolution=10000
+    ):
         """Gets the index of the closest point on the trajectory to the given point
 
         Args:
@@ -171,14 +181,39 @@ class Trajectory:
         if end_index is None:
             end_index = len(self.positions)
 
+        # Floor/ceil the start/end indices
+        start_index = int(np.floor(start_index))
+        end_index = int(np.ceil(end_index))
+
         # Calculate the distance from the point to each point on the trajectory
-        distances = np.sqrt(
-            (self.positions[start_index:end_index, 0] - x) ** 2
-            + (self.positions[start_index:end_index, 1] - y) ** 2
+        distances = (self.positions[start_index : end_index + 1, 0] - x) ** 2 + (
+            self.positions[start_index : end_index + 1, 1] - y
+        ) ** 2
+
+        min_ind = np.argmin(distances) + start_index
+
+        start_index = max(0, min_ind - 1)
+        end_index = min(len(self.positions), min_ind + 1)
+
+        # Now interpolate at a higher resolution to get a more accurate result
+        x_interp = np.interp(
+            np.linspace(start_index, end_index, subsample_resolution + 1),
+            np.arange(len(self.positions)),
+            self.positions[:, 0],
+        )
+        y_interp = np.interp(
+            np.linspace(start_index, end_index, subsample_resolution + 1),
+            np.arange(len(self.positions)),
+            self.positions[:, 1],
         )
 
+        distances = (x_interp - x) ** 2 + (y_interp - y) ** 2
+
         # Return the index of the closest point
-        return np.argmin(distances) + start_index
+        return (
+            np.argmin(distances) / subsample_resolution * (end_index - start_index)
+            + start_index
+        )
 
 
 if __name__ == "__main__":
