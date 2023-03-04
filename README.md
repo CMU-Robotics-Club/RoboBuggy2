@@ -52,6 +52,13 @@ If you get an error about not finding package `buggy`, remember to run `source /
 
 ---
 ## 2D Simulation Quickstart
+Examples (from the same run):
+- Foxglove playback of simulated file example: [link](https://youtu.be/dpa5oH69eJI)
+- Matplotlib live simulation example: [link](https://youtu.be/6Xji-FtDQfo)
+
+Control Example:
+- Foxglove output (via sending steering + velocity commands): [link](https://youtu.be/AOsecwWmqyw)
+
 - Install the appropriate X11 server on your computer for your respective operating systems (Xming for Windows, XQuartz for Mac, etc.).
 - Mac: In XQuartz settings, ensure that the "Allow connections from network clients" under "Security" is checked.
 - Windows: Make sure that you're using WSL 2 Ubuntu and NOT command prompt.
@@ -59,10 +66,6 @@ If you get an error about not finding package `buggy`, remember to run `source /
 - Boot up the docker container using the "Alternate Shortcut" above.
 - Run `xeyes` while INSIDE the Docker container to test X11 forwarding. If this works, we're good.
 - Run `roslaunch buggy sim_2d.launch` for the simulator.
-
-Examples (from the same run):
-- Foxglove playback of simulated file example: [link](https://youtu.be/dpa5oH69eJI)
-- Matplotlib live simulation example: [link](https://youtu.be/6Xji-FtDQfo)
 
 ### Using the Simulator
 Feedback:
