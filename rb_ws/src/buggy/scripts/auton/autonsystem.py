@@ -3,8 +3,8 @@
 import rospy
 
 # ROS Message Imports
-from std_msgs.msg import Float32
-from geometry_msgs.msg import PoseStamped
+from std_msgs.msg import Float32, Float64
+from nav_msgs.msg import Odometry
 
 import numpy as np
 from threading import Lock
@@ -29,9 +29,6 @@ class AutonSystem:
     controller: Controller = None
     lock = None
 
-    pose: Pose = Pose(0, 0, 0)
-    speed = 0
-
     steer_publisher = None
 
     def __init__(self, trajectory, controller) -> None:
@@ -40,10 +37,12 @@ class AutonSystem:
 
         self.lock = Lock()
 
-        rospy.Subscriber("state/pose", PoseStamped, self.tick)
-        rospy.Subscriber("state/speed", Float32, self.update_speed)
+        rospy.Subscriber("nav/odom", Odometry, self.tick)
         self.steer_publisher = rospy.Publisher(
-            "buggy/input/steering", Float32, queue_size=1
+            "buggy/input/steering", Float64, queue_size=1
+        )
+        self.brake_publisher = rospy.Publisher(
+            "buggy/input/brake", Float64, queue_size=1
         )
 
         self.heading_publisher = rospy.Publisher(
@@ -58,11 +57,13 @@ class AutonSystem:
         # Received an updated pose from the state estimator
         # Compute the new control output and publish it to the buggy
 
-        with self.lock:
-            current_speed = self.speed
+        current_speed = np.sqrt(
+            msg.twist.twist.linear.x**2 + msg.twist.twist.linear.y**2
+        )
+        current_rospose = msg.pose.pose
 
         # Get data from message
-        pose_gps = Pose.rospose_to_pose(msg.pose)
+        pose_gps = Pose.rospose_to_pose(current_rospose)
         pose = World.gps_to_world_pose(pose_gps)
 
         # Compute control output
@@ -72,7 +73,8 @@ class AutonSystem:
 
         # Publish control output
         steering_angle_deg = np.rad2deg(steering_angle)
-        self.steer_publisher.publish(Float32(steering_angle_deg))
+        self.steer_publisher.publish(Float64(steering_angle_deg))
+        self.brake_publisher.publish(Float64(0))
 
         # Publish debug data
         self.heading_publisher.publish(Float32(pose.theta))
@@ -81,7 +83,8 @@ class AutonSystem:
 if __name__ == "__main__":
     rospy.init_node("auton_system")
     auton_system = AutonSystem(
-        Trajectory("/rb_ws/src/buggy/paths/buggycourse.json"), PurePursuitController()
+        Trajectory("/rb_ws/src/buggy/paths/quartermiletrack.json"),
+        PurePursuitController(),
     )
     while not rospy.is_shutdown():
         rospy.spin()

@@ -28,4 +28,7 @@
     <node name="asset_server" pkg="buggy" type="asset_server.py" args="--directory='/rb_ws/src/buggy/assets'" />
     <node name="asset_publish" pkg="buggy" type="asset_publish.py" />
     <node name="telematics" pkg="buggy" type="telematics.py" />
+
+    <!-- AUTON -->
+    <node name="auton_system" pkg="buggy" type="autonsystem.py" output="screen"/>
 </launch>

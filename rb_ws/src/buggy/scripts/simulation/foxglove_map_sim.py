@@ -1,8 +1,9 @@
 #! /usr/bin/env python3
 import rospy
-from geometry_msgs.msg import PoseStamped
+from geometry_msgs.msg import Pose, Twist, PoseWithCovariance, TwistWithCovariance
 from sensor_msgs.msg import NavSatFix
-from std_msgs.msg import Float32
+from nav_msgs.msg import Odometry
+from std_msgs.msg import Float64
 import threading
 import numpy as np
 import utm
@@ -15,13 +16,12 @@ class FoxgloveSimulator:
     START_LON = -79.94158389000677
 
     def __init__(self):
-        self.pose_publisher = rospy.Publisher("state/pose", PoseStamped, queue_size=1)
+        self.pose_publisher = rospy.Publisher("nav/odom", Odometry, queue_size=1)
         self.navsat_publisher = rospy.Publisher(
             "state/pose_navsat", NavSatFix, queue_size=1
         )
-        self.speed_publisher = rospy.Publisher("state/speed", Float32, queue_size=1)
 
-        rospy.Subscriber("buggy/input/steering", Float32, self.update_steering_angle)
+        rospy.Subscriber("buggy/input/steering", Float64, self.update_steering_angle)
 
         self.lat = self.START_LAT
         self.lon = self.START_LON
@@ -34,11 +34,11 @@ class FoxgloveSimulator:
 
         self.lock = threading.Lock()
 
-    def update_steering_angle(self, data: Float32):
+    def update_steering_angle(self, data: Float64):
         """Updates the steering angle as callback function for subscriber
 
         Args:
-            data (Float32): angle in degrees
+            data (Float64): angle in degrees
         """
         with self.lock:
             self.steering_angle = data.data
@@ -75,19 +75,27 @@ class FoxgloveSimulator:
 
     def publish(self):
         """Publishes the pose the arrow in visualizer should be at"""
-        p = PoseStamped()
-        p.header.stamp = rospy.Time.now()
-        p.header.frame_id = "map"
-        p.pose.position.x = self.lon
-        p.pose.position.y = self.lat
-        p.pose.position.z = 260
 
-        p.pose.orientation.x = 0
-        p.pose.orientation.y = 0
-        p.pose.orientation.z = np.sin(self.heading / 2)
-        p.pose.orientation.w = np.cos(self.heading / 2)
+        p = Pose()
+        p.position.x = self.lon
+        p.position.y = self.lat
+        p.position.z = 260
 
-        self.pose_publisher.publish(p)
+        p.orientation.x = 0
+        p.orientation.y = 0
+        p.orientation.z = np.sin(self.heading / 2)
+        p.orientation.w = np.cos(self.heading / 2)
+
+        t = Twist()
+        t.linear.x = self.velocity
+
+        odom = Odometry()
+        odom.header.stamp = rospy.Time.now()
+        odom.header.frame_id = "map"
+        odom.pose = PoseWithCovariance(pose=p)
+        odom.twist = TwistWithCovariance(twist=t)
+
+        self.pose_publisher.publish(odom)
 
         navsat = NavSatFix()
         navsat.header.stamp = rospy.Time.now()
@@ -97,11 +105,6 @@ class FoxgloveSimulator:
         navsat.altitude = 260
 
         self.navsat_publisher.publish(navsat)
-
-        speed = Float32()
-        speed.data = self.velocity
-
-        self.speed_publisher.publish(speed)
 
     def loop(self):
         """Loop for the main simulator engine"""
