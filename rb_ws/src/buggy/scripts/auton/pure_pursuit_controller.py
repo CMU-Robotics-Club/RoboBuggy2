@@ -57,7 +57,7 @@ class PurePursuitController(Controller):
             current_pose.x,
             current_pose.y,
             start_index=self.current_traj_index,
-            end_index=self.current_traj_index + 1,
+            end_index=self.current_traj_index + 10,
         )
         self.current_traj_index = max(traj_index, self.current_traj_index)
         traj_dist = trajectory.get_distance_from_index(traj_index)
