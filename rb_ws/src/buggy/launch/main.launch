@@ -29,6 +29,6 @@
     <node name="asset_publish" pkg="buggy" type="asset_publish.py" />
     <node name="telematics" pkg="buggy" type="telematics.py" />
 
-    <!-- AUTON -->
+    <!-- ENABLE AUTON -->
     <node name="auton_system" pkg="buggy" type="autonsystem.py" output="screen"/>
 </launch>
