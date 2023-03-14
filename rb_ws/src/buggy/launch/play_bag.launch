@@ -1,0 +1,8 @@
+<launch>  
+	<arg name="bagfile"/>
+  	<node pkg="rosbag" type="play" name="rosbag_play" output="screen" args="--clock $(find buggy)/bags/$(arg bagfile).bag"/>
+    	<node name="foxglove" pkg="foxglove_bridge" type="foxglove_bridge" />
+	<node name="telematics" pkg="buggy" type="telematics.py" />
+	<node name="asset_server" pkg="buggy" type="asset_server.py" args="--directory='/rb_ws/src/buggy/assets'" />
+    <node name="asset_publish" pkg="buggy" type="asset_publish.py" />
+</launch>

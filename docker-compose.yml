@@ -3,18 +3,16 @@ services:
     build: .
     volumes:
       - ./rb_ws:/rb_ws
+      - "${RLSENSE_PORT:-/dev/null}:/dev/bus/usb"
     devices:
-      - "${GPS_PORT:-/dev/null}:/dev/ttyUSB0"
+      - "${TEENSY_PORT:-/dev/null}:/dev/ttyUSB0"
       - "${WEBCAM_PORT:-/dev/null}:/dev/ttyUSB1"
-      - "${RLSENSE_PORT:-/dev/null}:/dev/ttyUSB2"
-      - "${TEENSY0_PORT:-/dev/null}:/dev/ttyACM0"
-      - "${TEENSY1_PORT:-/dev/null}:/dev/ttyACM1"
-      - "${TEENSY2_PORT:-/dev/null}:/dev/ttyACM2"
-      - "${TEENSY3_PORT:-/dev/null}:/dev/ttyACM3"
-      - "${TEENSY4_PORT:-/dev/null}:/dev/ttyACM4"
+      - "${GPS_PORT:-/dev/null}:/dev/ttyACM0"
     stdin_open: true # docker run -i
     tty: true        # docker run -t
-    environment:
-      DISPLAY: ${DISPLAY}
-    network_mode: "host"
+    ports:
+       - "0.0.0.0:8765:8765"      # foxglove bridge
+       - "0.0.0.0:8760:8760"      # Asset server for loading stuff into foxglove
     platform: "linux/amd64"
+    device_cgroup_rules:
+       - "c *:* rmw"
