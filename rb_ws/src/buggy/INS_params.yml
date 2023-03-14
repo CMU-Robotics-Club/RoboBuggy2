@@ -208,11 +208,11 @@ filter_aiding_measurement_summary_data_rate : -1  # Rate of nav/aiding_summary t
 #            The different options are provided as a convenience.
 #            Support for matrix and quaternion options is firmware version dependent (GQ7 supports Quaternion as of firmware 1.0.07)
 #            Quaternion order is [i, j, k, w]
-filter_sensor2vehicle_frame_selector : 1
+filter_sensor2vehicle_frame_selector : 3
 
 filter_sensor2vehicle_frame_transformation_euler      : [0.0, 0.0, 0.0]
 filter_sensor2vehicle_frame_transformation_matrix     : [1.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 1.0]
-filter_sensor2vehicle_frame_transformation_quaternion : [0.0, 0.0, 0.0, 1.0]
+filter_sensor2vehicle_frame_transformation_quaternion : [0.0, -1.0, 0.0, 0.0]
 
 # Controls if the Kalman filter is reset after the settings are configured
 filter_reset_after_config : True
