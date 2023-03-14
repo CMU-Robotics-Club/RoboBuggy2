@@ -1,6 +1,5 @@
 FROM osrf/ros:noetic-desktop-full-focal
 
-COPY python-requirements.txt python-requirements.txt
 
 RUN apt update
 RUN apt-get install -y -qq \
@@ -15,6 +14,7 @@ RUN apt-get install -y -qq \
   ros-noetic-realsense2-camera \
   ros-noetic-realsense2-description
 
+COPY python-requirements.txt python-requirements.txt
 RUN pip3 install -r python-requirements.txt
 RUN echo 'source "/opt/ros/$ROS_DISTRO/setup.bash" --' >> ~/.bashrc
 RUN echo 'cd rb_ws' >> ~/.bashrc

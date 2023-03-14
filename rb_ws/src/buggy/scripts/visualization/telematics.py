@@ -39,8 +39,8 @@ x`
         Args:
             msg (Odometry): odometry as per INS
         """
-        lat = msg.pose.pose.position.x
-        long = msg.pose.pose.position.y
+        lat = msg.pose.pose.position.y
+        long = msg.pose.pose.position.x
         down = msg.pose.pose.position.z
         new_msg = NavSatFix()
         new_msg.header = msg.header
@@ -58,8 +58,8 @@ x`
             publishers (tuple): tuple of publishes
         """
         pose = PoseStamped()
-        pose.pose.position.x = msg.latitude
-        pose.pose.position.y = msg.longitude
+        pose.pose.position.y = msg.latitude
+        pose.pose.position.x = msg.longitude
         pose.pose.position.z = msg.altitude
         pose.header = msg.header
         publishers[0].publish(pose)
