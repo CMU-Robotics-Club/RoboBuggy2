@@ -160,7 +160,9 @@ void setup_radio() {
   radio.setDio0Action(setTxFlag);
 
   // set the function to call when we need to change frequency
+  #ifndef LORA_FIXED_FREQ
   radio.setDio1Action(setFHSSFlag);
+  #endif
 
   // set the control pins
   radio.setRfSwitchPins(8, 9);
