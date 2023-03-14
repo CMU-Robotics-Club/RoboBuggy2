@@ -2,7 +2,7 @@
 #include "DynamixelInterface.h"
 #include "DynamixelMotor.h"
 
-//#include <XBee.h>
+// #include <XBee.h>
 
 #define USE_TEENSY_HW_SERIAL
 #define ROS_BAUD 1000000
@@ -19,153 +19,257 @@
 /* ============= */
 
 #define BOARD_V1
-#ifdef BOARD_V1
+#define BOARD_V1
 
 // Dynamixel Pins
 #define DYNAMIXEL_SERIAL Serial5
 #define DYNAMIXEL_RXEN 14
 #define DYNAMIXEL_TXEN 15
 
-// Control Pins
+DynamixelMotor *motor;
+
+// Teensy Pins
 #define BRAKE_RELAY_PIN 25
 #define INTERRUPT_PIN 41
 
-// Radio PWM Pins
-#define STEER_PIN 26
-#define BRAKE_PIN 27
+// RC Controller PWM Pins
+#define STEERING_PIN 26
+#define THROTTLE_PIN 27
 
-#else // Breadboard
+// Width of RC steering and brake pulses.
+volatile int v_rcSteeringWidth = 0;
+volatile int v_rcThrottleWidth = 0;
 
-// Dynamixel Pins
-#define DYNAMIXEL_SERIAL Serial7
-#define DYNAMIXEL_RXEN 27
-#define DYNAMIXEL_TXEN 33
+/**
+ * @brief Timestamp of the most recent rising OR falling edge on the steering pin.
+ */
+volatile unsigned long rcSteeringLastEdge = 0;
+/**
+ * @brief Timestamp of the most recent rising OR falling edge on the brake pin.
+ */
+volatile unsigned long rcThrottleLastEdge = 0;
 
-// Control Pins
-#define BRAKE_RELAY_PIN 25
-#define INTERRUPT_PIN 41
+/**
+ * @brief Timestamp of the most recent rising edge on the steering pin.
+ */
+unsigned long rcSteeringUptime = 0;
+/**
+ * @brief Timestamp of the most recent rising edge on the steering pin.
+ */
+unsigned long rcThrottleUptime = 0;
 
-// Radio PWM Pins
-#define STEER_PIN 40
-#define BRAKE_PIN 7
+// For averaging the past 5 consecutive steering pulse widths.
+int rcSteeringSamples[5] = {0};
+int rcSteeringSampleIndex = 0;
 
-#endif
+// TODO make sure i implemented these interrupt handlers correctly lol
 
-/* ============= */
-/* ROS Serial    */
-/* ============= */
+/**
+ * @brief This method gets called every time STEERING_PIN switches from low to high or from high to low.
+ * It updates rcSteeringLastEdge to current timestamp.
+ * If the change is a rising edge, rcSteeringUptime is also updated to the current time.
+ * If the change is a falling edge, we are measuring the width of the last high pulse that just ended,
+ * and storing that value in v_rcSteeringWidth.
+ *
+ */
+void steeringInterruptHandler()
+{
+  rcSteeringLastEdge = millis();
 
-volatile double ros_servo_angle = 0.0;
-volatile double ros_brake = 1.0;
+  if (digitalRead(STEERING_PIN))
+  {
+    rcSteeringUptime = micros();
+  }
+  else
+  {
+    int width = micros() - rcSteeringUptime;
+    if (10 <= width && width <= 2000)
+    { // Filtering out blips and long pauses in the signal.
+      v_rcSteeringWidth = width;
+    }
 
-void steer_cb(const std_msgs::Float64& cmd_msg){
-  ros_servo_angle = cmd_msg.data;
+    if (width > 2000)
+    {
+      digitalWrite(INTERRUPT_PIN, HIGH);
+      digitalWrite(INTERRUPT_PIN, LOW);
+    }
+  }
 }
 
-void brake_cb(const std_msgs::Float64& cmd_msg){
-  ros_brake = cmd_msg.data;
+/**
+ * @brief See description for the steeringInterrupHandler method.
+ */
+void throttleInterruptHandler()
+{
+
+  rcThrottleLastEdge = millis();
+
+  if (digitalRead(THROTTLE_PIN))
+  { // The pin has changed from low to high, so we're resetting the uptime timer.
+    rcThrottleUptime = micros();
+  }
+  else
+  {
+    int width = micros() - rcThrottleUptime;
+    if (10 <= width && width <= 2000)
+    { // Filtering out blips and long pauses in the signal.
+      v_rcThrottleWidth = width;
+    }
+
+    if (width > 2000)
+    {
+      digitalWrite(INTERRUPT_PIN, HIGH);
+      digitalWrite(INTERRUPT_PIN, LOW);
+    }
+  }
+}
+
+volatile double rosSteeringAngle = 0.0;
+volatile double rosBrake = 1.0;
+
+/**
+ * @brief Simple wrapper to pull ROS number and store it in rosSteeringAngle.
+ *
+ * @param cmd_msg idk lol.  i simply copied this from the old version.
+ */
+void rosSteeringCallback(const std_msgs::Float64 &cmd_msg)
+{
+  rosSteeringAngle = cmd_msg.data;
+}
+
+/**
+ * @brief Simple wrapper to pull ROS number and store it in rosBrake.
+ *
+ * @param cmd_msg idk lol.  i simply copied this from the old version.
+ */
+void rosBrakeCallback(const std_msgs::Float64 &cmd_msg)
+{
+  rosBrake = cmd_msg.data;
 }
 
 ros::NodeHandle nh;
-ros::Subscriber<std_msgs::Float64> steer("SteerOut_T", steer_cb);
-ros::Subscriber<std_msgs::Float64> brake("BrakeOut_T", brake_cb);
+ros::Subscriber<std_msgs::Float64> steer("SteerOut_T", rosSteeringCallback);
+ros::Subscriber<std_msgs::Float64> brake("BrakeOut_T", rosBrakeCallback);
 
 diagnostic_msgs::DiagnosticStatus teensy_status;
 diagnostic_msgs::KeyValue status_values[7];
 ros::Publisher debug("TeensyStateIn_T", &teensy_status);
 
-/* ============= */
-/* RC Controller */
-/* ============= */
+int LEFT_DYNAMIXEL_LIMIT = 1516;
+int RIGHT_DYNAMIXEL_LIMIT = 829;
+int DYNAMIXEL_CENTER = (LEFT_DYNAMIXEL_LIMIT + RIGHT_DYNAMIXEL_LIMIT) / 2.0;
+int DYNAMIXEL_RANGE = LEFT_DYNAMIXEL_LIMIT - RIGHT_DYNAMIXEL_LIMIT;
 
-#define NUM_RC_CHANNELS 2
+int LEFT_RC_LIMIT = 1000;
+int RIGHT_RC_LIMIT = 1770;
+int RC_CENTER = 1450;
 
-#define RC_STEER 0
-#define RC_BRAKE 1
+/**
+ * @brief scales and skews the pulse width to input to the dynamixel
+ *
+ * @param pulseWidth width of pulse from steering RC pin in milliseconds
+ * @return signal to send directly to the dynamixel
+ */
+int rcToDynamixelWidth(int pulseWidth)
+{
+  double displacement = abs(pulseWidth - RC_CENTER); // Displacement of the wheel from center.
 
-typedef void (*interrupt_handler)(void);
-
-const int rc_pins[NUM_RC_CHANNELS] = { STEER_PIN, BRAKE_PIN };
-
-// Ranges from 1000 to 2000 under normal conditions.
-volatile int rc_width[NUM_RC_CHANNELS] = { 0 };
-// Set to millis() when an edge occurs.
-volatile unsigned long rc_last_edge[NUM_RC_CHANNELS] = { 0 };
-
-#define CONCAT( A, B ) A ## B
-#define CREATE_PDM_INTERRUPT_HANDLER( RC , PIN )  \
-  do {                                            \
-    rc_last_edge[ RC ] = millis();                \
-    static unsigned long start_time = 0;          \
-    if (digitalRead( PIN )) {                     \
-      start_time = micros();                      \
-    } else {                                      \
-      int new_width = micros() - start_time;      \
-      if (10 <= new_width && new_width <= 2000) { \
-        rc_width[ RC ] = new_width;               \
-      }                                           \
-      if (new_width > 2000) { digitalWrite(INTERRUPT_PIN, HIGH); digitalWrite(INTERRUPT_PIN, LOW); } \
-    }                                             \
-  } while (0);
-
-
-void steer_pin_change() {
-  CREATE_PDM_INTERRUPT_HANDLER( RC_STEER , STEER_PIN );
-}
-
-void brake_pin_change() {
-  CREATE_PDM_INTERRUPT_HANDLER( RC_BRAKE , BRAKE_PIN );
-}
-
-const interrupt_handler rc_interrupt_handlers[NUM_RC_CHANNELS] = { steer_pin_change, brake_pin_change };
-
-#undef CONCAT
-#undef CREATE_PDM_INTERRUPT_HANLDER
-
-#define AVERAGE_AMT 50
-
-volatile int next_pin_3 = 0;
-volatile int pin_3_widths[AVERAGE_AMT] = { 0 };
-
-void pin_2_change(void);
-void pin_3_change(void);
-
-enum class BuggyState {
-  Armed,
-
-  Moving,
-
-  Stopped0,
-  Stopped1,
-  Stopped2,
-};
-
-BuggyState buggy_state = BuggyState::Armed;
-int buggy_arming_timer_ms = 0;
-
-const char *get_buggy_state_str() {
-  switch (buggy_state) {
-    case BuggyState::Armed:    return "Armed   ";
-    case BuggyState::Moving:   return "Moving  ";
-    case BuggyState::Stopped0: return "Stopped0";
-    case BuggyState::Stopped1: return "Stopped1";
-    case BuggyState::Stopped2: return "Stopped2";
-    default:                   return "UNKNOWN ";
+  // Skewing and scaling based on if the RC pulse is right from center or left from center
+  if (pulseWidth < RC_CENTER) { // Left: (0, 1]
+    displacement /= RC_CENTER - LEFT_RC_LIMIT;
+  } else if (pulseWidth > RC_CENTER) { // Right: [-1, 0)
+    displacement /= RC_CENTER - RIGHT_RC_LIMIT;
   }
+  
+  // Quadratic steering scale
+  // (known to the programmers of Saints Robotics as "odd square")
+  displacement *= abs(displacement);
+
+  Serial.println(displacement);
+
+  // Translating [-1, 1] to Dynamixel units
+
+  displacement = DYNAMIXEL_CENTER + displacement * DYNAMIXEL_RANGE * 0.5;
+
+  return displacement;
 }
 
-#define ARM_TIME_MS 1000
+enum class BuggyState
+{
+  ARMED,
+  MOVING
+};
+BuggyState buggyState = BuggyState::ARMED;
+/**
+ * @brief Keeps count of how long the buggy has been armed.
+ */
+int buggyStateTimer = 0;
 
-#define BRAKE_TIME_MS 100
 
-void setup() {
+/**
+ * @brief TODO this should be cleaned up eventually
+ */
+void calibrateSteering()
+{
+
+  int a = 0;
+
+  uint16_t startPos = -1;
+  a = motor->currentPosition(startPos);
+  if (startPos == -1)
+  {
+    return;
+  }
+
+  int targetPos = startPos;
+  uint16_t currentPos = startPos;
+
+  // Calibrate right limit
+  while (currentPos - targetPos < 100)
+  {
+    Serial.print("right ");
+    a = motor->goalPosition(targetPos);
+
+    a = motor->currentPosition(currentPos);
+
+    targetPos -= 5;
+    delay(50);
+  }
+  RIGHT_DYNAMIXEL_LIMIT = currentPos;
+
+  targetPos = startPos;
+  currentPos = startPos;
+  Serial.println();
+    
+  a = motor->goalPosition(targetPos);
+  delay(2000);
+  
+  // Calibrate left limit
+  while (targetPos - currentPos < 100)
+  {
+    Serial.print("left ");
+    a = motor->goalPosition(targetPos);
+
+
+    a = motor->currentPosition(currentPos);
+
+    targetPos += 5;
+    delay(50);
+  }
+  LEFT_DYNAMIXEL_LIMIT = currentPos;
+
+
+}
+
+void setup()
+{
   Serial.begin(115200);
 
-  for (int i = 0; i < NUM_RC_CHANNELS; ++i) {
-    pinMode(rc_pins[i], INPUT);
+  pinMode(STEERING_PIN, INPUT);
+  pinMode(THROTTLE_PIN, INPUT);
 
-    attachInterrupt(digitalPinToInterrupt(rc_pins[i]), rc_interrupt_handlers[i], CHANGE);
-  }
+  attachInterrupt(digitalPinToInterrupt(STEERING_PIN), steeringInterruptHandler, CHANGE);
+  attachInterrupt(digitalPinToInterrupt(THROTTLE_PIN), throttleInterruptHandler, CHANGE);
 
   nh.getHardware()->setBaud(ROS_BAUD);
   nh.initNode();
@@ -176,343 +280,104 @@ void setup() {
   pinMode(BRAKE_RELAY_PIN, OUTPUT);
   digitalWrite(BRAKE_RELAY_PIN, LOW);
   pinMode(INTERRUPT_PIN, OUTPUT);
-}
 
-/*#define ANGLE_LIMIT_LO 880
-#define ANGLE_LIMIT_HI 1440
-#define ANGLE_RANGE (ANGLE_LIMIT_HI - ANGLE_LIMIT_LO)
-#define ANGLE_CENTER ((ANGLE_LIMIT_HI + ANGLE_LIMIT_LO) / 2)*/
+  DynamixelInterface *dInterface = new DynamixelInterface(DYNAMIXEL_SERIAL, DYNAMIXEL_RXEN, DYNAMIXEL_TXEN, DirPinMode::ReadHiWriteLo); // Stream
+  dInterface->begin(1000000, 50);                // baudrate, timeout
+  motor = new DynamixelMotor(*dInterface, 5); // Interface , ID
 
-int i = 0;
+  motor->init(); // This will get the returnStatusLevel of the servo
+  Serial.printf("Status return level = %u\n", motor->statusReturnLevel());
+  motor->statusReturnLevel(1);
+  Serial.printf("new return level = %u\n", motor->statusReturnLevel());
+  // Status packet delay = 20us
+  motor->write(5, (byte)250);
 
-double t = 0.0;
+  motor->enableTorque(false);
+  motor->jointMode(1, 0xFFF);
+  motor->enableTorque();
+  
+  // calibrateSteering();
+  // Serial.print("Left limit is ");
+  // Serial.println(LEFT_DYNAMIXEL_LIMIT);
+  // Serial.print("Right limit is ");
+  // Serial.println(RIGHT_DYNAMIXEL_LIMIT);
 
-int left_angle_limit = 1460;
-int right_angle_limit = 890;
-
-void recenterWheel(DynamixelMotor &motor) {
-
-  int a = 0;
-
-  uint16_t start = -1;
-  a = motor.currentPosition(start);
-
-  Serial.printf("Start position is %d %d\n", start, a);
-
-  if (start == -1) {
-    return;
-  }
-
-  a = motor.goalPosition(start - 100);
-  Serial.println(a);
-
-  int offset = 0;
-  while (true) {
-    offset += 5;
-    a = motor.goalPosition(start - offset);
-    Serial.println(a);
-
-    delay(100);
-
-    uint16_t current_pos;
-    a = motor.currentPosition(current_pos);
-
-    Serial.printf("right offset %d, current position is %d %d\n", start - offset, current_pos, a);
-
-    if (abs((int)current_pos - (int)(start - offset)) > 100) {
-      right_angle_limit = current_pos + 100;
-      Serial.printf("Stopping right limit at %d\n", right_angle_limit);
-      break;
-    }
-  }
-
-  Serial.println("Going to center");
-
-  motor.goalPosition(start);
-  delay(500);
-
-  offset = 0;
-  while (true) {
-    offset += 5;
-    motor.goalPosition(start + offset);
-
-    delay(100);
-
-    uint16_t current_pos;
-    a = motor.currentPosition(current_pos);
-    Serial.printf("offset %d, current position is %d %d\n", start + offset, current_pos, a);
-
-    if (abs((int)current_pos - (int)(start + offset)) > 100) {
-      left_angle_limit = current_pos - 100;
-      Serial.printf("Stopping left limit at %d\n", left_angle_limit);
-      break;
-    }
-  }
-
-  motor.goalPosition((left_angle_limit + right_angle_limit) / 2);
-  delay(500);
-}
-
-double map_pin_width(int pin_width) {
-  float range = (pin_width - 1000.0) / 650.0; // 0 to 1
-
-  float midpoint = 0.51;
-
-  float mapped;
-
-  if (range > midpoint) {
-    mapped = (range - midpoint) / (1.0 - midpoint) * 0.5 + 0.5;
-  } else {
-    mapped = 0.5 - (midpoint - range) / (midpoint) * 0.5;
-  }
-
-  mapped = (mapped * 2.0) - 1.0;
-
-  mapped = ((mapped >= 0) ? 1 : -1) * (mapped * mapped);
-
-  return (mapped + 1.0) / 2.0;
+  motor->enableTorque(false);
+  //motor->jointMode(RIGHT_DYNAMIXEL_LIMIT, LEFT_DYNAMIXEL_LIMIT); // Set the angular limits of the servo. Set to [min, max] by default
+  motor->enableTorque();
 }
 
 void loop()
 {
-  delay(3000);
+  int rcSteeringWidth = v_rcSteeringWidth;
+  int rcThrottleWidth = v_rcThrottleWidth;
 
-  Serial.println("hello, world");
+  bool rcSteeringTimeout = (millis() - rcSteeringLastEdge) >= 50.0;
+  bool rcThrottleTimeout = (millis() - rcThrottleLastEdge) >= 50.0;
 
-  Serial2.begin(115200);
+  // Capture most recent RC steering sample.
+  rcSteeringSampleIndex++;
+  rcSteeringSampleIndex %= 5;
+  rcSteeringSamples[rcSteeringSampleIndex] = rcSteeringWidth;
 
-  /*XBee xbee = XBee();
-  xbee.setSerial(Serial1);
-
-  char payload[] = "HELLO, WORLD!\n";
-
-  while (true) {
-    Tx16Request tx = Tx16Request(0x0002, payload, sizeof(payload));
-
-    TxStatusResponse txStatus = TxStatusResponse();
-
-    Serial.println("Response!");
-    Serial.println(txStatus.isSuccess());
-
-    delay(1000);
-  }*/
-  
-  DynamixelInterface dInterface(DYNAMIXEL_SERIAL, DYNAMIXEL_RXEN, DYNAMIXEL_TXEN, DirPinMode::ReadHiWriteLo); // Stream
-  dInterface.begin(1000000, 50); // baudrate, timeout
-  DynamixelMotor motor(dInterface, 5);  // Interface , ID
-
-
-  motor.init(); // This will get the returnStatusLevel of the servo
-  Serial.printf("Status return level = %u\n", motor.statusReturnLevel());
-  
-
-  motor.statusReturnLevel(1);
-
-  Serial.printf("new return level = %u\n", motor.statusReturnLevel());
-
-  // Status packet delay = 20us
-  motor.write(5, (byte)250);
-  
-  motor.enableTorque(false);
-  motor.jointMode(1, 0xFFF);
-  motor.enableTorque();
-  recenterWheel(motor);
-
-  motor.enableTorque(false);
-  motor.jointMode(right_angle_limit, left_angle_limit); // Set the angular limits of the servo. Set to [min, max] by default
-  motor.enableTorque();
-
-  int rc_pin_widths[NUM_RC_CHANNELS] = { 0 };
-  bool rc_pin_timed_out[NUM_RC_CHANNELS] = { false };
-
-  int log_timer = 0;
-
-  while (true)
+  // Calculating the average of the past 5 RC steering samples.
+  float rcSteeringAvg = 0.0;
+  for (int i = 0; i < 5; i++)
   {
-
-    t += 5.0;
-    unsigned long currentMillis = millis();
-
-    for (int i = 0; i < NUM_RC_CHANNELS; ++i) {
-      rc_pin_widths[i] = rc_width[i];
-      // TODO: Perhaps we should warn if it's ever outside of this range
-      //if (rc_pin_widths[i] < 1000) { rc_pin_widths[i] = 1000; }
-      //if (rc_pin_widths[i] > 2000) { rc_pin_widths[i] = 2000; }
-      
-      // 50 ms is two and a half RC periods
-      rc_pin_timed_out[i] = (currentMillis - rc_last_edge[i]) >= 50.0;
-    }
-
-    const int steer_average_count = 5;
-    static int steer_average_samples[steer_average_count] = { 0 };
-    static int steer_average_idx = 0;
-
-    steer_average_samples[steer_average_idx++] = rc_pin_widths[RC_STEER];
-    steer_average_idx %= steer_average_count;
-    float steer_average = 0.0;
-    for (int i = 0; i < steer_average_count; ++i) {
-      steer_average += steer_average_samples[i];
-    }
-    steer_average /= steer_average_count;
-    
-
-    bool throttleAuto = (1750 <= rc_pin_widths[RC_BRAKE]);
-    bool throttleTele = (rc_pin_widths[RC_BRAKE] <= 1250);
-    bool throttleNeutral = !throttleAuto && !throttleTele;
-
-    switch (buggy_state) {
-      case BuggyState::Stopped0:
-        // Must be moved to AUTONOMOUS
-        if (throttleAuto) {
-          if (millis() - buggy_arming_timer_ms > ARM_TIME_MS) {
-            buggy_arming_timer_ms = millis();
-
-          }
-        } else {
-          buggy_arming_timer_ms = millis();
-        }
-        break;
-      
-      case BuggyState::Stopped1:
-        // Must be moved to TELEOP
-        if (throttleTele) {
-          if (millis() - buggy_arming_timer_ms > ARM_TIME_MS) {
-            buggy_arming_timer_ms = millis();
-            buggy_state = BuggyState::Stopped2;
-          }
-        } else {
-          buggy_arming_timer_ms = millis();
-        }
-        break;
-      
-      case BuggyState::Stopped2:
-        if (throttleNeutral) {
-          if (millis() - buggy_arming_timer_ms > ARM_TIME_MS) {
-            buggy_arming_timer_ms = millis();
-            buggy_state = BuggyState::Armed;
-          }
-        } else {
-          buggy_arming_timer_ms = millis();
-        }
-        break;
-      
-      case BuggyState::Armed:
-        if (throttleTele || throttleAuto) {
-          if (millis() - buggy_arming_timer_ms > ARM_TIME_MS) {
-            buggy_arming_timer_ms = millis();
-            buggy_state = BuggyState::Moving;
-          }
-        } else {
-          buggy_arming_timer_ms = millis();
-        }
-        break;
-      
-      default:
-        if (throttleNeutral) {
-          if (millis() - buggy_arming_timer_ms > BRAKE_TIME_MS) {
-            buggy_arming_timer_ms = millis();
-
-            buggy_state = BuggyState::Armed;
-          }
-        } else {
-          buggy_arming_timer_ms = millis();
-        }
-        break;
-    }
-
-    
-    ++log_timer;
-    if (log_timer == 100) {
-      log_timer = 0;
-
-      Serial2.printf("state: %s   ", get_buggy_state_str());
-      int steer_age = currentMillis - rc_last_edge[RC_STEER];
-      int brake_age = currentMillis - rc_last_edge[RC_BRAKE];
-      Serial2.printf("str wdt/tmt: %4d %d   ", rc_pin_widths[RC_STEER], steer_age);
-      Serial2.printf("thr wdt/tmt: %4d %d   ", rc_pin_widths[RC_BRAKE], brake_age);
-
-      uint16_t current_pos = 65535;
-      motor.currentPosition(current_pos);
-      Serial2.printf("dyna pos %4d\n", current_pos);
-      
-      char steer_width[32];
-      char steer_time[32];
-      char brake_width[32];
-      char brake_time[32];
-      char pos_str[32];
-      char avg_str[32];
-
-      String(rc_pin_widths[RC_STEER], DEC).toCharArray(&steer_width[0], 32);
-      String(steer_age, DEC).toCharArray(&steer_time[0], 32);
-      String(rc_pin_widths[RC_BRAKE], DEC).toCharArray(&brake_width[0], 32);
-      String(brake_age, DEC).toCharArray(&brake_time[0], 32);
-      String(current_pos, DEC).toCharArray(&pos_str[0], 32);
-      String(steer_average, DEC).toCharArray(&avg_str[0], 32);
-
-      teensy_status.name = "Drive Teensy";
-      teensy_status.level = diagnostic_msgs::DiagnosticStatus::OK;
-      teensy_status.message = "Logging Status";
-      teensy_status.values = &status_values[0];
-      status_values[0].key = "state";
-      status_values[0].value = get_buggy_state_str();
-      status_values[1].key = "str wdt";
-      status_values[1].value = steer_width;
-      status_values[2].key = "str tmt";
-      status_values[2].value = steer_time;
-      status_values[3].key = "thr wdt";
-      status_values[3].value = brake_width;
-      status_values[4].key = "thr tmt";
-      status_values[4].value = brake_time;
-      status_values[5].key = "dyna pos";
-      status_values[5].value = pos_str;
-      status_values[6].key = "avg_str";
-      status_values[6].value = avg_str;
-      teensy_status.values_length = sizeof(status_values)/sizeof(diagnostic_msgs::KeyValue);
-      debug.publish(&teensy_status);
-    }
-
-    //uint16_t currentPos = 0;
-    //motor.read(36, currentPos);
-
-    //uint16_t currentSpeed;
-    //motor.read(38, currentSpeed);
-
-    if (++i == 100) {
-      i = 0;
-      Serial.printf("pin width is %d\n", rc_pin_widths[RC_STEER]);
-      Serial.printf("buggy state: %d\n", (int)buggy_state);
-    }
-
-    bool autoSteer = (buggy_state == BuggyState::Moving && throttleAuto);
-
-    if (autoSteer) {
-      // TODO: Autonomomous
-      int angle_center = (left_angle_limit + right_angle_limit) / 2.0;
-      motor.goalPosition(angle_center + ros_servo_angle * 3.41);
-
-      float ros_brake = 1.0;
-      bool engage_brakes = abs(ros_brake - 1.0) < 1e-6;
-      digitalWrite(BRAKE_RELAY_PIN, !engage_brakes);
-    } else {
-      float range = map_pin_width(steer_average);
-      
-      range = (range * 2.0) - 1.0; // -1 to 1
-
-      /*if (range > 0.5) {
-        range = (range - 0.5) * 2.0 + 0.5;
-      }*/
-
-      int angle_center = (left_angle_limit + right_angle_limit) / 2.0;
-      int angle_range = (right_angle_limit - left_angle_limit);
-
-      motor.goalPosition(angle_center + angle_range * range * 0.5);
-    
-      //motor.goalPositionDegree(90 + (range - 0.5) * 2.0 * 90.0);
-
-      digitalWrite(BRAKE_RELAY_PIN, (buggy_state == BuggyState::Moving));
-    }
-
-    delay(1);
-    nh.spinOnce();
+    rcSteeringAvg += rcSteeringSamples[i];
   }
+  rcSteeringAvg /= 5;
+
+  // Determining the state of the throttle trigger on the RC controller.
+  bool autoMode = (1750 <= rcThrottleWidth);
+  bool teleMode = (rcThrottleWidth <= 1250);
+  bool neutralMode = !autoMode && !teleMode;
+
+  switch (buggyState)
+  {
+  case BuggyState::ARMED:
+  {
+    if ((teleMode || autoMode) && (millis() - buggyStateTimer > 1000))
+    {
+      buggyStateTimer = millis();
+      buggyState = BuggyState::MOVING;
+    }
+    else if (!(teleMode || autoMode))
+    {
+      buggyStateTimer = millis();
+    }
+    break;
+  }
+
+  default:
+  {
+    if (neutralMode && millis() - buggyStateTimer > 1000)
+    {
+      buggyStateTimer = millis();
+      buggyState = BuggyState::ARMED;
+    }
+    else if (!neutralMode)
+    {
+      buggyStateTimer = millis();
+    }
+  }
+  }
+
+  // Controlling hardware thru RC.
+  float steeringCommand = rcToDynamixelWidth(rcSteeringAvg);
+  bool brakeCommand = buggyState == BuggyState::MOVING;
+
+  // If auton is enabled, it will set inputs to ROS inputs.
+  // if (buggyState == BuggyState::MOVING && autoMode)
+  // {
+  //   steeringCommand = DYNAMIXEL_CENTER + DYNAMIXEL_RANGE * rosSteeringAngle / 0.088 * 0.5;
+  //   brakeCommand = abs(rosBrake - 1.0) < 1e-6;
+  // }
+
+
+  motor->goalPosition(steeringCommand);
+  digitalWrite(BRAKE_RELAY_PIN, brakeCommand);
+
+  delay(1);
+  nh.spinOnce();
 }
