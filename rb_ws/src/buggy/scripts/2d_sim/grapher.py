@@ -7,14 +7,15 @@ from geometry_msgs.msg import Pose
 
 class Visualizer:
 
-    RATIO = 1279.305/1031.0987 # PNG:GMAPS
+    RATIO = 1279.305/517.136 # PNG:GMAPS
     IMAGE_SIZE = 3000 # size of X and Y (should be square aspect ratio)
-    UTM_EAST_ZERO = 589702.62
-    UTM_NORTH_ZERO = 4477172.17
+    UTM_EAST_ZERO = 589702.87
+    UTM_NORTH_ZERO = 4477172.947
     ZERO_LOC_UTM = (UTM_EAST_ZERO, UTM_NORTH_ZERO) # East North in meters UTM
     PNG_EAST_ZERO = 1866.1
     PNG_NORTH_ZERO = 1139.04
-    # UTM Zone = 17T
+    UTM_ZONE_NUM = 17
+    UTM_ZONE_LETTER = "T"
 
     def __init__(self):
         self.fig = plt.figure()
