@@ -20,7 +20,7 @@ class Trajectory:
     """
 
     distances = np.zeros((0, 1))  # (N x 1) [d, d, ...]
-    positions = np.zeros((0, 2))  # (N x 2) [(x,y), (x,y), ...]
+    positions = np.zeros((0, 3))  # (N x 2) [(x,y,th), (x,y,th), ...]
     curvatures = np.zeros((0, 1))  # (N x 1) [k, k, ...]
 
     def __init__(self, json_filepath) -> None:
@@ -29,15 +29,32 @@ class Trajectory:
             data = json.load(f)
 
         # Iterate through the waypoints and extract the positions
-        for waypoint in data:
+        num_waypoints = len(data)
+        for i in range(0, num_waypoints):
+            
+            waypoint = data[i]
+
             lat = waypoint["lat"]
             lon = waypoint["lon"]
 
             # Convert to world coordinates
             x, y = World.gps_to_world(lat, lon)
 
+            # find appropriate heading for use with Stanley Controller
+            heading = 0
+            if (i > 0):
+                # at initial index, heading just remains 0
+                prev_waypoint = data[i-1]
+                prev_lat = prev_waypoint["lat"]
+                prev_lon = prev_waypoint["lon"]
+                prev_x, prev_y = World.gps_to_world(prev_lat, prev_lon)
+                dx = x - prev_x
+                dy = y - prev_y
+                heading = np.arctan2(dy, dx)
+
+
             # Append to the arrays
-            self.positions = np.append(self.positions, [[x, y]], axis=0)
+            self.positions = np.append(self.positions, [[x, y, heading]], axis=0)
 
         # Calculate the distances along the trajectory
         self.distances = np.hstack(
@@ -70,6 +87,19 @@ class Trajectory:
             int: number of points
         """
         return len(self.positions)
+
+    def get_heading_by_index(self, index):
+        """Gets the heading at given index along trajectory,
+        interpolating if necessary
+
+        Args:
+            index (int): index along the trajectory
+
+        Returns:
+            tuple: (theta) in rads
+        """
+        theta = np.interp(index, np.arange(len(self.positions)), self.positions[:, 2])
+        return theta
 
     def get_position_by_index(self, index):
         """Gets the position at a given index along the trajectory,

@@ -43,7 +43,7 @@ class PurePursuitController(Controller):
         Computes the desired control output given the current state and reference trajectory
 
         Args:
-            state (numpy.ndarray [size: (3,)]): current pose (x, y, theta)
+            current_pose (Pose): current pose (x, y, theta) (UTM coordinates)
             trajectory (Trajectory): reference trajectory
             current_speed (float): current speed of the buggy
 

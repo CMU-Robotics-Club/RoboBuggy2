@@ -13,6 +13,7 @@ from trajectory import Trajectory
 from world import World
 from controller import Controller
 from pure_pursuit_controller import PurePursuitController
+from stanley_controller import StanleyController
 from pose import Pose
 
 
@@ -84,7 +85,8 @@ if __name__ == "__main__":
     rospy.init_node("auton_system")
     auton_system = AutonSystem(
         Trajectory("/rb_ws/src/buggy/paths/quartermiletrack.json"),
-        PurePursuitController(),
+        # PurePursuitController(),
+        StanleyController(),
     )
     while not rospy.is_shutdown():
         rospy.spin()
