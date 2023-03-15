@@ -363,7 +363,7 @@ void loop()
   }
 
   motor->goalPosition(steeringCommand);
-  digitalWrite(BRAKE_RELAY_PIN, brakeCommand);
+  digitalWrite(BRAKE_RELAY_PIN, !brakeCommand);
 
   // Logging data to ROS
   if (rosLogCounter == 0) {
