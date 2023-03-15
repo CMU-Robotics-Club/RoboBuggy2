@@ -1,5 +1,6 @@
 import numpy as np
 import json
+from scipy.interpolate import CubicSpline
 
 from world import World
 
@@ -20,10 +21,14 @@ class Trajectory:
     """
 
     distances = np.zeros((0, 1))  # (N x 1) [d, d, ...]
-    positions = np.zeros((0, 3))  # (N x 2) [(x,y,th), (x,y,th), ...]
-    curvatures = np.zeros((0, 1))  # (N x 1) [k, k, ...]
+    positions = np.zeros((0, 2))  # (N x 2) [(x,y), (x,y), ...]
+    # curvatures = np.zeros((0, 1))  # (N x 1) [k, k, ...]
+    indices = None
+    interpolation = None
+    # headings = None
 
     def __init__(self, json_filepath) -> None:
+        pos = []
         # Load the json file
         with open(json_filepath, "r") as f:
             data = json.load(f)
@@ -39,46 +44,55 @@ class Trajectory:
 
             # Convert to world coordinates
             x, y = World.gps_to_world(lat, lon)
+            pos.append([x, y])
 
-            # find appropriate heading for use with Stanley Controller
-            heading = 0
-            if (i > 0):
-                # at initial index, heading just remains 0
-                prev_waypoint = data[i-1]
-                prev_lat = prev_waypoint["lat"]
-                prev_lon = prev_waypoint["lon"]
-                prev_x, prev_y = World.gps_to_world(prev_lat, prev_lon)
-                dx = x - prev_x
-                dy = y - prev_y
-                heading = np.arctan2(dy, dx)
+            # # find appropriate heading for use with Stanley Controller
+            # heading = 0
+            # if (i > 0):
+            #     # at initial index, heading just remains 0
+            #     prev_waypoint = data[i-1]
+            #     prev_lat = prev_waypoint["lat"]
+            #     prev_lon = prev_waypoint["lon"]
+            #     prev_x, prev_y = World.gps_to_world(prev_lat, prev_lon)
+            #     dx = x - prev_x
+            #     dy = y - prev_y
+            #     heading = np.arctan2(dy, dx)
 
-
-            # Append to the arrays
-            self.positions = np.append(self.positions, [[x, y, heading]], axis=0)
+        self.positions = np.array(pos)
+        self.indices = np.arange(len(self.positions))
+        self.interpolation = CubicSpline(self.indices, self.positions)
 
         # Calculate the distances along the trajectory
-        self.distances = np.hstack(
-            (
-                0,
-                np.cumsum(
-                    np.sqrt(
-                        np.sum(
-                            np.diff(self.positions, axis=0) ** 2, axis=1, keepdims=True
-                        )
-                    )
-                ),
-            )
-        )
+        dt = 0.01
+        ts = np.arange(len(self.positions), step=dt)
+        drdt = self.interpolation(ts, nu=1) # Calculate derivatives of polynomial wrt indices
+        ds = np.sqrt(drdt[:, 0]**2 + drdt[:, 1]**2) * dt
+        s = np.cumsum(np.hstack([[0], ds[:-1]]))
+        self.distances = s#[0:None:int(1/dt)]
+        self.dt = dt
+
+        # self.distances = np.hstack(
+        #     (
+        #         0,
+        #         np.cumsum(
+        #             np.sqrt(
+        #                 np.sum(
+        #                     np.diff(self.positions, axis=0) ** 2, axis=1, keepdims=True
+        #                 )
+        #             )
+        #         ),
+        #     )
+        # )
 
         # Calculate the curvatures
-        dx_dt = np.gradient(self.positions[:, 0])
-        dy_dt = np.gradient(self.positions[:, 1])
-        d2x_dt2 = np.gradient(dx_dt)
-        d2y_dt2 = np.gradient(dy_dt)
+        # dx_dt = np.gradient(self.positions[:, 0])
+        # dy_dt = np.gradient(self.positions[:, 1])
+        # d2x_dt2 = np.gradient(dx_dt)
+        # d2y_dt2 = np.gradient(dy_dt)
 
-        self.curvatures = (d2x_dt2 * dy_dt - dx_dt * d2y_dt2) / (
-            dx_dt * dx_dt + dy_dt * dy_dt
-        ) ** 1.5
+        # self.curvatures = (d2x_dt2 * dy_dt - dx_dt * d2y_dt2) / (
+        #     dx_dt * dx_dt + dy_dt * dy_dt
+        # ) ** 1.5
 
     def get_num_points(self):
         """Gets the number of points along the trajectory
@@ -96,9 +110,12 @@ class Trajectory:
             index (int): index along the trajectory
 
         Returns:
-            tuple: (theta) in rads
+            float: (theta) in rads
         """
-        theta = np.interp(index, np.arange(len(self.positions)), self.positions[:, 2])
+        # theta = np.interp(index, self.indices, self.positions[:, 2])
+        dxdt, dydt = self.interpolation(index, nu=1)
+        theta = np.arctan2(dydt, dxdt)
+
         return theta
 
     def get_position_by_index(self, index):
@@ -112,10 +129,8 @@ class Trajectory:
             tuple: (x, y)
         """
         # Interpolate the position
-        x = np.interp(index, np.arange(len(self.positions)), self.positions[:, 0])
-        y = np.interp(index, np.arange(len(self.positions)), self.positions[:, 1])
 
-        return x, y
+        return self.interpolation(index)
 
     def get_position_by_distance(self, distance):
         """Gets the position at a given distance along the trajectory,
@@ -128,10 +143,8 @@ class Trajectory:
             tuple: (x, y)
         """
         # Interpolate the position
-        x = np.interp(distance, self.distances, self.positions[:, 0])
-        y = np.interp(distance, self.distances, self.positions[:, 1])
-
-        return x, y
+        index = self.get_index_from_distance(distance)
+        return self.get_position_by_index(index)
 
     def get_index_from_distance(self, distance):
         """Gets the index at a given distance along the trajectory,
@@ -146,7 +159,7 @@ class Trajectory:
         # Interpolate the index
         index = np.interp(distance, self.distances, np.arange(len(self.distances)))
 
-        return index
+        return index * self.dt
 
     def get_distance_from_index(self, index):
         """Gets the distance at a given index along the trajectory,
@@ -174,7 +187,10 @@ class Trajectory:
             float: curvature
         """
         # Interpolate the curvature
-        curvature = np.interp(index, np.arange(len(self.curvatures)), self.curvatures)
+        dxdt, dydt = self.interpolation(index, nu=1)
+        ddxdtt, ddydtt = self.interpolation(index, nu=2)
+
+        curvature = np.abs(dxdt*ddydtt - dydt*ddxdtt) / (dxdt**2 - dydt**2)**(3/2)
 
         return curvature
 
@@ -189,9 +205,9 @@ class Trajectory:
             float: curvature
         """
         # Interpolate the curvature
-        curvature = np.interp(distance, self.distances, self.curvatures)
+        index = self.get_index_from_distance(distance)
 
-        return curvature
+        return self.get_curvature_by_index(index)
 
     def get_closest_index_on_path(
         self, x, y, start_index=0, end_index=None, subsample_resolution=10000
