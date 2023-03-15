@@ -160,9 +160,14 @@ int RIGHT_DYNAMIXEL_LIMIT = 829;
 int DYNAMIXEL_CENTER = (LEFT_DYNAMIXEL_LIMIT + RIGHT_DYNAMIXEL_LIMIT) / 2.0;
 int DYNAMIXEL_RANGE = LEFT_DYNAMIXEL_LIMIT - RIGHT_DYNAMIXEL_LIMIT;
 
-int LEFT_RC_LIMIT = 1000;
-int RIGHT_RC_LIMIT = 1770;
-int RC_CENTER = 1450;
+int LEFT_RC_STEERING_LIMIT = 1000;
+int RIGHT_RC_STEERING_LIMIT = 1770;
+int RC_STEERING_CENTER = 1450;
+
+int FORWARD_RC_THROTTLE_LIMIT = 995;
+int BACKWARD_RC_THROTTLE_LIMIT = 2000;
+int RC_THROTTLE_CENTER = 1475;
+int RC_THROTTLE_DEADZONE = 200;
 
 /**
  * @brief scales and skews the pulse width to input to the dynamixel
@@ -172,20 +177,18 @@ int RC_CENTER = 1450;
  */
 int rcToDynamixelWidth(int pulseWidth)
 {
-  double displacement = abs(pulseWidth - RC_CENTER); // Displacement of the wheel from center.
+  double displacement = abs(pulseWidth - RC_STEERING_CENTER); // Displacement of the wheel from center.
 
   // Skewing and scaling based on if the RC pulse is right from center or left from center
-  if (pulseWidth < RC_CENTER) { // Left: (0, 1]
-    displacement /= RC_CENTER - LEFT_RC_LIMIT;
-  } else if (pulseWidth > RC_CENTER) { // Right: [-1, 0)
-    displacement /= RC_CENTER - RIGHT_RC_LIMIT;
+  if (pulseWidth < RC_STEERING_CENTER) { // Left: (0, 1]
+    displacement /= RC_STEERING_CENTER - LEFT_RC_STEERING_LIMIT;
+  } else if (pulseWidth > RC_STEERING_CENTER) { // Right: [-1, 0)
+    displacement /= RC_STEERING_CENTER - RIGHT_RC_STEERING_LIMIT;
   }
   
   // Quadratic steering scale
   // (known to the programmers of Saints Robotics as "odd square")
   displacement *= abs(displacement);
-
-  Serial.println(displacement);
 
   // Translating [-1, 1] to Dynamixel units
 
@@ -193,17 +196,6 @@ int rcToDynamixelWidth(int pulseWidth)
 
   return displacement;
 }
-
-enum class BuggyState
-{
-  ARMED,
-  MOVING
-};
-BuggyState buggyState = BuggyState::ARMED;
-/**
- * @brief Keeps count of how long the buggy has been armed.
- */
-int buggyStateTimer = 0;
 
 
 /**
@@ -329,50 +321,22 @@ void loop()
   rcSteeringAvg /= 5;
 
   // Determining the state of the throttle trigger on the RC controller.
-  bool autoMode = (1750 <= rcThrottleWidth);
-  bool teleMode = (rcThrottleWidth <= 1250);
-  bool neutralMode = !autoMode && !teleMode;
-
-  switch (buggyState)
-  {
-  case BuggyState::ARMED:
-  {
-    if ((teleMode || autoMode) && (millis() - buggyStateTimer > 1000))
-    {
-      buggyStateTimer = millis();
-      buggyState = BuggyState::MOVING;
-    }
-    else if (!(teleMode || autoMode))
-    {
-      buggyStateTimer = millis();
-    }
-    break;
-  }
-
-  default:
-  {
-    if (neutralMode && millis() - buggyStateTimer > 1000)
-    {
-      buggyStateTimer = millis();
-      buggyState = BuggyState::ARMED;
-    }
-    else if (!neutralMode)
-    {
-      buggyStateTimer = millis();
-    }
-  }
-  }
+  bool autoMode = FORWARD_RC_THROTTLE_LIMIT <= rcThrottleWidth 
+    && rcThrottleWidth < (RC_THROTTLE_CENTER - RC_THROTTLE_DEADZONE);
+  bool teleMode = (RC_THROTTLE_CENTER + RC_THROTTLE_DEADZONE) < rcThrottleWidth
+    && rcThrottleWidth <= BACKWARD_RC_THROTTLE_LIMIT;
+  bool brakeMode = !autoMode && !teleMode;
 
   // Controlling hardware thru RC.
   float steeringCommand = rcToDynamixelWidth(rcSteeringAvg);
-  bool brakeCommand = buggyState == BuggyState::MOVING;
+  bool brakeCommand = brakeMode;
 
   // If auton is enabled, it will set inputs to ROS inputs.
-  // if (buggyState == BuggyState::MOVING && autoMode)
-  // {
-  //   steeringCommand = DYNAMIXEL_CENTER + DYNAMIXEL_RANGE * rosSteeringAngle / 0.088 * 0.5;
-  //   brakeCommand = abs(rosBrake - 1.0) < 1e-6;
-  // }
+  if (autoMode)
+  {
+    steeringCommand = DYNAMIXEL_CENTER + DYNAMIXEL_RANGE * rosSteeringAngle / 0.088 * 0.5;
+    brakeCommand = abs(rosBrake - 1.0) < 1e-6;
+  }
 
 
   motor->goalPosition(steeringCommand);
