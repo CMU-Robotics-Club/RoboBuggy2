@@ -83,7 +83,7 @@ class AutonSystem:
 if __name__ == "__main__":
     rospy.init_node("auton_system")
     auton_system = AutonSystem(
-        Trajectory("/rb_ws/src/buggy/paths/quartermiletrack.json"),
+        Trajectory("/rb_ws/src/buggy/paths/buggycourse.json"),
         PurePursuitController(),
     )
     while not rospy.is_shutdown():
