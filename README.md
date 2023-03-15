@@ -63,7 +63,7 @@ Instructions:
 - Install the appropriate X11 server on your computer for your respective operating systems (Xming for Windows, XQuartz for Mac, etc.).
 - Mac: In XQuartz settings, ensure that the "Allow connections from network clients" under "Security" is checked.
 - Windows: Make sure that you're using WSL 2 Ubuntu and NOT command prompt.
-- While in a bash shell with the X11 server running, run `xhost +localhost`.
+- While in a bash shell with the X11 server running, run `xhost +local:docker`.
 - Boot up the docker container using the "Alternate Shortcut" above.
 - Run `xeyes` while INSIDE the Docker container to test X11 forwarding. If this works, we're good.
 - Run `roslaunch buggy sim_2d.launch` for the simulator.
