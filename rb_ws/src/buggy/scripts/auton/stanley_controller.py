@@ -19,8 +19,8 @@ class StanleyController(Controller):
     """
 
     WHEELBASE = 1.3
-    CROSS_TRACK_GAIN = 0.1
-    HEADING_GAIN = 1
+    CROSS_TRACK_GAIN = 1
+    HEADING_GAIN = 0.75
 
     def __init__(self) -> None:
         self.debug_reference_pos_publisher = rospy.Publisher(
@@ -28,6 +28,9 @@ class StanleyController(Controller):
         )
         self.debug_track_pos_publisher = rospy.Publisher(
             "auton/debug/track_navsat", NavSatFix, queue_size=1
+        )
+        self.debug_error_publisher = rospy.Publisher(
+            "auton/debug/error", ROSPose, queue_size=1
         )
 
         self.current_traj_index = 0
@@ -86,6 +89,17 @@ class StanleyController(Controller):
         steering_cmd = error_heading + cross_track_error
         steering_cmd = np.clip(steering_cmd, -np.pi/3, np.pi/3)
 
+        reference_position = trajectory.get_position_by_index(self.current_traj_index)
+        reference_error = current_pose.convert_point_from_global_to_local_frame(
+            reference_position
+        )
+        reference_error -= np.array([StanleyController.WHEELBASE, 0])
+
+        # Publish error for debugging
+        error_pose = ROSPose()
+        error_pose.position.x = reference_error[0]
+        error_pose.position.y = reference_error[1]
+        self.debug_error_publisher.publish(error_pose)
 
         # Publish reference position for debugging
         reference_navsat = NavSatFix()

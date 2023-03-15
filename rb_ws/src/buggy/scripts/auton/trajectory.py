@@ -1,6 +1,6 @@
 import numpy as np
 import json
-from scipy.interpolate import CubicSpline
+from scipy.interpolate import CubicSpline, Akima1DInterpolator
 
 from world import World
 
@@ -46,7 +46,8 @@ class Trajectory:
 
         self.positions = np.array(pos)
         self.indices = np.arange(len(self.positions))
-        self.interpolation = CubicSpline(self.indices, self.positions)
+        self.interpolation = Akima1DInterpolator(self.indices, self.positions)
+        self.interpolation.extrapolate = True
 
         # Calculate the distances along the trajectory
         dt = 0.01
@@ -135,7 +136,7 @@ class Trajectory:
             float: distance along the trajectory in meters
         """
         # Interpolate the distance
-        distance = np.interp(index, np.arange(len(self.distances)), self.distances)
+        distance = np.interp(index / self.dt, np.arange(len(self.distances)), self.distances)
 
         return distance
 
@@ -219,23 +220,23 @@ class Trajectory:
 
 if __name__ == "__main__":
     # Example usage
-    trajectory = Trajectory("/rb_ws/src/buggy/paths/buggycourse.json")
+    trajectory = Trajectory("/rb_ws/src/buggy/paths/quartermiletrack.json")
 
-    # Get the position at a given index
-    x, y = trajectory.get_position_by_index(10)
-    print(f"Position at index 10: ({x}, {y})")
+    import json
+    import uuid
 
-    x, y = trajectory.get_position_by_index(10.5)
-    print(f"Position at index 10.5: ({x}, {y})")
+    interp_dat = []
+    for k in np.linspace(0, trajectory.indices[-1], 500):
+        x, y = trajectory.get_position_by_index(k)
 
-    # Get the position at a given distance
-    x, y = trajectory.get_position_by_distance(10)
-    print(f"Position at distance 10: ({x}, {y})")
+        lat, lon = World.world_to_gps(x, y)
 
-    # Get the index closest to a given position
-    index = trajectory.get_closest_index_on_path(0, 0)
-    print(f"Closest index to (0, 0): {index}")
+        interp_dat.append({
+            "lat": lat,
+            "lon": lon,
+            "key": str(uuid.uuid4()),
+            "active": False
+        })
 
-    # Apply filter
-    index = trajectory.get_closest_index_on_path(0, 0, start_index=10, end_index=20)
-    print(f"Closest index to (0, 0) between 10 and 20: {index}")
+    with open("/rb_ws/src/buggy/paths/traj_spline_interp.json", "w") as f:
+        json.dump(interp_dat, f, indent=4)

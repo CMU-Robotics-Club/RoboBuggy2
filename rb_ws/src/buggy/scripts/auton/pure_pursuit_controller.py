@@ -19,9 +19,9 @@ class PurePursuitController(Controller):
 
     WHEELBASE = 1.3
 
-    LOOK_AHEAD_DIST_CONST = 0.375
-    MIN_LOOK_AHEAD_DIST = 0.5
-    MAX_LOOK_AHEAD_DIST = 5
+    LOOK_AHEAD_DIST_CONST = 0.25
+    MIN_LOOK_AHEAD_DIST = 2
+    MAX_LOOK_AHEAD_DIST = 10
 
     current_traj_index = 0
 
