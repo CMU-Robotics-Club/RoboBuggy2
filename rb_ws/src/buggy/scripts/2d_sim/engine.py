@@ -157,6 +157,14 @@ class Simulator:
         odom.pose = PoseWithCovariance(pose=odom_pose)
         odom.twist = TwistWithCovariance(twist=odom_twist)
 
+        # This is just dummy data
+        odom.pose.covariance = [0.01, 0, 0, 0, 0, 0,
+                                0, 0.01, 0, 0, 0, 0,
+                                0, 0, 0.01, 0, 0, 0,
+                                0, 0, 0, 0.01, 0, 0,
+                                0, 0, 0, 0, 0.01, 0,
+                                0, 0, 0, 0, 0, 0.01]
+
         self.pose_publisher.publish(odom)
 
         

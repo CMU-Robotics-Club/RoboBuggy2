@@ -57,11 +57,16 @@ class AutonSystem:
     def tick(self, msg):
         # Received an updated pose from the state estimator
         # Compute the new control output and publish it to the buggy
+        current_rospose = msg.pose.pose
+
+        # Check if the pose covariance is a sane value. Otherwise ignore the message
+        if msg.pose.covariance[0] ** 2 + msg.pose.covariance[7] ** 2 > 1**2:
+            # Covariance larger than one meter. We definitely can't trust the pose
+            return
 
         current_speed = np.sqrt(
             msg.twist.twist.linear.x**2 + msg.twist.twist.linear.y**2
         )
-        current_rospose = msg.pose.pose
 
         # Get data from message
         pose_gps = Pose.rospose_to_pose(current_rospose)
