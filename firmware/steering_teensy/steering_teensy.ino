@@ -124,22 +124,22 @@ void throttleInterruptHandler()
   }
 }
 
-volatile double rosSteeringAngle = 0.0;
-volatile double rosBrake = 1.0;
+volatile float rosSteeringAngle = 0.0;
+volatile float rosBrake = 1.0;
 
 /**
  * @brief Simple wrapper to pull ROS number and store it in rosSteeringAngle.
- *
+ * Note: a value > 0 is left.  < 0 is right.
  * @param cmd_msg idk lol.  i simply copied this from the old version.
  */
 void rosSteeringCallback(const std_msgs::Float64 &cmd_msg)
-{
+{  
   rosSteeringAngle = cmd_msg.data;
 }
 
 /**
  * @brief Simple wrapper to pull ROS number and store it in rosBrake.
- *
+ * Note: digital brake control.  if 0, brake off.  if 1, brake on.
  * @param cmd_msg idk lol.  i simply copied this from the old version.
  */
 void rosBrakeCallback(const std_msgs::Float64 &cmd_msg)
@@ -148,8 +148,8 @@ void rosBrakeCallback(const std_msgs::Float64 &cmd_msg)
 }
 
 ros::NodeHandle nh;
-ros::Subscriber<std_msgs::Float64> steer("SteerOut_T", rosSteeringCallback);
-ros::Subscriber<std_msgs::Float64> brake("BrakeOut_T", rosBrakeCallback);
+ros::Subscriber<std_msgs::Float64> steer("buggy/input/steering", rosSteeringCallback);
+ros::Subscriber<std_msgs::Float64> brake("buggy/input/brake", rosBrakeCallback);
 
 diagnostic_msgs::DiagnosticStatus teensy_status;
 diagnostic_msgs::KeyValue status_values[7];
@@ -157,15 +157,17 @@ ros::Publisher debug("TeensyStateIn_T", &teensy_status);
 
 int LEFT_DYNAMIXEL_LIMIT = 1516;
 int RIGHT_DYNAMIXEL_LIMIT = 829;
-int DYNAMIXEL_CENTER = (LEFT_DYNAMIXEL_LIMIT + RIGHT_DYNAMIXEL_LIMIT) / 2.0;
-int DYNAMIXEL_RANGE = LEFT_DYNAMIXEL_LIMIT - RIGHT_DYNAMIXEL_LIMIT;
+int getDynamixelCenter() {
+  return (LEFT_DYNAMIXEL_LIMIT + RIGHT_DYNAMIXEL_LIMIT) / 2.0;
+}
+int getDynamixelRange() {
+  return LEFT_DYNAMIXEL_LIMIT - RIGHT_DYNAMIXEL_LIMIT;
+}
 
 int LEFT_RC_STEERING_LIMIT = 1000;
 int RIGHT_RC_STEERING_LIMIT = 1770;
 int RC_STEERING_CENTER = 1450;
 
-int FORWARD_RC_THROTTLE_LIMIT = 995;
-int BACKWARD_RC_THROTTLE_LIMIT = 2000;
 int RC_THROTTLE_CENTER = 1475;
 int RC_THROTTLE_DEADZONE = 200;
 
@@ -192,9 +194,27 @@ int rcToDynamixelWidth(int pulseWidth)
 
   // Translating [-1, 1] to Dynamixel units
 
-  displacement = DYNAMIXEL_CENTER + displacement * DYNAMIXEL_RANGE * 0.5;
+  displacement = getDynamixelCenter() + displacement * getDynamixelRange() * 0.5;
 
   return displacement;
+}
+
+/**
+ * @brief scales, skews, and caps the angle offset to input to the dynamixel
+ *
+ * @param angleDegrees displacement of wheel from center
+ * @return signal to send directly to the dynamixel
+ */
+int rosAngleToDynamixelWidth(float angleDegrees) {
+  int output = getDynamixelCenter() + (angleDegrees / 0.088);
+
+  if (output > LEFT_DYNAMIXEL_LIMIT) {
+    return LEFT_DYNAMIXEL_LIMIT;
+  }
+  if (output < RIGHT_DYNAMIXEL_LIMIT) {
+    return RIGHT_DYNAMIXEL_LIMIT;
+  }
+  return output;
 }
 
 
@@ -227,7 +247,7 @@ void calibrateSteering()
     targetPos -= 5;
     delay(50);
   }
-  RIGHT_DYNAMIXEL_LIMIT = currentPos;
+  RIGHT_DYNAMIXEL_LIMIT = currentPos + 100;
 
   targetPos = startPos;
   currentPos = startPos;
@@ -248,7 +268,7 @@ void calibrateSteering()
     targetPos += 5;
     delay(50);
   }
-  LEFT_DYNAMIXEL_LIMIT = currentPos;
+  LEFT_DYNAMIXEL_LIMIT = currentPos - 100;
 
 
 }
@@ -288,11 +308,11 @@ void setup()
   motor->jointMode(1, 0xFFF);
   motor->enableTorque();
   
-  // calibrateSteering();
-  // Serial.print("Left limit is ");
-  // Serial.println(LEFT_DYNAMIXEL_LIMIT);
-  // Serial.print("Right limit is ");
-  // Serial.println(RIGHT_DYNAMIXEL_LIMIT);
+  calibrateSteering();
+  Serial.print("Left limit is ");
+  Serial.println(LEFT_DYNAMIXEL_LIMIT);
+  Serial.print("Right limit is ");
+  Serial.println(RIGHT_DYNAMIXEL_LIMIT);
 
   motor->enableTorque(false);
   //motor->jointMode(RIGHT_DYNAMIXEL_LIMIT, LEFT_DYNAMIXEL_LIMIT); // Set the angular limits of the servo. Set to [min, max] by default
@@ -321,10 +341,8 @@ void loop()
   rcSteeringAvg /= 5;
 
   // Determining the state of the throttle trigger on the RC controller.
-  bool autoMode = FORWARD_RC_THROTTLE_LIMIT <= rcThrottleWidth 
-    && rcThrottleWidth < (RC_THROTTLE_CENTER - RC_THROTTLE_DEADZONE);
-  bool teleMode = (RC_THROTTLE_CENTER + RC_THROTTLE_DEADZONE) < rcThrottleWidth
-    && rcThrottleWidth <= BACKWARD_RC_THROTTLE_LIMIT;
+  bool autoMode = rcThrottleWidth < (RC_THROTTLE_CENTER - RC_THROTTLE_DEADZONE);
+  bool teleMode = (RC_THROTTLE_CENTER + RC_THROTTLE_DEADZONE) < rcThrottleWidth;
   bool brakeMode = !autoMode && !teleMode;
 
   // Controlling hardware thru RC.
@@ -334,8 +352,8 @@ void loop()
   // If auton is enabled, it will set inputs to ROS inputs.
   if (autoMode)
   {
-    steeringCommand = DYNAMIXEL_CENTER + DYNAMIXEL_RANGE * rosSteeringAngle / 0.088 * 0.5;
-    brakeCommand = abs(rosBrake - 1.0) < 1e-6;
+    steeringCommand = rosAngleToDynamixelWidth(rosSteeringAngle);
+    brakeCommand = 0.5 < rosBrake;
   }
 
 
