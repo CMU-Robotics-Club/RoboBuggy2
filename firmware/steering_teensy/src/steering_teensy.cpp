@@ -1,3 +1,5 @@
+#include <Arduino.h>
+
 #include "Dynamixel.h"
 #include "DynamixelInterface.h"
 #include "DynamixelMotor.h"

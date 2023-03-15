@@ -30,6 +30,7 @@
 #define DEBUG_SERIAL Serial
 #define DATA_SERIAL Serial1
 
+#include <Arduino.h>
 #include <RadioLib.h>
 
 #ifdef LORA_ROS_NODE

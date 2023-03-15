@@ -21,6 +21,7 @@
    is changed to the next channel.
 */
 
+#include <Arduino.h>
 #include <RadioLib.h>
 #include <CircularBuffer.h>
 #include <rtcmstreamsplitter.h>
