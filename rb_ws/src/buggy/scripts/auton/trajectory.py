@@ -20,12 +20,10 @@ class Trajectory:
     Use https://rdudhagra.github.io/eracer-portal/ to make trajectories and save the JSON file
     """
 
-    distances = np.zeros((0, 1))  # (N x 1) [d, d, ...]
+    distances = np.zeros((0, 1))  # (N/dt x 1) [d, d, ...]
     positions = np.zeros((0, 2))  # (N x 2) [(x,y), (x,y), ...]
-    # curvatures = np.zeros((0, 1))  # (N x 1) [k, k, ...]
-    indices = None
-    interpolation = None
-    # headings = None
+    indices = None                # (N x 1) [0, 1, 2, ...]
+    interpolation = None          # scipy.interpolate.PPoly
 
     def __init__(self, json_filepath) -> None:
         pos = []
@@ -46,18 +44,6 @@ class Trajectory:
             x, y = World.gps_to_world(lat, lon)
             pos.append([x, y])
 
-            # # find appropriate heading for use with Stanley Controller
-            # heading = 0
-            # if (i > 0):
-            #     # at initial index, heading just remains 0
-            #     prev_waypoint = data[i-1]
-            #     prev_lat = prev_waypoint["lat"]
-            #     prev_lon = prev_waypoint["lon"]
-            #     prev_x, prev_y = World.gps_to_world(prev_lat, prev_lon)
-            #     dx = x - prev_x
-            #     dy = y - prev_y
-            #     heading = np.arctan2(dy, dx)
-
         self.positions = np.array(pos)
         self.indices = np.arange(len(self.positions))
         self.interpolation = CubicSpline(self.indices, self.positions)
@@ -68,31 +54,8 @@ class Trajectory:
         drdt = self.interpolation(ts, nu=1) # Calculate derivatives of polynomial wrt indices
         ds = np.sqrt(drdt[:, 0]**2 + drdt[:, 1]**2) * dt
         s = np.cumsum(np.hstack([[0], ds[:-1]]))
-        self.distances = s#[0:None:int(1/dt)]
+        self.distances = s
         self.dt = dt
-
-        # self.distances = np.hstack(
-        #     (
-        #         0,
-        #         np.cumsum(
-        #             np.sqrt(
-        #                 np.sum(
-        #                     np.diff(self.positions, axis=0) ** 2, axis=1, keepdims=True
-        #                 )
-        #             )
-        #         ),
-        #     )
-        # )
-
-        # Calculate the curvatures
-        # dx_dt = np.gradient(self.positions[:, 0])
-        # dy_dt = np.gradient(self.positions[:, 1])
-        # d2x_dt2 = np.gradient(dx_dt)
-        # d2y_dt2 = np.gradient(dy_dt)
-
-        # self.curvatures = (d2x_dt2 * dy_dt - dx_dt * d2y_dt2) / (
-        #     dx_dt * dx_dt + dy_dt * dy_dt
-        # ) ** 1.5
 
     def get_num_points(self):
         """Gets the number of points along the trajectory
@@ -107,7 +70,7 @@ class Trajectory:
         interpolating if necessary
 
         Args:
-            index (int): index along the trajectory
+            index (float): index along the trajectory
 
         Returns:
             float: (theta) in rads
@@ -123,7 +86,7 @@ class Trajectory:
         interpolating if necessary
 
         Args:
-            index (int): index along the trajectory
+            index (float): index along the trajectory
 
         Returns:
             tuple: (x, y)
@@ -166,7 +129,7 @@ class Trajectory:
         interpolating if necessary
 
         Args:
-            index (int): index along the trajectory
+            index (float): index along the trajectory
 
         Returns:
             float: distance along the trajectory in meters
@@ -181,7 +144,7 @@ class Trajectory:
         interpolating if necessary
 
         Args:
-            index (int): index along the trajectory
+            index (float): index along the trajectory
 
         Returns:
             float: curvature
@@ -242,16 +205,8 @@ class Trajectory:
         end_index = min(len(self.positions), min_ind + 1)
 
         # Now interpolate at a higher resolution to get a more accurate result
-        x_interp = np.interp(
-            np.linspace(start_index, end_index, subsample_resolution + 1),
-            np.arange(len(self.positions)),
-            self.positions[:, 0],
-        )
-        y_interp = np.interp(
-            np.linspace(start_index, end_index, subsample_resolution + 1),
-            np.arange(len(self.positions)),
-            self.positions[:, 1],
-        )
+        r_interp = self.interpolation(np.linspace(start_index, end_index, subsample_resolution + 1))
+        x_interp, y_interp = r_interp[:, 0], r_interp[:, 1]
 
         distances = (x_interp - x) ** 2 + (y_interp - y) ** 2
 
@@ -269,6 +224,9 @@ if __name__ == "__main__":
     # Get the position at a given index
     x, y = trajectory.get_position_by_index(10)
     print(f"Position at index 10: ({x}, {y})")
+
+    x, y = trajectory.get_position_by_index(10.5)
+    print(f"Position at index 10.5: ({x}, {y})")
 
     # Get the position at a given distance
     x, y = trajectory.get_position_by_distance(10)
