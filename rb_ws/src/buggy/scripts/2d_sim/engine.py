@@ -129,7 +129,6 @@ class Simulator:
         
         # NavSatFix for usage with X11 matplotlib AND Foxglove plotting
         (lat, long) = utm.to_latlon(p.position.x, p.position.y, Simulator.UTM_ZONE_NUM, Simulator.UTM_ZONE_LETTER)
-        print("LOOP: ", p.position.x, p.position.y)
         nsf.latitude = lat
         nsf.longitude = long
         nsf.altitude = 260 # constant
