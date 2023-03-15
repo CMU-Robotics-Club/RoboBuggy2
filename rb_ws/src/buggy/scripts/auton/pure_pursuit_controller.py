@@ -19,9 +19,9 @@ class PurePursuitController(Controller):
 
     WHEELBASE = 1.3
 
-    LOOK_AHEAD_DIST_CONST = 0.375
-    MIN_LOOK_AHEAD_DIST = 0.5
-    MAX_LOOK_AHEAD_DIST = 5
+    LOOK_AHEAD_DIST_CONST = 0.25
+    MIN_LOOK_AHEAD_DIST = 2
+    MAX_LOOK_AHEAD_DIST = 10
 
     current_traj_index = 0
 
@@ -43,7 +43,7 @@ class PurePursuitController(Controller):
         Computes the desired control output given the current state and reference trajectory
 
         Args:
-            state (numpy.ndarray [size: (3,)]): current pose (x, y, theta)
+            current_pose (Pose): current pose (x, y, theta) (UTM coordinates)
             trajectory (Trajectory): reference trajectory
             current_speed (float): current speed of the buggy
 
