@@ -151,9 +151,10 @@ ros::NodeHandle nh;
 ros::Subscriber<std_msgs::Float64> steer("buggy/input/steering", rosSteeringCallback);
 ros::Subscriber<std_msgs::Float64> brake("buggy/input/brake", rosBrakeCallback);
 
-diagnostic_msgs::DiagnosticStatus teensy_status;
-diagnostic_msgs::KeyValue status_values[7];
-ros::Publisher debug("TeensyStateIn_T", &teensy_status);
+diagnostic_msgs::DiagnosticStatus rosLogger;
+diagnostic_msgs::KeyValue rosLogValues[7];
+ros::Publisher debug("TeensyStateIn_T", &rosLogger);
+int rosLogCounter = 0;
 
 int LEFT_DYNAMIXEL_LIMIT = 1516;
 int RIGHT_DYNAMIXEL_LIMIT = 829;
@@ -356,9 +357,32 @@ void loop()
     brakeCommand = 0.5 < rosBrake;
   }
 
-
   motor->goalPosition(steeringCommand);
   digitalWrite(BRAKE_RELAY_PIN, brakeCommand);
+
+  // Logging data to ROS
+  if (rosLogCounter == 0) {
+    rosLogger.name = "Steering Teensy Log";
+    rosLogger.level = diagnostic_msgs::DiagnosticStatus::OK;
+    rosLogger.message = "buggy yeet";
+    rosLogger.values = &rosLogValues[0];
+
+    char c_steeringCommand[32];
+    String(steeringCommand).toCharArray(c_steeringCommand, 32);
+
+    char c_brakeCommand[32];
+    String(brakeCommand).toCharArray(c_brakeCommand, 32);
+
+    rosLogValues[0].key = "steeringCommand";
+    rosLogValues[0].value = c_steeringCommand;
+    rosLogValues[1].key = "brakeCommand";
+    rosLogValues[0].value = c_brakeCommand;
+    
+    debug.publish(&rosLogger);
+  }
+  
+  rosLogCounter++;
+  rosLogCounter %= 100;
 
   delay(1);
   nh.spinOnce();
