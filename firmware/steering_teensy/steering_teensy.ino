@@ -158,6 +158,7 @@ int rosLogCounter = 0;
 
 int LEFT_DYNAMIXEL_LIMIT = 1516;
 int RIGHT_DYNAMIXEL_LIMIT = 829;
+// TODO write docstring
 int getDynamixelCenter() {
   return (LEFT_DYNAMIXEL_LIMIT + RIGHT_DYNAMIXEL_LIMIT) / 2.0;
 }
@@ -216,6 +217,10 @@ int rosAngleToDynamixelWidth(float angleDegrees) {
     return RIGHT_DYNAMIXEL_LIMIT;
   }
   return output;
+}
+
+float dynamixelAngleToDegrees(int dynamixelWidth) {
+  return (dynamixelWidth - getDynamixelCenter()) * 0.088;
 }
 
 
@@ -368,15 +373,15 @@ void loop()
     rosLogger.values = &rosLogValues[0];
 
     char c_steeringCommand[32];
-    String(steeringCommand).toCharArray(c_steeringCommand, 32);
+    String(dynamixelAngleToDegrees(steeringCommand)).toCharArray(c_steeringCommand, 32);
 
     char c_brakeCommand[32];
     String(brakeCommand).toCharArray(c_brakeCommand, 32);
 
-    rosLogValues[0].key = "steeringCommand";
+    rosLogValues[0].key = "steeringAngleCommand";
     rosLogValues[0].value = c_steeringCommand;
     rosLogValues[1].key = "brakeCommand";
-    rosLogValues[0].value = c_brakeCommand;
+    rosLogValues[1].value = c_brakeCommand;
     
     debug.publish(&rosLogger);
   }
