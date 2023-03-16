@@ -19,8 +19,8 @@ class PurePursuitController(Controller):
 
     WHEELBASE = 1.3
 
-    LOOK_AHEAD_DIST_CONST = 0.25
-    MIN_LOOK_AHEAD_DIST = 2
+    LOOK_AHEAD_DIST_CONST = 0.5
+    MIN_LOOK_AHEAD_DIST = 0.5
     MAX_LOOK_AHEAD_DIST = 10
 
     current_traj_index = 0
@@ -83,6 +83,7 @@ class PurePursuitController(Controller):
         steering_angle = np.arctan(
             2.0 * self.WHEELBASE * np.sin(bearing) / lookahead_dist
         )
+        steering_angle = np.clip(steering_angle, -np.pi / 9, np.pi / 9)
 
         # Publish track position for debugging
         track_navsat = NavSatFix()
