@@ -1,0 +1,20 @@
+<!-- roslaunch buggy main.launch simulation:=true -->
+<!-- roslaunch buggy main.launch simulation:=false -->
+<!-- <arg name="name" value="INS" /> -->
+
+<launch>
+    <param name="simulation" value="$(arg simulation)" />
+    <group if="$(arg simulation)"> <!-- if simulation is true -->
+        <node name="simulator" pkg="buggy" type="simulator.py" output="screen"/>
+    </group>
+    <group unless="$(arg simulation)"> <!-- if simulation is false -->
+        <include file="$(find microstrain_inertial_driver)/launch/microstrain.launch">
+            <arg name="params_file" value="/rb_ws/src/buggy/INS_params.yml"/>
+        </include>
+    </group>
+    <node name="foxglove" pkg="foxglove_bridge" type="foxglove_bridge" />
+    <node name="asset_server" pkg="buggy" type="asset_server.py" args="--directory='/rb_ws/src/buggy/assets'" />
+    <node name="asset_publish" pkg="buggy" type="asset_publish.py" />
+    <node name="telematics" pkg="buggy" type="telematics.py" />
+    <node name="pure_pursuit" pkg="buggy" type="pure_pursuit_controller.py" output="screen"/>
+</launch>
