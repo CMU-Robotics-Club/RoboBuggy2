@@ -70,12 +70,13 @@ Instructions:
 
 ### Using the Simulator
 Feedback:
-- Longitude + Latitude for Foxglove visualization on map: `/sim_2d/navsatfix` (sensor_msgs/NavSatFix)
+- Longitude + Latitude for Foxglove visualization on map: `/state/pose_navsat` (sensor_msgs/NavSatFix)
 - UTM coordinates (assume we're in Zone 17T): `/sim_2d/utm` (geometry_msgs/Pose - position.x = Easting meters , position.y = Northing meters, position.z = heading in degrees from East axis + is CCW)
+- INS Simulation: `/nav/odom` (nsg_msgs/Odometry) (**Noise** is implemented to vary ~1cm)
 
 Commands:
-- Steering angle: `/sim_2d/steering` in degrees (std_msgs/Float32)
-- Velocity: `/sim_2d/velocity` in m/s (std_msgs/Float32)
+- Steering angle: `/buggy/steering` in degrees (std_msgs/Float64)
+- Velocity: `/buggy/velocity` in m/s (std_msgs/Float64)
 
 ---
 
