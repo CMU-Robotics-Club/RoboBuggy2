@@ -15,13 +15,11 @@
 #include <std_msgs/UInt32.h>
 #include <diagnostic_msgs/DiagnosticStatus.h>
 #include <diagnostic_msgs/KeyValue.h>
+#include <sensor_msgs/BatteryState.h>
 
 /* ============= */
 /* Board Config  */
 /* ============= */
-
-#define BOARD_V1
-#define BOARD_V1
 
 // Dynamixel Pins
 #define DYNAMIXEL_SERIAL Serial5
@@ -31,6 +29,7 @@
 DynamixelMotor *motor;
 
 // Teensy Pins
+#define VOLTAGE_PIN 24
 #define BRAKE_RELAY_PIN 25
 #define INTERRUPT_PIN 41
 
@@ -152,6 +151,9 @@ void rosBrakeCallback(const std_msgs::Float64 &cmd_msg)
 ros::NodeHandle nh;
 ros::Subscriber<std_msgs::Float64> steer("buggy/input/steering", rosSteeringCallback);
 ros::Subscriber<std_msgs::Float64> brake("buggy/input/brake", rosBrakeCallback);
+
+sensor_msgs::BatteryState battery_msg;
+ros::Publisher battery("buggy/battery", &battery_msg);
 
 diagnostic_msgs::DiagnosticStatus rosLogger;
 diagnostic_msgs::KeyValue rosLogValues[7];
@@ -296,10 +298,30 @@ void setup()
   nh.subscribe(steer);
   nh.subscribe(brake);
   nh.advertise(debug);
+  nh.advertise(battery);
+
+  // The charging status as reported
+  battery_msg.power_supply_status = sensor_msgs::BatteryState::POWER_SUPPLY_STATUS_UNKNOWN;
+  // The battery health metric
+  battery_msg.power_supply_health = sensor_msgs::BatteryState::POWER_SUPPLY_HEALTH_UNKNOWN;
+  // The battery chemistry
+  battery_msg.power_supply_technology = sensor_msgs::BatteryState::POWER_SUPPLY_TECHNOLOGY_UNKNOWN;
+
+  // Set unused battery parameters
+  battery_msg.temperature = NAN;     // Temperature in Degrees Celsius (If unmeasured NaN)
+  battery_msg.current = NAN;         // Negative when discharging (A)  (If unmeasured NaN)
+  battery_msg.charge = NAN;          // Current charge in Ah  (If unmeasured NaN)
+  battery_msg.capacity = NAN;        // Capacity in Ah (last full capacity)  (If unmeasured NaN)
+  battery_msg.design_capacity = NAN; // Capacity in Ah (design capacity)  (If unmeasured NaN)
+  battery_msg.percentage = NAN;      // Charge percentage on 0 to 1 range  (If unmeasured NaN)
+  battery_msg.present = true;        // True if the battery is present
+  battery_msg.location = "Buggy";    // The location into which the battery is inserted. (slot number or plug)
+  battery_msg.serial_number = "";    // The best approximation of the battery serial number
 
   pinMode(BRAKE_RELAY_PIN, OUTPUT);
   digitalWrite(BRAKE_RELAY_PIN, LOW);
   pinMode(INTERRUPT_PIN, OUTPUT);
+  pinMode(VOLTAGE_PIN, INPUT);
 
   DynamixelInterface *dInterface = new DynamixelInterface(DYNAMIXEL_SERIAL, DYNAMIXEL_RXEN, DYNAMIXEL_TXEN, DirPinMode::ReadHiWriteLo); // Stream
   dInterface->begin(1000000, 50);                // baudrate, timeout
@@ -386,6 +408,9 @@ void loop()
     rosLogValues[1].value = c_brakeCommand;
     
     debug.publish(&rosLogger);
+
+    battery_msg.voltage = analogRead(VOLTAGE_PIN) / 1024.0 * 50.0;
+    battery.publish(&battery_msg);
   }
   
   rosLogCounter++;
