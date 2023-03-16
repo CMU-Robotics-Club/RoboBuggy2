@@ -46,7 +46,7 @@ class Simulator:
 
         self.steering_angle = 0 # degrees
 
-        self.rate = 10 # Hz
+        self.rate = 50 # Hz
 
         self.lock = threading.Lock()
     
@@ -141,8 +141,8 @@ class Simulator:
         odom.header.stamp = rospy.Time.now()
 
         odom_pose = Pose()
-        odom_pose.position.x = long
-        odom_pose.position.y = lat
+        odom_pose.position.x = long + np.random.normal(0, 1e-8) # ~1cm error
+        odom_pose.position.y = lat + np.random.normal(0, 1e-8) # ~1cm error
         odom_pose.position.z = 260
 
         odom_pose.orientation.x = 0
