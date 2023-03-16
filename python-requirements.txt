@@ -5,3 +5,4 @@ pandas
 pymap3d
 matplotlib
 utm
+scipy

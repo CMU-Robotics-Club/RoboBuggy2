@@ -63,19 +63,20 @@ Instructions:
 - Install the appropriate X11 server on your computer for your respective operating systems (Xming for Windows, XQuartz for Mac, etc.).
 - Mac: In XQuartz settings, ensure that the "Allow connections from network clients" under "Security" is checked.
 - Windows: Make sure that you're using WSL 2 Ubuntu and NOT command prompt.
-- While in a bash shell with the X11 server running, run `xhost +localhost`.
+- While in a bash shell with the X11 server running, run `xhost +local:docker`.
 - Boot up the docker container using the "Alternate Shortcut" above.
 - Run `xeyes` while INSIDE the Docker container to test X11 forwarding. If this works, we're good.
 - Run `roslaunch buggy sim_2d.launch` for the simulator.
 
 ### Using the Simulator
 Feedback:
-- Longitude + Latitude for Foxglove visualization on map: `/sim_2d/navsatfix` (sensor_msgs/NavSatFix)
+- Longitude + Latitude for Foxglove visualization on map: `/state/pose_navsat` (sensor_msgs/NavSatFix)
 - UTM coordinates (assume we're in Zone 17T): `/sim_2d/utm` (geometry_msgs/Pose - position.x = Easting meters , position.y = Northing meters, position.z = heading in degrees from East axis + is CCW)
+- INS Simulation: `/nav/odom` (nsg_msgs/Odometry) (**Noise** is implemented to vary ~1cm)
 
 Commands:
-- Steering angle: `/sim_2d/steering` in degrees (std_msgs/Float32)
-- Velocity: `/sim_2d/velocity` in m/s (std_msgs/Float32)
+- Steering angle: `/buggy/steering` in degrees (std_msgs/Float64)
+- Velocity: `/buggy/velocity` in m/s (std_msgs/Float64)
 
 ---
 

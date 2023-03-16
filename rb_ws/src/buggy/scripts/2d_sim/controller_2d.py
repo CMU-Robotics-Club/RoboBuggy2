@@ -1,13 +1,13 @@
 #! /usr/bin/env python3
 import rospy
-from std_msgs.msg import Float32
+from std_msgs.msg import Float64
 import threading
 import numpy as np
 
 class Controller:
     def __init__(self):
-        self.steering_publisher = rospy.Publisher("sim_2d/steering", Float32, queue_size=10)
-        self.velocity_publisher = rospy.Publisher("sim_2d/velocity", Float32, queue_size=10)
+        self.steering_publisher = rospy.Publisher("sim_2d/steering", Float64, queue_size=10)
+        self.velocity_publisher = rospy.Publisher("buggy/velocity", Float64, queue_size=10)
         self.steering_angle = 0
         self.velocity = 0
 
@@ -21,7 +21,7 @@ class Controller:
         Args:
             angle (float): degrees, + is CCW
         """
-        msg = Float32()
+        msg = Float64()
         msg.data = angle
 
         with self.lock:
@@ -35,7 +35,7 @@ class Controller:
         Args:
             vel (float): velocity (m/s)
         """
-        msg = Float32()
+        msg = Float64()
         msg.data = vel
 
         with self.lock:
