@@ -22,6 +22,9 @@ class BrakeController:
         Returns:
             float: lateral accel in "g"
         """
+        if (steering_angle == 0.0):
+            return 0.0
+        
         radius_front_wheel = Controller.WHEELBASE / np.sin(np.deg2rad(steering_angle))
         radius_rear_wheel = Controller.WHEELBASE / np.tan(np.deg2rad(steering_angle))
 
