@@ -14,6 +14,7 @@ from world import World
 from controller import Controller
 from pure_pursuit_controller import PurePursuitController
 from stanley_controller import StanleyController
+from brake_controller import BrakeController
 from pose import Pose
 
 
@@ -28,13 +29,15 @@ class AutonSystem:
 
     trajectory: Trajectory = None
     controller: Controller = None
+    brake_controller: BrakeController = None
     lock = None
 
     steer_publisher = None
 
-    def __init__(self, trajectory, controller) -> None:
+    def __init__(self, trajectory, controller, brake_controller) -> None:
         self.trajectory = trajectory
         self.controller = controller
+        self.brake_controller = brake_controller
 
         self.lock = Lock()
 
@@ -80,7 +83,8 @@ class AutonSystem:
         # Publish control output
         steering_angle_deg = np.rad2deg(steering_angle)
         self.steer_publisher.publish(Float64(steering_angle_deg))
-        self.brake_publisher.publish(Float64(0))
+        brake_cmd = self.brake_controller.compute_braking(current_speed, steering_angle_deg)
+        self.brake_publisher.publish(Float64(brake_cmd))
 
         # Publish debug data
         self.heading_publisher.publish(Float32(pose.theta))
@@ -90,8 +94,9 @@ if __name__ == "__main__":
     rospy.init_node("auton_system")
     auton_system = AutonSystem(
         Trajectory("/rb_ws/src/buggy/paths/quartermiletrack.json"),
-        PurePursuitController(),
-        # StanleyController(),
+        # PurePursuitController(),
+        StanleyController(),
+        BrakeController()
     )
     while not rospy.is_shutdown():
         rospy.spin()

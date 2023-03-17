@@ -16,6 +16,8 @@ class Controller(ABC):
     Example schemes include Pure Pursuit, Stanley, and LQR.
     """
 
+    WHEELBASE = 1.3
+
     @abstractmethod
     def compute_control(
         self, current_pose: Pose, trajectory: Trajectory, current_speed: float
