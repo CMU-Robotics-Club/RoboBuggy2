@@ -91,7 +91,8 @@ class StanleyController(Controller):
             * StanleyController.HEADING_GAIN
         )
 
-        # Calculate cross track error by finding the distance from the buggy to the tangent line of the reference trajectory
+        # Calculate cross track error by finding the distance from the buggy to the tangent line of
+        # the reference trajectory
         closest_position = trajectory.get_position_by_index(self.current_traj_index)
         next_position = trajectory.get_position_by_index(
             self.current_traj_index + 0.0001
