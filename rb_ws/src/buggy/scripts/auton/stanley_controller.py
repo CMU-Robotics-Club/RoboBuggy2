@@ -22,7 +22,6 @@ class StanleyController(Controller):
     MIN_LOOK_AHEAD_DIST = 0.1
     MAX_LOOK_AHEAD_DIST = 2
 
-    WHEELBASE = 1.3
     CROSS_TRACK_GAIN = 1
     HEADING_GAIN = 0.75
 
