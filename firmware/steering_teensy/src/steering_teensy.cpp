@@ -156,7 +156,7 @@ sensor_msgs::BatteryState battery_msg;
 ros::Publisher battery("buggy/battery", &battery_msg);
 
 diagnostic_msgs::DiagnosticStatus rosLogger;
-diagnostic_msgs::KeyValue rosLogValues[7];
+diagnostic_msgs::KeyValue rosLogValues[2];
 ros::Publisher debug("TeensyStateIn_T", &rosLogger);
 int rosLogCounter = 0;
 
@@ -395,6 +395,7 @@ void loop()
     rosLogger.level = diagnostic_msgs::DiagnosticStatus::OK;
     rosLogger.message = "buggy yeet";
     rosLogger.values = &rosLogValues[0];
+    rosLogger.values_length = sizeof(rosLogValues)/sizeof(diagnostic_msgs::KeyValue);
 
     char c_steeringCommand[32];
     String(dynamixelAngleToDegrees(steeringCommand)).toCharArray(c_steeringCommand, 32);
