@@ -48,6 +48,9 @@ class AutonSystem:
         self.brake_publisher = rospy.Publisher(
             "buggy/input/brake", Float64, queue_size=1
         )
+        self.brake_debug_publisher = rospy.Publisher(
+            "auton/debug/brake", Float64, queue_size=1
+        )
 
         self.heading_publisher = rospy.Publisher(
             "auton/debug/heading", Float32, queue_size=1
@@ -84,7 +87,8 @@ class AutonSystem:
         steering_angle_deg = np.rad2deg(steering_angle)
         self.steer_publisher.publish(Float64(steering_angle_deg))
         brake_cmd = self.brake_controller.compute_braking(current_speed, steering_angle_deg)
-        self.brake_publisher.publish(Float64(brake_cmd))
+        self.brake_debug_publisher.publish(Float64(brake_cmd))
+        self.brake_publisher.publish(Float64(0)) # No braking for now, just look at debug data
 
         # Publish debug data
         self.heading_publisher.publish(Float32(pose.theta))
