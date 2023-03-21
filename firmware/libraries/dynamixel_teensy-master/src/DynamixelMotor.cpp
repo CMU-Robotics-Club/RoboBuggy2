@@ -1,7 +1,6 @@
 #include "DynamixelMotor.h"
 
-DynamixelDevice::DynamixelDevice(DynamixelInterface &aInterface, DynamixelID aID):
-	mInterface(aInterface), mStatusReturnLevel(255), mID(aID)
+DynamixelDevice::DynamixelDevice(DynamixelInterface &aInterface, DynamixelID aID) : mInterface(aInterface), mStatusReturnLevel(255), mID(aID)
 {
 	mStatus = DYN_STATUS_OK;
 	if (mID == BROADCAST_ID)
@@ -73,16 +72,13 @@ DynamixelStatus DynamixelDevice::init()
 	return DYN_STATUS_OK;
 }
 
-
-
-DynamixelMotor::DynamixelMotor(DynamixelInterface &aInterface, DynamixelID aId):
-	DynamixelDevice(aInterface, aId)
-{}
-
+DynamixelMotor::DynamixelMotor(DynamixelInterface &aInterface, DynamixelID aId) : DynamixelDevice(aInterface, aId)
+{
+}
 
 void DynamixelMotor::wheelMode()
 {
-	jointMode(0,0);
+	jointMode(0, 0);
 }
 
 void DynamixelMotor::jointMode(uint16_t aCWLimit, uint16_t aCCWLimit)
@@ -93,7 +89,7 @@ void DynamixelMotor::jointMode(uint16_t aCWLimit, uint16_t aCCWLimit)
 
 void DynamixelMotor::enableTorque(bool aTorque)
 {
-	write(DYN_ADDRESS_ENABLE_TORQUE, uint8_t(aTorque?1:0));
+	write(DYN_ADDRESS_ENABLE_TORQUE, uint8_t(aTorque ? 1 : 0));
 }
 
 DynamixelStatus DynamixelMotor::alarmShutdown(uint8_t aMode)
@@ -170,14 +166,39 @@ void DynamixelMotor::led(uint8_t aState)
 
 DynamixelStatus DynamixelMotor::currentPosition(uint16_t &aPosition)
 {
-    aPosition = UINT16_MAX;
-    return read(DYN_ADDRESS_CURRENT_POSITION, aPosition);
+	aPosition = UINT16_MAX;
+	return read(DYN_ADDRESS_CURRENT_POSITION, aPosition);
 }
 
 DynamixelStatus DynamixelMotor::currentPositionDegree(uint16_t &aPosition)
 {
-    DynamixelStatus status = currentPosition(aPosition);
-    aPosition = (uint16_t)((float)aPosition / 3.41);
+	DynamixelStatus status = currentPosition(aPosition);
+	aPosition = (uint16_t)((float)aPosition / 3.41);
 	return status;
 }
 
+/**
+ * It means currently applied load.
+ * The range of the value is 0~2047, and the unit is about 0.1%. If the value is 0~1,023, it means the load works to the CCW direction.
+ * If the value is 1,024~2,047, it means the load works to the CW direction.
+ * That is, the 10th bit becomes the direction bit to control the direction, and 1,024 is equal to 0.
+ * For example, the value is 512, it means the load is detected in the direction of CCW about 50% of the maximum torque.
+ */
+DynamixelStatus DynamixelMotor::presentLoad(uint16_t &aLoad)
+{
+	aLoad = UINT16_MAX;
+	return read(40, aLoad);
+}
+
+/**
+ * At an idle state without current flow, this value is 2,048(0x800).
+ * When positive current flows, this value becomes larger than 2,048(0x800) while negative current flow returns a value smaller than 2,048(0x800).
+ * The following is current flow calculation formula.
+ * I = ( 4.5mA ) * (CURRENT – 2048 ) in amps unit (A).
+ * For example, 68 gives a value of 2148, which corresponds to 450mA of current flow.
+ */
+DynamixelStatus DynamixelMotor::currentMilliAmps(uint16_t &aCurrent)
+{
+	aCurrent = UINT16_MAX;
+	return read(40, aCurrent);
+}
