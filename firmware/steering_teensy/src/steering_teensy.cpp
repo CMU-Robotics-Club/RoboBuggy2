@@ -134,7 +134,7 @@ volatile float rosBrake = 1.0;
  * @param cmd_msg idk lol.  i simply copied this from the old version.
  */
 void rosSteeringCallback(const std_msgs::Float64 &cmd_msg)
-{  
+{
   rosSteeringAngle = cmd_msg.data;
 }
 
@@ -163,10 +163,12 @@ int rosLogCounter = 0;
 int LEFT_DYNAMIXEL_LIMIT = 1516;
 int RIGHT_DYNAMIXEL_LIMIT = 829;
 // TODO write docstring
-int getDynamixelCenter() {
+int getDynamixelCenter()
+{
   return (LEFT_DYNAMIXEL_LIMIT + RIGHT_DYNAMIXEL_LIMIT) / 2.0;
 }
-int getDynamixelRange() {
+int getDynamixelRange()
+{
   return LEFT_DYNAMIXEL_LIMIT - RIGHT_DYNAMIXEL_LIMIT;
 }
 
@@ -188,12 +190,15 @@ int rcToDynamixelWidth(int pulseWidth)
   double displacement = abs(pulseWidth - RC_STEERING_CENTER); // Displacement of the wheel from center.
 
   // Skewing and scaling based on if the RC pulse is right from center or left from center
-  if (pulseWidth < RC_STEERING_CENTER) { // Left: (0, 1]
+  if (pulseWidth < RC_STEERING_CENTER)
+  { // Left: (0, 1]
     displacement /= RC_STEERING_CENTER - LEFT_RC_STEERING_LIMIT;
-  } else if (pulseWidth > RC_STEERING_CENTER) { // Right: [-1, 0)
+  }
+  else if (pulseWidth > RC_STEERING_CENTER)
+  { // Right: [-1, 0)
     displacement /= RC_STEERING_CENTER - RIGHT_RC_STEERING_LIMIT;
   }
-  
+
   // Quadratic steering scale
   // (known to the programmers of Saints Robotics as "odd square")
   displacement *= abs(displacement);
@@ -211,22 +216,25 @@ int rcToDynamixelWidth(int pulseWidth)
  * @param angleDegrees displacement of wheel from center
  * @return signal to send directly to the dynamixel
  */
-int rosAngleToDynamixelWidth(float angleDegrees) {
+int rosAngleToDynamixelWidth(float angleDegrees)
+{
   int output = getDynamixelCenter() + (angleDegrees / 0.088);
 
-  if (output > LEFT_DYNAMIXEL_LIMIT) {
+  if (output > LEFT_DYNAMIXEL_LIMIT)
+  {
     return LEFT_DYNAMIXEL_LIMIT;
   }
-  if (output < RIGHT_DYNAMIXEL_LIMIT) {
+  if (output < RIGHT_DYNAMIXEL_LIMIT)
+  {
     return RIGHT_DYNAMIXEL_LIMIT;
   }
   return output;
 }
 
-float dynamixelAngleToDegrees(int dynamixelWidth) {
+float dynamixelAngleToDegrees(int dynamixelWidth)
+{
   return (dynamixelWidth - getDynamixelCenter()) * 0.088;
 }
-
 
 /**
  * @brief TODO this should be cleaned up eventually
@@ -262,16 +270,15 @@ void calibrateSteering()
   targetPos = startPos;
   currentPos = startPos;
   Serial.println();
-    
+
   a = motor->goalPosition(targetPos);
   delay(2000);
-  
+
   // Calibrate left limit
   while (targetPos - currentPos < 100)
   {
     Serial.print("left ");
     a = motor->goalPosition(targetPos);
-
 
     a = motor->currentPosition(currentPos);
 
@@ -279,8 +286,6 @@ void calibrateSteering()
     delay(50);
   }
   LEFT_DYNAMIXEL_LIMIT = currentPos - 100;
-
-
 }
 
 void setup()
@@ -302,7 +307,7 @@ void setup()
 
   // The charging status as reported
   battery_msg.power_supply_status = sensor_msgs::BatteryState::POWER_SUPPLY_STATUS_UNKNOWN;
-  // The battery health metric
+  //  The battery health metric
   battery_msg.power_supply_health = sensor_msgs::BatteryState::POWER_SUPPLY_HEALTH_UNKNOWN;
   // The battery chemistry
   battery_msg.power_supply_technology = sensor_msgs::BatteryState::POWER_SUPPLY_TECHNOLOGY_UNKNOWN;
@@ -324,8 +329,8 @@ void setup()
   pinMode(VOLTAGE_PIN, INPUT);
 
   DynamixelInterface *dInterface = new DynamixelInterface(DYNAMIXEL_SERIAL, DYNAMIXEL_RXEN, DYNAMIXEL_TXEN, DirPinMode::ReadHiWriteLo); // Stream
-  dInterface->begin(1000000, 50);                // baudrate, timeout
-  motor = new DynamixelMotor(*dInterface, 5); // Interface , ID
+  dInterface->begin(1000000, 50);                                                                                                       // baudrate, timeout
+  motor = new DynamixelMotor(*dInterface, 5);                                                                                           // Interface , ID
 
   motor->init(); // This will get the returnStatusLevel of the servo
   Serial.printf("Status return level = %u\n", motor->statusReturnLevel());
@@ -337,7 +342,7 @@ void setup()
   motor->enableTorque(false);
   motor->jointMode(1, 0xFFF);
   motor->enableTorque();
-  
+
   calibrateSteering();
   Serial.print("Left limit is ");
   Serial.println(LEFT_DYNAMIXEL_LIMIT);
@@ -345,7 +350,7 @@ void setup()
   Serial.println(RIGHT_DYNAMIXEL_LIMIT);
 
   motor->enableTorque(false);
-  //motor->jointMode(RIGHT_DYNAMIXEL_LIMIT, LEFT_DYNAMIXEL_LIMIT); // Set the angular limits of the servo. Set to [min, max] by default
+  // motor->jointMode(RIGHT_DYNAMIXEL_LIMIT, LEFT_DYNAMIXEL_LIMIT); // Set the angular limits of the servo. Set to [min, max] by default
   motor->enableTorque();
 }
 
@@ -390,12 +395,13 @@ void loop()
   digitalWrite(BRAKE_RELAY_PIN, !brakeCommand);
 
   // Logging data to ROS
-  if (rosLogCounter == 0) {
+  if (rosLogCounter == 0)
+  {
     rosLogger.name = "Steering Teensy Log";
     rosLogger.level = diagnostic_msgs::DiagnosticStatus::OK;
     rosLogger.message = "buggy yeet";
     rosLogger.values = &rosLogValues[0];
-    rosLogger.values_length = sizeof(rosLogValues)/sizeof(diagnostic_msgs::KeyValue);
+    rosLogger.values_length = sizeof(rosLogValues) / sizeof(diagnostic_msgs::KeyValue);
 
     char c_steeringCommand[32];
     String(dynamixelAngleToDegrees(steeringCommand)).toCharArray(c_steeringCommand, 32);
@@ -403,17 +409,29 @@ void loop()
     char c_brakeCommand[32];
     String(brakeCommand).toCharArray(c_brakeCommand, 32);
 
+    uint16_t presentLoad;
+    bool a = motor->presentLoad(presentLoad);
+    char c_presentLoad[32];
+    String(presentLoad).toCharArray(c_presentLoad, 32);
+
+    uint16_t current;
+    a = motor->presentLoad(current);
+    char c_current[32];
+    String(current).toCharArray(c_current, 32);
+
     rosLogValues[0].key = "steeringAngleCommand";
     rosLogValues[0].value = c_steeringCommand;
     rosLogValues[1].key = "brakeCommand";
     rosLogValues[1].value = c_brakeCommand;
-    
+    rosLogValues[2].key = "current milliamps";
+    rosLogValues[2].value = c_current;
+
     debug.publish(&rosLogger);
 
     battery_msg.voltage = analogRead(VOLTAGE_PIN) / 1024.0 * 50.0;
     battery.publish(&battery_msg);
   }
-  
+
   rosLogCounter++;
   rosLogCounter %= 100;
 
