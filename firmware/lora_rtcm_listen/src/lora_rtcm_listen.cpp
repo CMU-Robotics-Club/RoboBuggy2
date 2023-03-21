@@ -24,16 +24,14 @@
 #define LORA_HEADER "W3VC/1"
 #define LORA_HEADER_LENGTH 6
 #define LORA_PAYLOAD_LENGTH 249
+#define LORA_ROS_NODE "rtcm"
 #define LORA_FIXED_FREQ 902.5
-//#define LORA_ROS_NODE "rtcm"
 
-#define DEBUG_SERIAL Serial
 #define DATA_SERIAL Serial1
 
 #include <Arduino.h>
 #include <RadioLib.h>
 
-#ifdef LORA_ROS_NODE
 #include <ros.h>
 #include <ros/time.h>
 #include <mavros_msgs/RTCM.h>
@@ -41,9 +39,8 @@
 ros::NodeHandle nh;
 
 mavros_msgs::RTCM rtcm;
-ros::Publisher p(LORA_ROS_NODE, &rtcm);
-
-#endif
+ros::Publisher rtcm_pub(LORA_ROS_NODE, &rtcm);
+char debug_chars[64];
 
 typedef struct {
   byte length;
@@ -101,20 +98,15 @@ void setFHSSFlag(void) {
 }
 
 void setup() {
-  DEBUG_SERIAL.begin(57600);
+  // Set up ROS serial communication
+  nh.getHardware()->setBaud(115200);
+  nh.initNode();
+  nh.advertise(rtcm_pub);
 
-  #ifndef LORA_ROS_NODE
-    DATA_SERIAL.begin(115200);
-  #else  
-    nh.getHardware()->setBaud(115200);
-    #if DATA_SERIAL != Serial
-      nh.getHardware()->setPort(&DATA_SERIAL);
-    #endif
-    nh.initNode();
-    nh.advertise(p);
-  #endif
+  // Set up RS232 data
+  DATA_SERIAL.begin(115200);
 
-  delay(5000);
+  delay(1000);
 
   // generate LFSR indexes (psuedorandom non-repeating [0, 63])
   memset(&channel_indices[0], 0, sizeof(channel_indices));
@@ -127,27 +119,23 @@ void setup() {
   }
 
   // begin radio on home channel
-  DEBUG_SERIAL.println("[SX1276] Initializing ... ");
+  nh.logdebug("[SX1276] Initializing ... ");
   #ifndef LORA_FIXED_FREQ
   int state = radio.begin(channels[channel_indices[0]], 125.0, 7, 5, RADIOLIB_SX127X_SYNC_WORD, 17, 8, 0);
   #else
   int state = radio.begin(LORA_FIXED_FREQ, 250.0, 7, 8, RADIOLIB_SX127X_SYNC_WORD, 10, 8, 0);
   #endif
-  if (state == RADIOLIB_ERR_NONE) {
-    DEBUG_SERIAL.println("success!");
-  } else {
-    DEBUG_SERIAL.print("failed, code ");
-    DEBUG_SERIAL.println(state);
+  if (state != RADIOLIB_ERR_NONE) {
+    snprintf(&debug_chars[0], 64, "failed, code %d", state);
+    nh.logerror(debug_chars);
     while (true);
   }
 
   // set the CRC to be used
   state = radio.setCRC(true);
-  if (state == RADIOLIB_ERR_NONE) {
-    DEBUG_SERIAL.println(F("success!"));
-  } else {
-    DEBUG_SERIAL.print(F("failed, code "));
-    DEBUG_SERIAL.println(state);
+  if (state != RADIOLIB_ERR_NONE) {
+    snprintf(&debug_chars[0], 64, "failed, code %d", state);
+    nh.logerror(debug_chars);
     while (true);
   }
 
@@ -155,11 +143,9 @@ void setup() {
   // this will also enable FHSS
   #ifndef LORA_FIXED_FREQ
   state = radio.setFHSSHoppingPeriod(9);
-  if (state == RADIOLIB_ERR_NONE) {
-    DEBUG_SERIAL.println("success!");
-  } else {
-    DEBUG_SERIAL.print("failed, code ");
-    DEBUG_SERIAL.println(state);
+  if (state != RADIOLIB_ERR_NONE) {
+    snprintf(&debug_chars[0], 64, "failed, code %d", state);
+    nh.logerror(debug_chars);
     while (true);
   }
   #endif
@@ -173,13 +159,11 @@ void setup() {
   #endif
 
   // start listening for LoRa packets
-  DEBUG_SERIAL.print("[SX1276] Starting to listen ... ");
+  nh.logdebug("[SX1276] Starting to listen ... ");
   state = radio.startReceive();
-  if (state == RADIOLIB_ERR_NONE) {
-    DEBUG_SERIAL.println("success!");
-  } else {
-    DEBUG_SERIAL.print("failed, code ");
-    DEBUG_SERIAL.println(state);
+  if (state != RADIOLIB_ERR_NONE) {
+    snprintf(&debug_chars[0], 64, "failed, code %d", state);
+    nh.logerror(debug_chars);
     while (true);
   }
 }
@@ -193,7 +177,8 @@ void loop() {
     message.length = length > LORA_HEADER_LENGTH ? length - LORA_HEADER_LENGTH : 0;
 
     // put the module back to listen mode
-    // DEBUG_SERIAL.printf("[SX1276] SnR %f RSSI %f\n",radio.getSNR(), radio.getRSSI());
+    float snr = radio.getSNR();
+    float rssi = radio.getRSSI();
     radio.startReceive();
 
     // we're ready to receive more packets, clear the flag
@@ -201,33 +186,31 @@ void loop() {
 
     if (state == RADIOLIB_ERR_NONE && message.length > 0) {
       // packet was successfully received
-      // print data of the packet
-      DEBUG_SERIAL.print("[SX1276] Data:\t\t");
-      DEBUG_SERIAL.printf("%d\n", message.length);
-      #ifndef LORA_ROS_NODE
       DATA_SERIAL.write(&message.data[0], message.length);
-      //DATA_SERIAL.flush();
-      #else 
+      
+      // write to ROS publisher as well
       rtcm.header.frame_id = "odom";
       rtcm.header.stamp = nh.now();      
       rtcm.data = &message.data[0];
       rtcm.data_length = message.length;
-      p.publish(&rtcm);
-      #endif
+      rtcm_pub.publish(&rtcm);
     } 
     else if (state == RADIOLIB_ERR_CRC_MISMATCH) {
       // packet was received, but is malformed
-      DEBUG_SERIAL.println("[SX1276] CRC error!");
+      nh.logerror("[SX1276] CRC error!");
     } else {
       // some other error occurred
-      DEBUG_SERIAL.print("[SX1276] Failed, code ");
-      DEBUG_SERIAL.println(state);
+      snprintf(&debug_chars[0], 64, "[SX1276] Failed, code %d", state);
+      nh.logerror(debug_chars);
     }
+
+    snprintf(&debug_chars[0], 64, "[SX1276] SnR %f RSSI %f", snr, rssi);
+    nh.loginfo(debug_chars);
 
     #ifndef LORA_FIXED_FREQ    
     // print the number of hops it took
-    DEBUG_SERIAL.print("[SX1276] Hops completed: ");
-    DEBUG_SERIAL.println(hopsCompleted);
+    snprintf(&debug_chars[0], 64, "[SX1276] Hops completed: %d", hopsCompleted);
+    nh.logerror(debug_chars);
 
     // reset the counter
     hopsCompleted = 0;
@@ -240,8 +223,8 @@ void loop() {
     // we do, change it now
     int state = radio.setFrequency(channels[radio.getFHSSChannel() % numberOfChannels]);
     if (state != RADIOLIB_ERR_NONE) {
-      DEBUG_SERIAL.print("[SX1276] Failed to change frequency, code ");
-      DEBUG_SERIAL.println(state);
+      snprintf(&debug_chars[0], 64, "[SX1276] Failed to change frequency, code %d", state);
+      nh.logerror(debug_chars);
     }
 
     // increment the counter
@@ -255,7 +238,5 @@ void loop() {
   }
   #endif
 
-  #ifdef LORA_ROS_NODE
   nh.spinOnce();
-  #endif
 }
