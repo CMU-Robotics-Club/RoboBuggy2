@@ -19,3 +19,12 @@ services:
     platform: "linux/amd64"
     device_cgroup_rules:
        - "c *:* rmw"
+  tileserver:
+    image: maptiler/tileserver-gl
+    volumes:
+      - "./maps:/data"
+    stdin_open: true # docker run -i
+    tty: true        # docker run -t
+    command: ["-p", "80", "-c", "/data/conf.json"]
+    ports:
+      - "8080:80"

@@ -2,7 +2,7 @@
 # Run to spin up docker containers and set aliases
 docker kill $(docker ps -q) # kill all running containers
 docker compose build
-docker compose --env-file .env.prod up &
+docker compose --env-file .env.prod up -d
 
 sleep 0.5
 

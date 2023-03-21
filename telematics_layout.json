@@ -54,7 +54,7 @@
         "lat": 40.43935344174364,
         "lon": -79.94659781455995
       },
-      "customTileUrl": "",
+      "customTileUrl": "http://192.168.1.217:8080/data/v3/{z}/{x}/{y}.png",
       "disabledTopics": [],
       "followTopic": "",
       "layer": "map",
@@ -62,7 +62,8 @@
         "/gnss1/fix": "#e34f4f",
         "/gnss2/fix": "#4fd5e3"
       },
-      "zoomLevel": 17
+      "zoomLevel": 17,
+      "maxNativeZoom": 20
     },
     "ImageViewPanel!3mnp456": {
       "cameraTopic": "",
