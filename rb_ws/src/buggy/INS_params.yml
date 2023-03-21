@@ -1,3 +1,4 @@
+
 # Standalone example params file for GX3, GX4, GX/CX5, RQ1 and GQ7 series devices
 # Note: Feature support is device-dependent and some of the following settings may have no affect on your device.
 # Please consult your device's documentation for supported features
@@ -107,9 +108,9 @@ imu_overrange_status_data_rate : -1  # Rate of imu/overrange_status topic
 
 # Static IMU message covariance values (the device does not generate these) 
 # Since internally these are std::vector we need to use the rosparam tags 
-imu_orientation_cov : [0.01, 0, 0, 0, 0.01, 0, 0, 0, 0.01]
-imu_linear_cov      : [0.01, 0, 0, 0, 0.01, 0, 0, 0, 0.01]
-imu_angular_cov     : [0.01, 0, 0, 0, 0.01, 0, 0, 0, 0.01]
+imu_orientation_cov : [0.01, 0.0, 0.0, 0.0, 0.01, 0.0, 0.0, 0.0, 0.01]
+imu_linear_cov      : [0.01, 0.0, 0.0, 0.0, 0.01, 0.0, 0.0, 0.0, 0.01]
+imu_angular_cov     : [0.01, 0.0, 0.0, 0.0, 0.01, 0.0, 0.0, 0.0, 0.01]
 
 # ****************************************************************** 
 # GNSS Settings (only applicable for devices with GNSS) 
@@ -208,11 +209,11 @@ filter_aiding_measurement_summary_data_rate : -1  # Rate of nav/aiding_summary t
 #            The different options are provided as a convenience.
 #            Support for matrix and quaternion options is firmware version dependent (GQ7 supports Quaternion as of firmware 1.0.07)
 #            Quaternion order is [i, j, k, w]
-filter_sensor2vehicle_frame_selector : 3
+filter_sensor2vehicle_frame_selector : 1
 
 filter_sensor2vehicle_frame_transformation_euler      : [0.0, 0.0, 0.0]
 filter_sensor2vehicle_frame_transformation_matrix     : [1.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 1.0]
-filter_sensor2vehicle_frame_transformation_quaternion : [0.0, -1.0, 0.0, 0.0]
+filter_sensor2vehicle_frame_transformation_quaternion : [0.0, 0.0, 0.0, 1.0]
 
 # Controls if the Kalman filter is reset after the settings are configured
 filter_reset_after_config : True
@@ -376,7 +377,7 @@ filter_init_attitude : [0.0, 0.0, 0.0]
 #   Note: prior to firmware version 1.0.06 this command will fail for non-positive heights.  1.0.06 fixes this)
 filter_relative_position_config : False
 filter_relative_position_frame  : 2
-filter_relative_position_ref    : [0, 0, 0.01]
+filter_relative_position_ref    : [0.0, 0.0, 0.01]
 
 # (GQ7 only) Speed Lever Arm Configuration
 #   Lever Arm - In vehicle reference frame (meters)
