@@ -2,7 +2,7 @@
 # Run to spin up docker containers and set aliases
 docker compose down # kill all running containers
 docker compose build
-docker compose --env-file .env.dev up &
+docker compose --env-file .env.dev up -d
 
 sleep 0.5
 
