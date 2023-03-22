@@ -15,6 +15,7 @@ from controller import Controller
 from pure_pursuit_controller import PurePursuitController
 from stanley_controller import StanleyController
 from brake_controller import BrakeController
+from model_predictive_controller import ModelPredictiveController
 from pose import Pose
 
 
@@ -99,7 +100,8 @@ if __name__ == "__main__":
     auton_system = AutonSystem(
         Trajectory("/rb_ws/src/buggy/paths/buggycourse_raceline.json"),
         # PurePursuitController(),
-        StanleyController(),
+        # StanleyController(),
+        ModelPredictiveController(),
         BrakeController()
     )
     while not rospy.is_shutdown():
