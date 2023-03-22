@@ -8,6 +8,7 @@ services:
       - "${TEENSY_PORT:-/dev/null}:/dev/ttyUSB0"
       - "${WEBCAM_PORT:-/dev/null}:/dev/ttyUSB1"
       - "${GPS_PORT:-/dev/null}:/dev/ttyACM0"
+      - "${FEATHER_PORT:-/dev/null}:/dev/ttyACM1"
     stdin_open: true # docker run -i
     tty: true        # docker run -t
     ports:

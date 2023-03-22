@@ -27,6 +27,7 @@
 #define LORA_ROS_NODE "rtcm"
 #define LORA_FIXED_FREQ 902.5
 
+#define USE_USBCON
 #define DATA_SERIAL Serial1
 
 #include <Arduino.h>
@@ -105,8 +106,6 @@ void setup() {
 
   // Set up RS232 data
   DATA_SERIAL.begin(115200);
-
-  delay(1000);
 
   // generate LFSR indexes (psuedorandom non-repeating [0, 63])
   memset(&channel_indices[0], 0, sizeof(channel_indices));
