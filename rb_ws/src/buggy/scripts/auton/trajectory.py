@@ -22,8 +22,8 @@ class Trajectory:
 
     distances = np.zeros((0, 1))  # (N/dt x 1) [d, d, ...]
     positions = np.zeros((0, 2))  # (N x 2) [(x,y), (x,y), ...]
-    indices = None                # (N x 1) [0, 1, 2, ...]
-    interpolation = None          # scipy.interpolate.PPoly
+    indices = None  # (N x 1) [0, 1, 2, ...]
+    interpolation = None  # scipy.interpolate.PPoly
 
     def __init__(self, json_filepath) -> None:
         pos = []
@@ -34,7 +34,7 @@ class Trajectory:
         # Iterate through the waypoints and extract the positions
         num_waypoints = len(data)
         for i in range(0, num_waypoints):
-            
+
             waypoint = data[i]
 
             lat = waypoint["lat"]
@@ -52,8 +52,10 @@ class Trajectory:
         # Calculate the distances along the trajectory
         dt = 0.01
         ts = np.arange(len(self.positions), step=dt)
-        drdt = self.interpolation(ts, nu=1) # Calculate derivatives of polynomial wrt indices
-        ds = np.sqrt(drdt[:, 0]**2 + drdt[:, 1]**2) * dt
+        drdt = self.interpolation(
+            ts, nu=1
+        )  # Calculate derivatives of polynomial wrt indices
+        ds = np.sqrt(drdt[:, 0] ** 2 + drdt[:, 1] ** 2) * dt
         s = np.cumsum(np.hstack([[0], ds[:-1]]))
         self.distances = s
         self.dt = dt
@@ -81,6 +83,19 @@ class Trajectory:
         theta = np.arctan2(dydt, dxdt)
 
         return theta
+
+    def get_heading_by_distance(self, distance):
+        """Gets the heading at given distance along trajectory,
+        interpolating if necessary
+
+        Args:
+            distance (float): distance along the trajectory in meters
+
+        Returns:
+            float: (theta) in rads
+        """
+        index = self.get_index_from_distance(distance)
+        return self.get_heading_by_index(index)
 
     def get_position_by_index(self, index):
         """Gets the position at a given index along the trajectory,
@@ -110,6 +125,37 @@ class Trajectory:
         index = self.get_index_from_distance(distance)
         return self.get_position_by_index(index)
 
+    def get_steering_angle_by_index(self, index, wheelbase):
+        """Gets the bicycle-model steering angle at a given distance along the trajectory,
+        interpolating if necessary. Assumes that the origin point of the buggy is at the
+        center of the rear axle.
+
+        Args:
+            index (float): index along the trajectory
+            wheelbase (float): wheelbase of the buggy in meters
+
+        Returns:
+            float: steering angle in rads
+        """
+        curvature = self.get_curvature_by_index(index)
+
+        return np.arctan(wheelbase * curvature)
+
+    def get_steering_angle_by_distance(self, distance, wheelbase):
+        """Gets the bicycle-model steering angle at a given distance along the trajectory,
+        interpolating if necessary. Assumes that the origin point of the buggy is at the
+        center of the rear axle.
+
+        Args:
+            distance (float): distance along the trajectory in meters
+            wheelbase (float): wheelbase of the buggy in meters
+
+        Returns:
+            float: steering angle in rads
+        """
+        index = self.get_index_from_distance(distance)
+        return self.get_steering_angle_by_index(index, wheelbase)
+
     def get_index_from_distance(self, distance):
         """Gets the index at a given distance along the trajectory,
         interpolating if necessary
@@ -136,7 +182,9 @@ class Trajectory:
             float: distance along the trajectory in meters
         """
         # Interpolate the distance
-        distance = np.interp(index / self.dt, np.arange(len(self.distances)), self.distances)
+        distance = np.interp(
+            index / self.dt, np.arange(len(self.distances)), self.distances
+        )
 
         return distance
 
@@ -154,7 +202,9 @@ class Trajectory:
         dxdt, dydt = self.interpolation(index, nu=1)
         ddxdtt, ddydtt = self.interpolation(index, nu=2)
 
-        curvature = np.abs(dxdt*ddydtt - dydt*ddxdtt) / (dxdt**2 - dydt**2)**(3/2)
+        curvature = np.abs(dxdt * ddydtt - dydt * ddxdtt) / (dxdt**2 - dydt**2) ** (
+            3 / 2
+        )
 
         return curvature
 
@@ -206,7 +256,9 @@ class Trajectory:
         end_index = min(len(self.positions), min_ind + 1)
 
         # Now interpolate at a higher resolution to get a more accurate result
-        r_interp = self.interpolation(np.linspace(start_index, end_index, subsample_resolution + 1))
+        r_interp = self.interpolation(
+            np.linspace(start_index, end_index, subsample_resolution + 1)
+        )
         x_interp, y_interp = r_interp[:, 0], r_interp[:, 1]
 
         distances = (x_interp - x) ** 2 + (y_interp - y) ** 2
@@ -222,21 +274,31 @@ if __name__ == "__main__":
     # Example usage
     trajectory = Trajectory("/rb_ws/src/buggy/paths/quartermiletrack.json")
 
-    import json
-    import uuid
+    # import json
+    # import uuid
 
-    interp_dat = []
-    for k in np.linspace(0, trajectory.indices[-1], 500):
-        x, y = trajectory.get_position_by_index(k)
+    # interp_dat = []
+    # for k in np.linspace(0, trajectory.indices[-1], 500):
+    #     x, y = trajectory.get_position_by_index(k)
 
-        lat, lon = World.world_to_gps(x, y)
+    #     lat, lon = World.world_to_gps(x, y)
 
-        interp_dat.append({
-            "lat": lat,
-            "lon": lon,
-            "key": str(uuid.uuid4()),
-            "active": False
-        })
+    #     interp_dat.append({
+    #         "lat": lat,
+    #         "lon": lon,
+    #         "key": str(uuid.uuid4()),
+    #         "active": False
+    #     })
 
-    with open("/rb_ws/src/buggy/paths/traj_spline_interp.json", "w") as f:
-        json.dump(interp_dat, f, indent=4)
+    # with open("/rb_ws/src/buggy/paths/traj_spline_interp.json", "w") as f:
+    #     json.dump(interp_dat, f, indent=4)
+
+    knot_point_distances = np.arange(0, 20, 1)
+    reference_trajectory = np.hstack(
+        [(
+            *trajectory.get_position_by_distance(d),
+            trajectory.get_heading_by_distance(d),
+            trajectory.get_steering_angle_by_distance(d, 1.3),
+        ) for d in knot_point_distances]
+    )
+    print(reference_trajectory)
