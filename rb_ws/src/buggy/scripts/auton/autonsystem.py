@@ -34,6 +34,8 @@ class AutonSystem:
     lock = None
 
     steer_publisher = None
+    
+    ticks = 0
 
     def __init__(self, trajectory, controller, brake_controller) -> None:
         self.trajectory = trajectory
@@ -85,9 +87,10 @@ class AutonSystem:
         )
 
         # Plot projected forward/back positions
-        self.controller.plot_trajectory(
-            pose, self.trajectory, current_speed
-        )
+        if (self.ticks % 5 == 0):
+            self.controller.plot_trajectory(
+                pose, self.trajectory, current_speed
+            )
 
         # Publish control output
         steering_angle_deg = np.rad2deg(steering_angle)
@@ -98,6 +101,8 @@ class AutonSystem:
 
         # Publish debug data
         self.heading_publisher.publish(Float32(pose.theta))
+
+        self.ticks += 1
 
 
 if __name__ == "__main__":
