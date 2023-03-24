@@ -1,6 +1,6 @@
 import numpy as np
 import json
-from scipy.interpolate import PchipInterpolator, Akima1DInterpolator
+from scipy.interpolate import Akima1DInterpolator, CubicSpline
 
 from world import World
 
@@ -25,7 +25,7 @@ class Trajectory:
     indices = None  # (N x 1) [0, 1, 2, ...]
     interpolation = None  # scipy.interpolate.PPoly
 
-    def __init__(self, json_filepath) -> None:
+    def __init__(self, json_filepath, interpolator="CubicSpline") -> None:
         pos = []
         # Load the json file
         with open(json_filepath, "r") as f:
@@ -43,15 +43,27 @@ class Trajectory:
             # Convert to world coordinates
             x, y = World.gps_to_world(lat, lon)
             pos.append([x, y])
+        num_indices = len(pos)
 
-        self.positions = np.array(pos)
-        self.indices = np.arange(len(self.positions))
-        self.interpolation = Akima1DInterpolator(self.indices, self.positions)
+        if interpolator == "Akima":
+            self.positions = np.array(pos)
+            self.indices = np.arange(num_indices)
+            self.interpolation = Akima1DInterpolator(self.indices, self.positions)
+        else:
+            temp_traj = Trajectory(json_filepath, interpolator="Akima")
+            tot_len = temp_traj.distances[-1]
+            interp_dists = np.linspace(0, tot_len, num_indices)
+
+            self.indices = np.arange(num_indices)
+            self.positions = [temp_traj.get_position_by_distance(interp_dist) for interp_dist in interp_dists]
+            self.positions = np.array(self.positions)
+
+            self.interpolation = CubicSpline(self.indices, self.positions)
         self.interpolation.extrapolate = True
 
         # Calculate the distances along the trajectory
         dt = 0.01
-        ts = np.arange(len(self.positions), step=dt)
+        ts = np.arange(len(self.positions) - 1, step=dt)
         drdt = self.interpolation(
             ts, nu=1
         )  # Calculate derivatives of polynomial wrt indices
@@ -166,7 +178,7 @@ class Trajectory:
             int: index along the trajectory
         """
         # Interpolate the index
-        index = np.interp(distance, self.distances, np.arange(len(self.distances)))
+        index = np.interp(distance, self.distances, np.linspace(0, len(self.distances), len(self.distances)))
 
         return index * self.dt
 
@@ -279,7 +291,6 @@ if __name__ == "__main__":
     interp_dat = []
     for k in np.linspace(0, trajectory.indices[-1], 500):
         x, y = trajectory.get_position_by_index(k)
-
         lat, lon = World.world_to_gps(x, y)
 
         interp_dat.append({
@@ -288,6 +299,12 @@ if __name__ == "__main__":
             "key": str(uuid.uuid4()),
             "active": False
         })
+
+    import matplotlib.pyplot as plt
+    ts = np.linspace(0, trajectory.indices[-1], 500)
+    kurv = [trajectory.get_curvature_by_index(t) for t in ts]
+    plt.plot(ts, kurv)
+    plt.show()
 
     with open("/rb_ws/src/buggy/paths/traj_spline_interp.json", "w") as f:
         json.dump(interp_dat, f, indent=4)
