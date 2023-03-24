@@ -108,6 +108,15 @@ class Simulator:
         return Simulator.WHEELBASE / np.tan(np.deg2rad(steering_angle))
 
     def dynamics(self, state, v):
+        """ Calculates continuous time bicycle dynamics as a function of state and velocity
+
+        Args:
+            state (np.Array): State vector [x, y, heading, steering] in m, m, rad, rad respectively
+            v (Float 64): velocity in m/s
+
+        Returns:
+            dstate (np.Array): time derivative of state from dynamics
+        """
         l = Simulator.WHEELBASE
         x, y, theta, delta = state
 
