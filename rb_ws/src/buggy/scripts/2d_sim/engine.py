@@ -27,12 +27,12 @@ class Simulator:
         # for X11 matplotlib (direction included)
         self.plot_publisher = rospy.Publisher("sim_2d/utm",
                                               Pose,
-                                              queue_size=10) 
+                                              queue_size=1) 
         
         # simulate the INS's outputs (noise included)
         self.pose_publisher = rospy.Publisher("nav/odom",
                                               Odometry,
-                                              queue_size=10) 
+                                              queue_size=1) 
         
         self.steering_subscriber = rospy.Subscriber("buggy/input/steering",
                                                     Float64,
@@ -44,12 +44,12 @@ class Simulator:
         # to plot on Foxglove (no noise)
         self.navsatfix_publisher = rospy.Publisher("state/pose_navsat",
                                                    NavSatFix,
-                                                   queue_size=10)
+                                                   queue_size=1)
         
         # to plot on Foxglove (with noise)
         self.navsatfix_noisy_publisher = rospy.Publisher("state/pose_navsat_noisy",
                                                          NavSatFix,
-                                                         queue_size=10)
+                                                         queue_size=1)
 
         # Start position for End of Hill 2
         # self.e_utm = Simulator.UTM_EAST_ZERO + 15
@@ -65,7 +65,7 @@ class Simulator:
         self.n_utm = utm_coords[1]
 
         self.heading = heading # degrees
-        self.velocity = 0 # m/s
+        self.velocity = 1 # m/s
 
         self.steering_angle = 0 # degrees
 
@@ -128,10 +128,10 @@ class Simulator:
             distance = (velocity/self.rate)
 
             delta_heading = distance/radius
-            heading_new = heading + np.rad2deg(delta_heading)
-
+            heading_new = heading + np.rad2deg(delta_heading) / 2
             e_utm_new = e_utm + (velocity/self.rate) * np.cos(np.deg2rad(heading_new))
             n_utm_new = n_utm + (velocity/self.rate) * np.sin(np.deg2rad(heading_new))
+            heading_new = heading_new + np.rad2deg(delta_heading) / 2
 
         
         with self.lock:

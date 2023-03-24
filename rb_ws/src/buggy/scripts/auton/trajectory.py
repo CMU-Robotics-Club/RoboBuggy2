@@ -1,6 +1,6 @@
 import numpy as np
 import json
-from scipy.interpolate import CubicSpline, Akima1DInterpolator
+from scipy.interpolate import PchipInterpolator, Akima1DInterpolator
 
 from world import World
 
@@ -138,7 +138,6 @@ class Trajectory:
             float: steering angle in rads
         """
         curvature = self.get_curvature_by_index(index)
-
         return np.arctan(wheelbase * curvature)
 
     def get_steering_angle_by_distance(self, distance, wheelbase):
@@ -202,8 +201,8 @@ class Trajectory:
         dxdt, dydt = self.interpolation(index, nu=1)
         ddxdtt, ddydtt = self.interpolation(index, nu=2)
 
-        curvature = np.abs(dxdt * ddydtt - dydt * ddxdtt) / (dxdt**2 - dydt**2) ** (
-            3 / 2
+        curvature = (dxdt * ddydtt - dydt * ddxdtt) / (
+            (dxdt**2 + dydt**2) ** (3 / 2)
         )
 
         return curvature
@@ -274,31 +273,34 @@ if __name__ == "__main__":
     # Example usage
     trajectory = Trajectory("/rb_ws/src/buggy/paths/quartermiletrack.json")
 
-    # import json
-    # import uuid
+    import json
+    import uuid
 
-    # interp_dat = []
-    # for k in np.linspace(0, trajectory.indices[-1], 500):
-    #     x, y = trajectory.get_position_by_index(k)
+    interp_dat = []
+    for k in np.linspace(0, trajectory.indices[-1], 500):
+        x, y = trajectory.get_position_by_index(k)
 
-    #     lat, lon = World.world_to_gps(x, y)
+        lat, lon = World.world_to_gps(x, y)
 
-    #     interp_dat.append({
-    #         "lat": lat,
-    #         "lon": lon,
-    #         "key": str(uuid.uuid4()),
-    #         "active": False
-    #     })
+        interp_dat.append({
+            "lat": lat,
+            "lon": lon,
+            "key": str(uuid.uuid4()),
+            "active": False
+        })
 
-    # with open("/rb_ws/src/buggy/paths/traj_spline_interp.json", "w") as f:
-    #     json.dump(interp_dat, f, indent=4)
+    with open("/rb_ws/src/buggy/paths/traj_spline_interp.json", "w") as f:
+        json.dump(interp_dat, f, indent=4)
 
-    knot_point_distances = np.arange(0, 20, 1)
-    reference_trajectory = np.hstack(
-        [(
-            *trajectory.get_position_by_distance(d),
-            trajectory.get_heading_by_distance(d),
-            trajectory.get_steering_angle_by_distance(d, 1.3),
-        ) for d in knot_point_distances]
-    )
-    print(reference_trajectory)
+    # knot_point_distances = np.arange(0, 20, 1)
+    # reference_trajectory = np.hstack(
+    #     [
+    #         (
+    #             *trajectory.get_position_by_distance(d),
+    #             trajectory.get_heading_by_distance(d),
+    #             trajectory.get_steering_angle_by_distance(d, 1.3),
+    #         )
+    #         for d in knot_point_distances
+    #     ]
+    # )
+    # print(reference_trajectory)
