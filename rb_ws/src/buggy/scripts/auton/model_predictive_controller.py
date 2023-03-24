@@ -1,8 +1,11 @@
 from abc import ABC, abstractmethod
 
+import time
+
 import numpy as np
 import osqp
-import scipy.sparse
+import scipy
+from scipy import sparse
 
 import rospy
 from sensor_msgs.msg import NavSatFix
@@ -23,6 +26,7 @@ class ModelPredictiveController(Controller):
 
     DEBUG = False
     PLOT = False
+    TIME = False
 
     # MPC Params
     WHEELBASE = 1.3
@@ -61,18 +65,17 @@ class ModelPredictiveController(Controller):
         # "time_limit": 0.01,
         "warm_start": False,
     }
-    X = np.kron(
+    X = sparse.kron(
         np.eye(MPC_HORIZON),
-        np.hstack(
-            (np.zeros((N_STATES, N_CONTROLS)), np.eye(N_STATES))
-        ),
+        np.hstack((np.zeros((N_STATES, N_CONTROLS)), np.eye(N_STATES))),
+        format="csc",
     )
-    U = np.kron(
+    U = sparse.kron(
         np.eye(MPC_HORIZON),
-        np.hstack(
-            (np.eye(N_CONTROLS), np.zeros((N_CONTROLS, N_STATES)))
-        ),
+        np.hstack((np.eye(N_CONTROLS), np.zeros((N_CONTROLS, N_STATES)))),
+        format="csc",
     )
+    b = np.zeros(MPC_HORIZON * (N_STATES + N_CONTROLS))
 
     def __init__(self) -> None:
         self.debug_reference_pos_publisher = rospy.Publisher(
@@ -80,6 +83,14 @@ class ModelPredictiveController(Controller):
         )
         self.debug_error_publisher = rospy.Publisher(
             "auton/debug/error", ROSPose, queue_size=1
+        )
+
+        self.solver = osqp.OSQP()
+
+        self.C = sparse.kron(
+            np.eye(self.MPC_HORIZON),
+            np.hstack((self.control_jacobian(), -np.eye(self.N_STATES))),
+            format="csc",
         )
 
     def state(self, x, y, theta, steer):
@@ -242,13 +253,17 @@ class ModelPredictiveController(Controller):
         Returns:
             float (desired steering angle)
         """
+        if self.TIME:
+            print("--------------------")
+            totaltime = time.time()
+
         # Get reference pose
         if self.current_traj_index >= trajectory.get_num_points() - 1:
             return 0
-
+            
+        if self.TIME:
+            t = time.time()
         self.current_speed = current_speed
-
-        # print(current_pose)
 
         traj_index = trajectory.get_closest_index_on_path(
             current_pose.x,
@@ -282,8 +297,11 @@ class ModelPredictiveController(Controller):
         # print(knot_point_distances)
         reference_control = np.gradient(reference_trajectory[:, 3]) / self.MPC_TIMESTEP
 
-        print("Current pose: ", current_pose)
-        print("Reference pose: ", reference_trajectory[0, :])
+        if self.TIME:
+            print("Get reference trajectory: ", time.time() - t)
+
+        # print("Current pose: ", current_pose)
+        # print("Reference pose: ", reference_trajectory[0, :])
 
         # Build QP matrices
         # We define the problem as follows:
@@ -303,60 +321,51 @@ class ModelPredictiveController(Controller):
         # X selects all the states from z
         # U selects all the controls from z
 
-        # Minimize 0.5 z^T H z + b^T z such that lb <= D z <= ub
-        H = scipy.linalg.block_diag(
-            np.diag(self.control_cost),
-            *[
-                m
-                for k in range(0, self.MPC_HORIZON - 1)
-                for m in [
-                    np.diag(self.rotate_state_cost(reference_trajectory[k, 2])),
-                    np.diag(self.control_cost),
-                ]
-            ],
-            np.diag(
-                self.rotate_final_state_cost(
-                    reference_trajectory[self.MPC_HORIZON - 1, 2]
-                )
-            ),
-        )
-        C = np.block(
-            [
-                [
-                    self.control_jacobian(),
-                    -np.eye(self.N_STATES),
-                    np.zeros(
-                        (
-                            self.N_STATES,
-                            (self.MPC_HORIZON - 1) * (self.N_STATES + self.N_CONTROLS),
-                        )
-                    ),
-                ],
+        # Minimize 0.5 z^T H z such that lb <= D z <= ub
+        if self.TIME:
+            t = time.time()
+
+        H = sparse.block_diag(
+            (
+                np.diag(self.control_cost),
                 *[
-                    [
-                        np.zeros((self.N_STATES, self.N_CONTROLS)),
-                        np.zeros(
-                            (
-                                self.N_STATES,
-                                (k - 1) * (self.N_STATES + self.N_CONTROLS),
-                            )
-                        ),
-                        self.state_jacobian(reference_trajectory[k, :]),
-                        self.control_jacobian(),
-                        -np.eye(self.N_STATES),
-                        np.zeros(
-                            (
-                                self.N_STATES,
-                                (self.MPC_HORIZON - k - 1)
-                                * (self.N_STATES + self.N_CONTROLS),
-                            )
-                        ),
+                    m
+                    for k in range(0, self.MPC_HORIZON - 1)
+                    for m in [
+                        np.diag(self.rotate_state_cost(reference_trajectory[k, 2])),
+                        np.diag(self.control_cost),
                     ]
-                    for k in range(1, self.MPC_HORIZON)
                 ],
-            ]
+                np.diag(
+                    self.rotate_final_state_cost(
+                        reference_trajectory[self.MPC_HORIZON - 1, 2]
+                    )
+                ),
+            ),
+            format="csc",
         )
-        D = np.vstack([C, self.X, self.U])
+
+        C1 = sparse.hstack(
+            (
+                sparse.block_diag(
+                    (
+                        np.zeros((self.N_STATES, self.N_CONTROLS)),
+                        *[
+                            np.hstack(
+                                (
+                                    self.state_jacobian(reference_trajectory[k, :]),
+                                    np.zeros((self.N_STATES, self.N_CONTROLS)),
+                                )
+                            )
+                            for k in range(1, self.MPC_HORIZON)
+                        ],
+                    ),
+                    format="csc",
+                ),
+                np.zeros((self.N_STATES * self.MPC_HORIZON, self.N_STATES)),
+            )
+        )
+        D = sparse.vstack([self.C + C1, self.X, self.U])
 
         lb = np.hstack(
             (
@@ -393,63 +402,53 @@ class ModelPredictiveController(Controller):
             )
         )
 
-        # b = np.vstack(
-        #     [
-        #         *[
-        #             np.hstack(
-        #                 (
-        #                     (
-        #                         np.diag(-self.control_cost)
-        #                         @ (reference_control[k].reshape((-1, 1)))
-        #                     ).ravel(),
-        #                     np.diag(-self.rotate_state_cost(reference_trajectory[k, 2]))
-        #                     @ (reference_trajectory[k, :] - state_eq),
-        #                 )
-        #             )
-        #             for k in range(0, self.MPC_HORIZON - 1)
-        #         ],
-        #         np.hstack(
-        #             (
-        #                 (
-        #                     np.diag(-self.control_cost)
-        #                     @ (reference_control[self.MPC_HORIZON - 1].reshape((-1, 1)))
-        #                 ).ravel(),
-        #                 np.diag(
-        #                     -self.rotate_final_state_cost(
-        #                         reference_trajectory[self.MPC_HORIZON - 1, 2]
-        #                     )
-        #                 )
-        #                 @ (reference_trajectory[self.MPC_HORIZON - 1, :] - state_eq),
-        #             )
-        #         ),
-        #     ]
-        # ).ravel()
-        b = np.zeros(self.MPC_HORIZON * (self.N_STATES + self.N_CONTROLS))
+        if self.TIME:
+            print(" Create matrices: ", 1000 * (time.time() - t))
 
         # Print shapes of matrices
         if self.DEBUG:
             print("H shape: ", H.shape)
-            print("C shape: ", C.shape)
+            print("C shape: ", self.C.shape)
             print("D shape: ", D.shape)
             print("lb shape: ", lb.shape)
             print("ub shape: ", ub.shape)
-            print("b shape: ", b.shape)
+            print("b shape: ", self.b.shape)
             print("reference_trajectory shape: ", reference_trajectory.shape)
             print("reference_control shape: ", reference_control.shape)
 
         # Solve QP
-        self.solver = osqp.OSQP()
-        self.solver.setup(
-            **self.solver_settings,
-            P=scipy.sparse.csc_array(H),
-            q=b,
-            A=scipy.sparse.csc_array(D),
-            l=lb,
-            u=ub,
-        )
 
+        if self.TIME:
+            t = time.time()
+        if self.first_iteration:
+            self.solver.setup(
+                **self.solver_settings,
+                P=H,
+                q=self.b,
+                A=D,
+                l=lb,
+                u=ub,
+            )
+            self.first_iteration = False
+        else:
+            self.solver.update(
+                Px=sparse.triu(H).data,
+                Ax=D.data,
+                l=lb,
+                u=ub,
+            )
+        if self.TIME:
+            print(" Setup: ", 1000 * (time.time() - t))
+
+        if self.TIME:
+            t = time.time()
         results = self.solver.solve()
+        if self.TIME:
+            print(" Solve: ", 1000 * (time.time() - t))
         steer_angle = results.x[: self.N_CONTROLS]
+
+        if steer_angle == None:
+            print("No solution found")
 
         if self.DEBUG:
             print("Control: ", steer_angle)
@@ -478,33 +477,33 @@ class ModelPredictiveController(Controller):
                 ]
             controls += reference_control.reshape((-1, 1))
 
-            print(states[:10, :])
-            s3 = states[3, :] - reference_trajectory[3, :]
-            s2 = states[2, :] - reference_trajectory[2, :]
-            s1 = states[1, :] - reference_trajectory[1, :]
-            s0 = states[0, :] - reference_trajectory[0, :]
-            print(
-                s3
-                - self.state_jacobian(reference_trajectory[2, :]) @ (s2)
-                - self.control_jacobian() @ (controls[2, :] - reference_control[2])
-            )
-            print(
-                s2
-                - self.state_jacobian(reference_trajectory[1, :]) @ (s1)
-                - self.control_jacobian() @ (controls[1, :] - reference_control[1])
-            )
-            print(
-                s1
-                - self.state_jacobian(reference_trajectory[0, :]) @ (s0)
-                - self.control_jacobian() @ (controls[0, :] - reference_control[0])
-            )
-            print(
-                s0
-                - self.state_jacobian(
-                    self.state(current_pose.x, current_pose.y, current_pose.theta, 0)
-                )
-                @ (s0)
-            )
+            # print(states[:10, :])
+            # s3 = states[3, :] - reference_trajectory[3, :]
+            # s2 = states[2, :] - reference_trajectory[2, :]
+            # s1 = states[1, :] - reference_trajectory[1, :]
+            # s0 = states[0, :] - reference_trajectory[0, :]
+            # print(
+            #     s3
+            #     - self.state_jacobian(reference_trajectory[2, :]) @ (s2)
+            #     - self.control_jacobian() @ (controls[2, :] - reference_control[2])
+            # )
+            # print(
+            #     s2
+            #     - self.state_jacobian(reference_trajectory[1, :]) @ (s1)
+            #     - self.control_jacobian() @ (controls[1, :] - reference_control[1])
+            # )
+            # print(
+            #     s1
+            #     - self.state_jacobian(reference_trajectory[0, :]) @ (s0)
+            #     - self.control_jacobian() @ (controls[0, :] - reference_control[0])
+            # )
+            # print(
+            #     s0
+            #     - self.state_jacobian(
+            #         self.state(current_pose.x, current_pose.y, current_pose.theta, 0)
+            #     )
+            #     @ (s0)
+            # )
 
             ax1.set_title("Position (red=mpc, blue=ref)")
             ax1.plot(states[:, 0], states[:, 1], "rx-", label="MPC")
@@ -531,28 +530,36 @@ class ModelPredictiveController(Controller):
             plt.show()
 
         # Publish error for debugging
-        reference_position = trajectory.get_position_by_index(self.current_traj_index)
-        reference_error = current_pose.convert_point_from_global_to_local_frame(
-            reference_position
-        )
-        error_pose = ROSPose()
-        error_pose.position.x = reference_error[0]
-        error_pose.position.y = reference_error[1]
-        self.debug_error_publisher.publish(error_pose)
+        try:
+            reference_position = trajectory.get_position_by_index(
+                self.current_traj_index
+            )
+            reference_error = current_pose.convert_point_from_global_to_local_frame(
+                reference_position
+            )
+            error_pose = ROSPose()
+            error_pose.position.x = reference_error[0]
+            error_pose.position.y = reference_error[1]
+            self.debug_error_publisher.publish(error_pose)
 
-        # Publish reference position for debugging
-        reference_navsat = NavSatFix()
-        ref_gps = World.world_to_gps(*reference_position)
-        # ref_gps = World.world_to_gps(current_pose.x, current_pose.y)
-        reference_navsat.latitude = ref_gps[0]
-        reference_navsat.longitude = ref_gps[1]
-        self.debug_reference_pos_publisher.publish(reference_navsat)
+            # Publish reference position for debugging
+            reference_navsat = NavSatFix()
+            ref_gps = World.world_to_gps(*reference_position)
+            # ref_gps = World.world_to_gps(current_pose.x, current_pose.y)
+            reference_navsat.latitude = ref_gps[0]
+            reference_navsat.longitude = ref_gps[1]
+            self.debug_reference_pos_publisher.publish(reference_navsat)
+        except rospy.ROSException:
+            pass
+            # print("ROS Publishing Error")
 
+        if self.TIME:
+            print("Total time: ", 1000 * (time.time() - totaltime))
         return steer_angle
 
 
 if __name__ == "__main__":
-    ModelPredictiveController.DEBUG = True
+    # ModelPredictiveController.DEBUG = True
     ModelPredictiveController.PLOT = True
     mpc_controller = ModelPredictiveController()
 
@@ -567,8 +574,11 @@ if __name__ == "__main__":
     # initial_pose.y += 4
     # initial_pose.theta += 0.1
     # print(initial_pose)
-    initial_pose = Pose(
-        x=707.5893698488362, y=539.947168705985, theta=-0.0292735217760258
-    )
+    initial_pose = Pose(x=707.5893698488362, y=540, theta=-0.0292735217760258)
 
     mpc_controller.compute_control(initial_pose, trajectory, 5)
+    mpc_controller.compute_control(initial_pose, trajectory, 5)
+    ModelPredictiveController.PLOT = False
+
+    for _ in range(100):
+        mpc_controller.compute_control(initial_pose, trajectory, 5)
