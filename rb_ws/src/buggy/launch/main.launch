@@ -1,35 +1,31 @@
-<!-- roslaunch buggy main.launch simulation:=true -->
-<!-- roslaunch buggy main.launch simulation:=false -->
-<!-- <arg name="name" value="INS" /> -->
+<!-- roslaunch buggy main.launch -->
 
 <launch>
-    <param name="simulation" value="$(arg simulation)" />
-    <group if="$(arg simulation)"> <!-- if simulation is true -->
-        <node name="simulator" pkg="buggy" type="simulator.py" output="screen" />
-    </group>
-    <group unless="$(arg simulation)"> <!-- if simulation is false -->
-        <include file="$(find microstrain_inertial_driver)/launch/microstrain.launch">
-            <arg name="params_file" value="/rb_ws/src/buggy/INS_params.yml"/>
-        </include>
-	<include file="$(find realsense2_camera)/launch/rs_aligned_depth.launch">
-        <arg name="color_width"         value="1280"/>
-   	    <arg name="color_height"        value="800"/>
-	    <arg name="color_fps"        value="30"/>
-            <arg name="enable_gyro"         value="false"/>
-            <arg name="enable_accel"        value="false"/>            
-            <arg name="tf_prefix" value="d455" />
-        </include>
-	<node name="serial_node"        pkg="rosserial_python"      type="serial_node.py">
-        <param name="port"              type="string"               value="/dev/ttyUSB0"/>
-        <param name="baud"              type="int"                  value="1000000"/>
+    <include file="$(find microstrain_inertial_driver)/launch/microstrain.launch">
+        <arg name="params_file" value="/rb_ws/src/buggy/INS_params.yml"/>
+    </include>
+    <!-- <include file="$(find realsense2_camera)/launch/rs_camera.launch">
+        <arg name="color_width" value="848"/>
+        <arg name="color_height" value="480"/>
+        <arg name="color_fps" value="30"/>
+        <arg name="enable_gyro" value="false"/>
+        <arg name="enable_accel" value="false"/>
+        <arg name="enable_depth" value="false"/>
+        <arg name="tf_prefix" value="d455" />
+    </include> -->
+    <node name="serial_node" pkg="rosserial_python" type="serial_node.py">
+        <param name="port" type="string" value="/dev/ttyUSB0"/>
+        <param name="baud" type="int" value="1000000"/>
     </node>
     <node name="serial_node2"        pkg="rosserial_python"      type="serial_node.py">
         <param name="port"              type="string"               value="/dev/ttyACM1"/>
         <param name="baud"              type="int"                  value="115200"/>
     </node>
-    </group>
     <node name="foxglove" pkg="foxglove_bridge" type="foxglove_bridge" />
     <node name="asset_server" pkg="buggy" type="asset_server.py" args="--directory='/rb_ws/src/buggy/assets'" />
     <node name="asset_publish" pkg="buggy" type="asset_publish.py" />
     <node name="telematics" pkg="buggy" type="telematics.py" />
+
+    <!-- ENABLE AUTON -->
+    <node name="auton_system" pkg="buggy" type="autonsystem.py" output="screen"/>
 </launch>

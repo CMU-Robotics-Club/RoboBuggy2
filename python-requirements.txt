@@ -3,3 +3,6 @@ pyembree
 numpy>=1.20.0
 pandas
 pymap3d
+matplotlib
+utm
+scipy
