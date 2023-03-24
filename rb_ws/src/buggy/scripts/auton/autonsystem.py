@@ -112,7 +112,7 @@ if __name__ == "__main__":
         raise Exception("Invalid Controller Argument")
 
     auton_system = AutonSystem(
-        Trajectory("/rb_ws/src/buggy/paths/buggycourse_raceline.json"),
+        Trajectory("/rb_ws/src/buggy/paths/buggycourse_safe.json"),
         ctrller,
         BrakeController()
     )
