@@ -65,11 +65,11 @@ class Simulator:
         self.n_utm = utm_coords[1]
 
         self.heading = heading # degrees
-        self.velocity = 1 # m/s
+        self.velocity = 5 # m/s
 
         self.steering_angle = 0 # degrees
 
-        self.rate = 50 # Hz
+        self.rate = 25 # Hz
 
         self.lock = threading.Lock()
     

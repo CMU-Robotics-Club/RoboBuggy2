@@ -37,9 +37,9 @@ class ModelPredictiveController(Controller):
     N_CONTROLS = 1
 
     # MPC Cost Weights
-    state_cost = np.array([0.0001, 1, 1, 1])  # x, y, theta, steer
+    state_cost = np.array([0.0001, 1000, 1, 1])  # x, y, theta, steer
     control_cost = np.array([1])  # d_steer
-    final_state_cost = 10.0 * np.array([0.0001, 1, 1, 1])  # x, y, theta, steer
+    final_state_cost = 10.0 * np.array([0.0001, 1000, 1, 1])  # x, y, theta, steer
 
     # State constraints (relative to the reference)
     state_lb = np.array([-np.inf, -np.inf, -np.inf, -np.pi / 9])  # x, y, theta, steer
@@ -59,8 +59,8 @@ class ModelPredictiveController(Controller):
     solver: osqp.OSQP = None
     solver_settings: dict = {
         "verbose": DEBUG,
-        "eps_abs": 1e-5,
-        "eps_rel": 1e-5,
+        "eps_abs": 1e-4,
+        "eps_rel": 1e-4,
         "polish": 1,
         # "time_limit": 0.01,
         "warm_start": False,
@@ -260,7 +260,7 @@ class ModelPredictiveController(Controller):
         # Get reference pose
         if self.current_traj_index >= trajectory.get_num_points() - 1:
             return 0
-            
+
         if self.TIME:
             t = time.time()
         self.current_speed = current_speed
@@ -443,9 +443,9 @@ class ModelPredictiveController(Controller):
         if self.TIME:
             t = time.time()
         results = self.solver.solve()
+        steer_angle = results.x[self.N_CONTROLS + self.N_STATES - 1]
         if self.TIME:
             print(" Solve: ", 1000 * (time.time() - t))
-        steer_angle = results.x[: self.N_CONTROLS]
 
         if steer_angle == None:
             print("No solution found")
