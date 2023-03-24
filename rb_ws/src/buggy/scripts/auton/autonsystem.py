@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 
 import rospy
+import sys
 
 # ROS Message Imports
 from std_msgs.msg import Float32, Float64
@@ -96,10 +97,23 @@ class AutonSystem:
 
 if __name__ == "__main__":
     rospy.init_node("auton_system")
+
+    arg = sys.argv[1]
+    print("\n\nStarting Controller: " + str(arg) + "\n\n")
+
+    # Add Controllers Here
+    ctrller = None
+    if (arg == "stanley"):
+        ctrller = StanleyController()
+    elif (arg == "pure_pursuit"):
+        ctrller = PurePursuitController()
+
+    if (ctrller == None):
+        raise Exception("Invalid Controller Argument")
+
     auton_system = AutonSystem(
         Trajectory("/rb_ws/src/buggy/paths/buggycourse_raceline.json"),
-        # PurePursuitController(),
-        StanleyController(),
+        ctrller,
         BrakeController()
     )
     while not rospy.is_shutdown():

@@ -66,7 +66,7 @@ Instructions:
 - While in a bash shell with the X11 server running, run `xhost +local:docker`.
 - Boot up the docker container using the "Alternate Shortcut" above.
 - Run `xeyes` while INSIDE the Docker container to test X11 forwarding. If this works, we're good.
-- Run `roslaunch buggy sim_2d.launch` for the simulator.
+- Run `roslaunch buggy sim_2d.launch controller:=CONTROLLER_TYPE` for the simulator.
 
 ### Using the Simulator
 Feedback:
