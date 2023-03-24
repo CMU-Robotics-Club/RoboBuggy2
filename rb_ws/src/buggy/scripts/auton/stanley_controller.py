@@ -26,6 +26,7 @@ class StanleyController(Controller):
     HEADING_GAIN = 0.75
 
     def __init__(self) -> None:
+        super(StanleyController, self).__init__()
         self.debug_reference_pos_publisher = rospy.Publisher(
             "auton/debug/reference_navsat", NavSatFix, queue_size=1
         )
@@ -35,8 +36,6 @@ class StanleyController(Controller):
         self.debug_error_publisher = rospy.Publisher(
             "auton/debug/error", ROSPose, queue_size=1
         )
-
-        self.current_traj_index = 0
 
     def compute_control(
         self, current_pose: Pose, trajectory: Trajectory, current_speed: float

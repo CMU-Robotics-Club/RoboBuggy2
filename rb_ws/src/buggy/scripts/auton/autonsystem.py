@@ -84,6 +84,11 @@ class AutonSystem:
             pose, self.trajectory, current_speed
         )
 
+        # Plot projected forward/back positions
+        self.controller.plot_trajectory(
+            pose, self.trajectory, current_speed
+        )
+
         # Publish control output
         steering_angle_deg = np.rad2deg(steering_angle)
         self.steer_publisher.publish(Float64(steering_angle_deg))
