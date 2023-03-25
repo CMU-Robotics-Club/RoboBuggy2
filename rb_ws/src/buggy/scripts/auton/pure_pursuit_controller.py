@@ -21,9 +21,8 @@ class PurePursuitController(Controller):
     MIN_LOOK_AHEAD_DIST = 0.5
     MAX_LOOK_AHEAD_DIST = 10
 
-    current_traj_index = 0
-
     def __init__(self) -> None:
+        super(PurePursuitController, self).__init__()
         self.debug_reference_pos_publisher = rospy.Publisher(
             "auton/debug/reference_navsat", NavSatFix, queue_size=1
         )

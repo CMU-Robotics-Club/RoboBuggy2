@@ -34,6 +34,8 @@ class AutonSystem:
     lock = None
 
     steer_publisher = None
+    
+    ticks = 0
 
     def __init__(self, trajectory, controller, brake_controller) -> None:
         self.trajectory = trajectory
@@ -84,6 +86,12 @@ class AutonSystem:
             pose, self.trajectory, current_speed
         )
 
+        # Plot projected forward/back positions
+        if (self.ticks % 5 == 0):
+            self.controller.plot_trajectory(
+                pose, self.trajectory, current_speed
+            )
+
         # Publish control output
         steering_angle_deg = np.rad2deg(steering_angle)
         self.steer_publisher.publish(Float64(steering_angle_deg))
@@ -93,6 +101,8 @@ class AutonSystem:
 
         # Publish debug data
         self.heading_publisher.publish(Float32(pose.theta))
+
+        self.ticks += 1
 
 
 if __name__ == "__main__":
@@ -112,7 +122,7 @@ if __name__ == "__main__":
         raise Exception("Invalid Controller Argument")
 
     auton_system = AutonSystem(
-        Trajectory("/rb_ws/src/buggy/paths/buggycourse_raceline.json"),
+        Trajectory("/rb_ws/src/buggy/paths/buggycourse_safe.json"),
         ctrller,
         BrakeController()
     )
