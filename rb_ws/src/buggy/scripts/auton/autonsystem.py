@@ -42,7 +42,9 @@ class AutonSystem:
 
         self.lock = Lock()
 
-        rospy.Subscriber("nav/odom", Odometry, self.tick)
+        self.msg = None
+
+        rospy.Subscriber("nav/odom", Odometry, self.update_msg)
         self.steer_publisher = rospy.Publisher(
             "buggy/input/steering", Float64, queue_size=1
         )
@@ -57,13 +59,28 @@ class AutonSystem:
             "auton/debug/heading", Float32, queue_size=1
         )
 
+        self.tick_caller()
+
     def update_speed(self, msg):
         with self.lock:
             self.speed = msg.data
+    
+    def update_msg(self, msg):
+        with self.lock:
+            self.msg = msg
+        
+    def tick_caller(self):
+        while(self.msg == None):
+            rospy.sleep(0.001)
+        while (True):
+            self.tick()
+            rospy.sleep(0.001)
 
-    def tick(self, msg):
+    def tick(self):
         # Received an updated pose from the state estimator
         # Compute the new control output and publish it to the buggy
+        with self.lock:
+            msg = self.msg
         current_rospose = msg.pose.pose
 
         # Check if the pose covariance is a sane value. Otherwise ignore the message

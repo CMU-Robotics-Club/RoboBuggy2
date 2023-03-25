@@ -69,7 +69,7 @@ class Simulator:
 
         self.steering_angle = 0 # degrees
 
-        self.rate = 25 # Hz
+        self.rate = 1000 # Hz
 
         self.lock = threading.Lock()
     

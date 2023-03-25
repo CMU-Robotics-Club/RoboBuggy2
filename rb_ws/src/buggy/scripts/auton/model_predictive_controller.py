@@ -544,8 +544,8 @@ class ModelPredictiveController(Controller):
 
             # Publish reference position for debugging
             reference_navsat = NavSatFix()
-            ref_gps = World.world_to_gps(*reference_position)
-            # ref_gps = World.world_to_gps(current_pose.x, current_pose.y)
+            # ref_gps = World.world_to_gps(*reference_position)
+            ref_gps = World.world_to_gps(current_pose.x, current_pose.y)
             reference_navsat.latitude = ref_gps[0]
             reference_navsat.longitude = ref_gps[1]
             self.debug_reference_pos_publisher.publish(reference_navsat)
