@@ -156,7 +156,7 @@ sensor_msgs::BatteryState battery_msg;
 ros::Publisher battery("buggy/battery", &battery_msg);
 
 diagnostic_msgs::DiagnosticStatus rosLogger;
-diagnostic_msgs::KeyValue rosLogValues[2];
+diagnostic_msgs::KeyValue rosLogValues[10];
 ros::Publisher debug("TeensyStateIn_T", &rosLogger);
 int rosLogCounter = 0;
 
@@ -172,9 +172,9 @@ int getDynamixelRange()
   return LEFT_DYNAMIXEL_LIMIT - RIGHT_DYNAMIXEL_LIMIT;
 }
 
-int LEFT_RC_STEERING_LIMIT = 1000;
-int RIGHT_RC_STEERING_LIMIT = 1770;
-int RC_STEERING_CENTER = 1450;
+int LEFT_RC_STEERING_LIMIT = 995;
+int RIGHT_RC_STEERING_LIMIT = 1750;
+int RC_STEERING_CENTER = 1420;
 
 int RC_THROTTLE_CENTER = 1475;
 int RC_THROTTLE_DEADZONE = 200;
@@ -187,7 +187,7 @@ int RC_THROTTLE_DEADZONE = 200;
  */
 int rcToDynamixelWidth(int pulseWidth)
 {
-  double displacement = abs(pulseWidth - RC_STEERING_CENTER); // Displacement of the wheel from center.
+  float displacement = abs(pulseWidth - RC_STEERING_CENTER); // Displacement of the wheel from center.
 
   // Skewing and scaling based on if the RC pulse is right from center or left from center
   if (pulseWidth < RC_STEERING_CENTER)
@@ -208,6 +208,33 @@ int rcToDynamixelWidth(int pulseWidth)
   displacement = getDynamixelCenter() + displacement * getDynamixelRange() * 0.5;
 
   return displacement;
+}
+
+/**
+ * @brief scales and skews the pulse width to input to the dynamixel
+ *
+ * @param pulseWidth width of pulse from steering RC pin in milliseconds
+ * @return Steering percentage, signed.  may sometimes go over 100 if you yoink on the steering hard enough.
+ */
+float rcToPercent(int pulseWidth)
+{
+  float displacement = abs(pulseWidth - RC_STEERING_CENTER); // Displacement of the wheel from center.
+
+  // Skewing and scaling based on if the RC pulse is right from center or left from center
+  if (pulseWidth < RC_STEERING_CENTER)
+  { // Left: (0, 1]
+    displacement /= RC_STEERING_CENTER - LEFT_RC_STEERING_LIMIT;
+  }
+  else if (pulseWidth > RC_STEERING_CENTER)
+  { // Right: [-1, 0)
+    displacement /= RC_STEERING_CENTER - RIGHT_RC_STEERING_LIMIT;
+  }
+
+  // Quadratic steering scale
+  // (known to the programmers of Saints Robotics as "odd square")
+  displacement *= abs(displacement);
+
+  return displacement * 100;
 }
 
 /**
@@ -234,6 +261,21 @@ int rosAngleToDynamixelWidth(float angleDegrees)
 float dynamixelAngleToDegrees(int dynamixelWidth)
 {
   return (dynamixelWidth - getDynamixelCenter()) * 0.088;
+}
+
+float dynamixelLoadToPercent(uint16_t load)
+{
+  float value = load - 1023;
+  value /= 2057;
+  value *= 100;
+  return value;
+}
+
+float dynamixelCurrentToMilliAmps(uint16_t current)
+{
+  float value = current - 2048;
+  value *= 4.5;
+  return value;
 }
 
 /**
@@ -404,7 +446,7 @@ void loop()
     rosLogger.values_length = sizeof(rosLogValues) / sizeof(diagnostic_msgs::KeyValue);
 
     char c_steeringCommand[32];
-    String(dynamixelAngleToDegrees(steeringCommand)).toCharArray(c_steeringCommand, 32);
+    String(String(dynamixelAngleToDegrees(steeringCommand)) + " deg").toCharArray(c_steeringCommand, 32);
 
     char c_brakeCommand[32];
     String(brakeCommand).toCharArray(c_brakeCommand, 32);
@@ -412,19 +454,41 @@ void loop()
     uint16_t presentLoad;
     bool a = motor->presentLoad(presentLoad);
     char c_presentLoad[32];
-    String(presentLoad).toCharArray(c_presentLoad, 32);
+    String(String(dynamixelLoadToPercent(presentLoad)) + "%").toCharArray(c_presentLoad, 32);
 
     uint16_t current;
-    a = motor->presentLoad(current);
+    a = motor->currentMilliAmps(current);
     char c_current[32];
-    String(current).toCharArray(c_current, 32);
+    String(String(dynamixelCurrentToMilliAmps(current)) + " mA").toCharArray(c_current, 32);
+
+    char c_leftSteeringLimit[32];
+    String(String(dynamixelAngleToDegrees(LEFT_DYNAMIXEL_LIMIT)) + " deg").toCharArray(c_leftSteeringLimit, 32);
+
+    char c_rightSteeringLimit[32];
+    String(String(dynamixelAngleToDegrees(RIGHT_DYNAMIXEL_LIMIT)) + " deg").toCharArray(c_rightSteeringLimit, 32);
+
+    char c_rcSteeringInput[32];
+    String(String(rcToPercent(rcSteeringAvg)) + "%").toCharArray(c_rcSteeringInput, 32);
+
+    char c_rcSteeringWidth[32];
+    String(rcSteeringWidth).toCharArray(c_rcSteeringWidth, 32);
 
     rosLogValues[0].key = "steeringAngleCommand";
     rosLogValues[0].value = c_steeringCommand;
     rosLogValues[1].key = "brakeCommand";
     rosLogValues[1].value = c_brakeCommand;
-    rosLogValues[2].key = "current milliamps";
-    rosLogValues[2].value = c_current;
+    rosLogValues[2].key = "present load";
+    rosLogValues[2].value = c_presentLoad;
+    rosLogValues[3].key = "current milliamps";
+    rosLogValues[3].value = c_current;
+    rosLogValues[4].key = "left dynamixel limit";
+    rosLogValues[4].value = c_leftSteeringLimit;
+    rosLogValues[5].key = "right dynamixel limit";
+    rosLogValues[5].value = c_rightSteeringLimit;
+    rosLogValues[6].key = "rc steering input percent";
+    rosLogValues[6].value = c_rcSteeringInput;
+    rosLogValues[7].key = "rc steering input width";
+    rosLogValues[7].value = c_rcSteeringWidth;
 
     debug.publish(&rosLogger);
 
