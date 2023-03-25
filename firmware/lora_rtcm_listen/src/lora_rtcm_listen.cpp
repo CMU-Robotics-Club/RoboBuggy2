@@ -24,7 +24,6 @@
 #define LORA_HEADER "W3VC/1"
 #define LORA_HEADER_LENGTH 6
 #define LORA_PAYLOAD_LENGTH 249
-#define LORA_ROS_NODE "rtcm"
 #define LORA_FIXED_FREQ 902.5
 
 #define USE_USBCON
@@ -36,11 +35,16 @@
 #include <ros.h>
 #include <ros/time.h>
 #include <mavros_msgs/RTCM.h>
+#include <buggy/LoRaEvent.h>
 
 ros::NodeHandle nh;
 
 mavros_msgs::RTCM rtcm;
-ros::Publisher rtcm_pub(LORA_ROS_NODE, &rtcm);
+ros::Publisher rtcm_pub("rtcm", &rtcm);
+
+buggy::LoRaEvent lora;
+ros::Publisher lora_pub("buggy/lora", &lora);
+
 char debug_chars[64];
 
 typedef struct {
@@ -103,6 +107,7 @@ void setup() {
   nh.getHardware()->setBaud(115200);
   nh.initNode();
   nh.advertise(rtcm_pub);
+  nh.advertise(lora_pub);
 
   // Set up RS232 data
   DATA_SERIAL.begin(115200);
@@ -170,18 +175,18 @@ void setup() {
 void loop() {
   // check if the reception flag is set
   if (receivedFlag == true) {
+    // we're ready to receive more packets, clear the flag
+    receivedFlag = false;
+
     // you can read received data
     unsigned int length = radio.getPacketLength();
     int state = radio.readData(&message.header[0], length);
     message.length = length > LORA_HEADER_LENGTH ? length - LORA_HEADER_LENGTH : 0;
-
-    // put the module back to listen mode
     float snr = radio.getSNR();
     float rssi = radio.getRSSI();
+    
+    // put the module back to listen mode
     radio.startReceive();
-
-    // we're ready to receive more packets, clear the flag
-    receivedFlag = false;
 
     if (state == RADIOLIB_ERR_NONE && message.length > 0) {
       // packet was successfully received
@@ -189,28 +194,20 @@ void loop() {
       
       // write to ROS publisher as well
       rtcm.header.frame_id = "odom";
-      rtcm.header.stamp = nh.now();      
+      rtcm.header.stamp = nh.now();
       rtcm.data = &message.data[0];
       rtcm.data_length = message.length;
       rtcm_pub.publish(&rtcm);
-    } 
-    else if (state == RADIOLIB_ERR_CRC_MISMATCH) {
-      // packet was received, but is malformed
-      nh.logerror("[SX1276] CRC error!");
-    } else {
-      // some other error occurred
-      snprintf(&debug_chars[0], 64, "[SX1276] Failed, code %d", state);
-      nh.logerror(debug_chars);
     }
 
-    snprintf(&debug_chars[0], 64, "[SX1276] SnR %f RSSI %f", snr, rssi);
-    nh.loginfo(debug_chars);
+    lora.snr = snr;
+    lora.rssi = rssi;
+    lora.hops = hopsCompleted; 
+    lora.code = state;
+    lora.crc = (state != RADIOLIB_ERR_CRC_MISMATCH);
+    lora_pub.publish(&lora);
 
-    #ifndef LORA_FIXED_FREQ    
-    // print the number of hops it took
-    snprintf(&debug_chars[0], 64, "[SX1276] Hops completed: %d", hopsCompleted);
-    nh.logerror(debug_chars);
-
+    #ifndef LORA_FIXED_FREQ
     // reset the counter
     hopsCompleted = 0;
     #endif
