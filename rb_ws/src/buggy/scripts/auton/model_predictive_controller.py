@@ -37,9 +37,9 @@ class ModelPredictiveController(Controller):
     N_CONTROLS = 1
 
     # MPC Cost Weights
-    state_cost = np.array([0.0001, 1000, 1, 1])  # x, y, theta, steer
+    state_cost = np.array([0.0001, 20, 1, 1])  # x, y, theta, steer
     control_cost = np.array([1])  # d_steer
-    final_state_cost = 10.0 * np.array([0.0001, 1000, 1, 1])  # x, y, theta, steer
+    final_state_cost = 10.0 * np.array([0.0001, 20, 1, 1])  # x, y, theta, steer
 
     # State constraints (relative to the reference)
     state_lb = np.array([-np.inf, -np.inf, -np.inf, -np.pi / 9])  # x, y, theta, steer
