@@ -34,25 +34,25 @@ class ModelPredictiveController(Controller):
     WHEELBASE = 1.3
     MIN_SPEED = 1.0
     MPC_TIMESTEP = 0.02
-    MPC_HORIZON = 250
-    LOOKAHEAD_TIME = 0.05  # seconds
+    MPC_HORIZON = 125
+    LOOKAHEAD_TIME = 0.1  # seconds
     N_STATES = 4
     N_CONTROLS = 1
 
     # MPC Cost Weights
-    state_cost = np.array([0.0001, 100, 1, 1])  # x, y, theta, steer
-    control_cost = np.array([1])  # d_steer
-    final_state_cost = 10.0 * np.array([0.0001, 100, 1, 1])  # x, y, theta, steer
+    state_cost = np.array([0.0001, 250, 5, 25])  # x, y, theta, steer
+    control_cost = np.array([5])  # d_steer
+    final_state_cost = 2 * np.array([0.0001, 250, 5, 25])  # x, y, theta, steer
 
     # State constraints (relative to the reference)
     state_lb = np.array([-np.inf, -np.inf, -np.inf, -np.pi / 9])  # x, y, theta, steer
     state_ub = np.array([np.inf, np.inf, np.inf, np.pi / 9])  # x, y, theta, steer
 
     # Control constraints
-    # control_lb = np.array([-np.pi / 2])  # d_steer
-    # control_ub = np.array([np.pi / 2])  # d_steer
-    control_lb = np.array([-np.inf])  # d_steer
-    control_ub = np.array([np.inf])  # d_steer
+    control_lb = np.array([-np.pi * 2])  # d_steer
+    control_ub = np.array([np.pi * 2])  # d_steer
+    # control_lb = np.array([-np.inf])  # d_steer
+    # control_ub = np.array([np.inf])  # d_steer
 
     # Solver params
     solver_settings: dict = {
@@ -266,6 +266,7 @@ class ModelPredictiveController(Controller):
         )
 
     @staticmethod
+    @njit
     def transform_trajectory(trajectory, transform_matrix):
         """Transform a trajectory by a translation and rotation
 
@@ -278,13 +279,19 @@ class ModelPredictiveController(Controller):
         )
         traj_transformed = transform_matrix @ traj_homogeneous
 
-        return np.hstack(
+        new_thetas = trajectory[:, 2] + np.arctan2(
+            transform_matrix[1, 0], transform_matrix[0, 0]
+        )
+        new_thetas = np.arctan2(np.sin(new_thetas), np.cos(new_thetas))
+
+        return np.stack(
             (
-                traj_transformed[0:2, :].T,
-                trajectory[:, 2]
-                + np.arctan2(transform_matrix[1, 0], transform_matrix[0, 0]),
-                trajectory[:, 3],
-            )
+                traj_transformed[0, :].ravel(),
+                traj_transformed[1, :].ravel(),
+                new_thetas.ravel(),
+                trajectory[:, 3].ravel(),
+            ),
+            -1,
         )
 
     first_iteration = True
@@ -325,7 +332,7 @@ class ModelPredictiveController(Controller):
             current_pose.x,
             current_pose.y,
             start_index=self.current_traj_index,
-            end_index=self.current_traj_index + 100,
+            end_index=self.current_traj_index + 20,
             subsample_resolution=1000,
         )
         self.current_traj_index = max(traj_index, self.current_traj_index)
@@ -358,6 +365,9 @@ class ModelPredictiveController(Controller):
         reference_trajectory = self.transform_trajectory(
             reference_trajectory, inverted_pose.to_mat()
         )
+
+        if self.TIME:
+            ref_transform_time = 1000.0 * (time.time() - t)
 
         # print("Current pose: ", current_pose)
         # print("Reference pose: ", reference_trajectory[0, :])
@@ -459,10 +469,7 @@ class ModelPredictiveController(Controller):
         lb = np.hstack(
             (
                 -self.state_jacobian(reference_trajectory[0, :])
-                @ (
-                    self.state(current_pose.x, current_pose.y, current_pose.theta, 0)
-                    - reference_trajectory[0, :]
-                ),
+                @ (self.state(0, 0, 0, 0) - reference_trajectory[0, :]),
                 np.zeros(self.N_STATES * (self.MPC_HORIZON - 1)),
                 np.tile(self.state_lb, self.MPC_HORIZON) + reference_trajectory.ravel(),
                 np.tile(self.control_lb, self.MPC_HORIZON) + reference_control.ravel(),
@@ -471,10 +478,7 @@ class ModelPredictiveController(Controller):
         ub = np.hstack(
             (
                 -self.state_jacobian(reference_trajectory[0, :])
-                @ (
-                    self.state(current_pose.x, current_pose.y, current_pose.theta, 0)
-                    - reference_trajectory[0, :]
-                ),
+                @ (self.state(0, 0, 0, 0) - reference_trajectory[0, :]),
                 np.zeros(self.N_STATES * (self.MPC_HORIZON - 1)),
                 np.tile(self.state_ub, self.MPC_HORIZON) + reference_trajectory.ravel(),
                 np.tile(self.control_ub, self.MPC_HORIZON) + reference_control.ravel(),
@@ -612,6 +616,7 @@ class ModelPredictiveController(Controller):
 
         if self.TIME:
             print(" Ref Traj: ", ref_time)
+            print(" Transform: ", ref_transform_time)
             print(" Create H: ", create_mat_time_H)
             print(" Create D: ", create_mat_time_D)
             print(" Create bounds: ", create_mat_time_bounds)
@@ -624,7 +629,7 @@ class ModelPredictiveController(Controller):
 
 if __name__ == "__main__":
     # ModelPredictiveController.DEBUG = True
-    # ModelPredictiveController.PLOT = True
+    ModelPredictiveController.PLOT = True
     ModelPredictiveController.TIME = True
     mpc_controller = ModelPredictiveController()
 

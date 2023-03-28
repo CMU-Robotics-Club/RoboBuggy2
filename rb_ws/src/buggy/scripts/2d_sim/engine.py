@@ -67,7 +67,7 @@ class Simulator:
 
         self.steering_angle = 0  # degrees
 
-        self.rate = 1000  # Hz
+        self.rate = 100  # Hz
         self.pub_skip = 10  # publish every pub_skip ticks
 
         self.lock = threading.Lock()
@@ -175,8 +175,8 @@ class Simulator:
         if Simulator.NOISE:
             lat_noisy = lat + np.random.normal(0, 1e-8)  # ~1cm error
             long_noisy = long + np.random.normal(0, 1e-8)  # ~1cm error
-            velocity_noisy = velocity + np.random.normal(0, 0.15)
-            heading_noisy = heading + np.random.normal(0, 0.05)
+            velocity_noisy = velocity + np.random.normal(0, 0.01)
+            heading_noisy = heading + np.random.normal(0, 0.01)
 
             # Publish a new point on Foxglove to indicate the noisy location
             nsf_noisy = NavSatFix()
