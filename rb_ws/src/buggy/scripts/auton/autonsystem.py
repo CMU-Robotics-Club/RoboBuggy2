@@ -15,7 +15,8 @@ from controller import Controller
 from pure_pursuit_controller import PurePursuitController
 from stanley_controller import StanleyController
 from brake_controller import BrakeController
-from model_predictive_controller import ModelPredictiveController
+# from model_predictive_controller import ModelPredictiveController
+from model_predictive_interpolation import ModelPredictiveController
 from pose import Pose
 
 
