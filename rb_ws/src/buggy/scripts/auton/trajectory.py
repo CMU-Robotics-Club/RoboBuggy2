@@ -20,12 +20,12 @@ class Trajectory:
     Use https://rdudhagra.github.io/eracer-portal/ to make trajectories and save the JSON file
     """
 
-    distances = np.zeros((0, 1))  # (N/dt x 1) [d, d, ...]
-    positions = np.zeros((0, 2))  # (N x 2) [(x,y), (x,y), ...]
-    indices = None  # (N x 1) [0, 1, 2, ...]
-    interpolation = None  # scipy.interpolate.PPoly
-
     def __init__(self, json_filepath, interpolator="CubicSpline") -> None:
+        self.distances = np.zeros((0, 1))  # (N/dt x 1) [d, d, ...]
+        self.positions = np.zeros((0, 2))  # (N x 2) [(x,y), (x,y), ...]
+        self.indices = None  # (N x 1) [0, 1, 2, ...]
+        self.interpolation = None  # scipy.interpolate.PPoly
+    
         pos = []
         # Load the json file
         with open(json_filepath, "r") as f:
@@ -55,7 +55,10 @@ class Trajectory:
             interp_dists = np.linspace(0, tot_len, num_indices)
 
             self.indices = np.arange(num_indices)
-            self.positions = [temp_traj.get_position_by_distance(interp_dist) for interp_dist in interp_dists]
+            self.positions = [
+                temp_traj.get_position_by_distance(interp_dist)
+                for interp_dist in interp_dists
+            ]
             self.positions = np.array(self.positions)
 
             self.interpolation = CubicSpline(self.indices, self.positions)
@@ -91,7 +94,7 @@ class Trajectory:
             float: (theta) in rads
         """
         # theta = np.interp(index, self.indices, self.positions[:, 2])
-        dxdt, dydt = self.interpolation(index, nu=1)
+        dxdt, dydt = self.interpolation(index, nu=1).reshape((-1, 2)).T
         theta = np.arctan2(dydt, dxdt)
 
         return theta
@@ -178,7 +181,11 @@ class Trajectory:
             int: index along the trajectory
         """
         # Interpolate the index
-        index = np.interp(distance, self.distances, np.linspace(0, len(self.distances), len(self.distances)))
+        index = np.interp(
+            distance,
+            self.distances,
+            np.linspace(0, len(self.distances), len(self.distances)),
+        )
 
         return index * self.dt
 
@@ -210,8 +217,8 @@ class Trajectory:
             float: curvature
         """
         # Interpolate the curvature
-        dxdt, dydt = self.interpolation(index, nu=1)
-        ddxdtt, ddydtt = self.interpolation(index, nu=2)
+        dxdt, dydt = self.interpolation(index, nu=1).reshape((-1, 2)).T
+        ddxdtt, ddydtt = self.interpolation(index, nu=2).reshape((-1, 2)).T
 
         curvature = (dxdt * ddydtt - dydt * ddxdtt) / (
             (dxdt**2 + dydt**2) ** (3 / 2)
@@ -233,6 +240,31 @@ class Trajectory:
         index = self.get_index_from_distance(distance)
 
         return self.get_curvature_by_index(index)
+
+    def get_dynamics_by_index(self, index, wheelbase):
+        """Gets the dynamics at a given index along the trajectory,
+        interpolating if necessary. Convenience function that returns
+        all of the dynamics at once rather than requiring multiple
+        calls to other helper functions. In this way, we can reuse calls
+        to the interpolator, improving performance.
+
+        Args:
+            index (float): index along the trajectory
+
+        Returns:
+            tuple: (x, y, theta, steering_angle)
+        """
+        # Interpolate the dynamics
+        x, y = self.interpolation(index).reshape((-1, 2)).T
+        dxdt, dydt = self.interpolation(index, nu=1).reshape((-1, 2)).T
+        ddxdtt, ddydtt = self.interpolation(index, nu=2).reshape((-1, 2)).T
+
+        curvature = (dxdt * ddydtt - dydt * ddxdtt) / (
+            (dxdt**2 + dydt**2) ** (3 / 2)
+        )
+        theta = np.arctan2(dydt, dxdt)
+
+        return np.stack((x, y, theta, np.arctan(wheelbase * curvature)), axis=-1)
 
     def get_closest_index_on_path(
         self, x, y, start_index=0, end_index=None, subsample_resolution=10000
@@ -293,14 +325,12 @@ if __name__ == "__main__":
         x, y = trajectory.get_position_by_index(k)
         lat, lon = World.world_to_gps(x, y)
 
-        interp_dat.append({
-            "lat": lat,
-            "lon": lon,
-            "key": str(uuid.uuid4()),
-            "active": False
-        })
+        interp_dat.append(
+            {"lat": lat, "lon": lon, "key": str(uuid.uuid4()), "active": False}
+        )
 
     import matplotlib.pyplot as plt
+
     ts = np.linspace(0, trajectory.indices[-1], 500)
     kurv = [trajectory.get_curvature_by_index(t) for t in ts]
     plt.plot(ts, kurv)
