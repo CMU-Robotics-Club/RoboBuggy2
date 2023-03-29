@@ -131,26 +131,21 @@ void DynamixelInterface::receivePacket(DynamixelPacket &aPacket, uint8_t answerS
 	aPacket.mDataLength = 255;
 	if (mStream.readBytes(buffer, 2) < 2)
 	{
-		Serial.println("HERE!");
 		aPacket.mStatus = DYN_STATUS_COM_ERROR | DYN_STATUS_TIMEOUT;
 		return;
 	}
 	if (buffer[0] != 255 || buffer[1] != 255)
 	{
-		Serial.println("HERE 2!");
-		Serial.printf("%x %x\n",buffer[0], buffer[1]);
 		aPacket.mStatus = DYN_STATUS_COM_ERROR;
 		return;
 	}
 	if (mStream.readBytes(buffer, 3) < 3)
 	{
-		Serial.println("HERE 3!");
 		aPacket.mStatus = DYN_STATUS_COM_ERROR | DYN_STATUS_TIMEOUT;
 		return;
 	}
 	if (aPacket.mID != buffer[0])
 	{
-		Serial.println("HERE 4!");
 		aPacket.mStatus = DYN_STATUS_COM_ERROR;
 		return;
 	}

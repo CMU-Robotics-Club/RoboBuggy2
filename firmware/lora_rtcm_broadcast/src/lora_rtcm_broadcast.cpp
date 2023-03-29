@@ -28,8 +28,8 @@
 
 #define LORA_HEADER "W3VC/1"
 #define LORA_HEADER_LENGTH 6
-#define LORA_PAYLOAD_LENGTH 249
-#define LORA_FIXED_FREQ 902.5
+#define LORA_PAYLOAD_LENGTH (255 - LORA_HEADER_LENGTH)
+#define LORA_FIXED_FREQ 902.5 // MHz (902.5 to 927.5 valid in US)
 
 typedef struct {
   byte length;

@@ -4,9 +4,7 @@
 #include "DynamixelInterface.h"
 #include "DynamixelMotor.h"
 
-// #include <XBee.h>
-
-#define USE_TEENSY_HW_SERIAL
+#define USE_TEENSY_HW_SERIAL // Must be before <ros.h>
 #define ROS_BAUD 1000000
 
 #include <ros.h>
@@ -60,7 +58,8 @@ unsigned long rcSteeringUptime = 0;
 unsigned long rcThrottleUptime = 0;
 
 // For averaging the past 5 consecutive steering pulse widths.
-int rcSteeringSamples[5] = {0};
+#define RC_SAMPLING_WINDOW 5
+int rcSteeringSamples[RC_SAMPLING_WINDOW] = {0};
 int rcSteeringSampleIndex = 0;
 
 // TODO make sure i implemented these interrupt handlers correctly lol
@@ -158,16 +157,25 @@ ros::Publisher battery("buggy/battery", &battery_msg);
 diagnostic_msgs::DiagnosticStatus rosLogger;
 diagnostic_msgs::KeyValue rosLogValues[10];
 ros::Publisher debug("TeensyStateIn_T", &rosLogger);
+
+// Every 100 cycles, publish debug data to ROS
 int rosLogCounter = 0;
 
 int LEFT_DYNAMIXEL_LIMIT = 1516;
 int RIGHT_DYNAMIXEL_LIMIT = 829;
-// TODO write docstring
-int getDynamixelCenter()
+
+/**
+ * @brief
+ */
+inline int getDynamixelCenter()
 {
   return (LEFT_DYNAMIXEL_LIMIT + RIGHT_DYNAMIXEL_LIMIT) / 2.0;
 }
-int getDynamixelRange()
+
+/**
+ * @brief
+ */
+inline int getDynamixelRange()
 {
   return LEFT_DYNAMIXEL_LIMIT - RIGHT_DYNAMIXEL_LIMIT;
 }
@@ -207,7 +215,7 @@ int rcToDynamixelWidth(int pulseWidth)
 
   displacement = getDynamixelCenter() + displacement * getDynamixelRange() * 0.5;
 
-  return displacement;
+  return (int)round(displacement);
 }
 
 /**
@@ -266,15 +274,15 @@ float dynamixelAngleToDegrees(int dynamixelWidth)
 float dynamixelLoadToPercent(uint16_t load)
 {
   float value = load - 1023;
-  value /= 2057;
-  value *= 100;
+  value /= 1023.5f;
+  value *= 100.0f;
   return value;
 }
 
 float dynamixelCurrentToMilliAmps(uint16_t current)
 {
   float value = current - 2048;
-  value *= 4.5;
+  value *= 4.5f;
   return value;
 }
 
@@ -283,7 +291,6 @@ float dynamixelCurrentToMilliAmps(uint16_t current)
  */
 void calibrateSteering()
 {
-
   int a = 0;
 
   uint16_t startPos = -1;
@@ -371,16 +378,17 @@ void setup()
   pinMode(VOLTAGE_PIN, INPUT);
 
   DynamixelInterface *dInterface = new DynamixelInterface(DYNAMIXEL_SERIAL, DYNAMIXEL_RXEN, DYNAMIXEL_TXEN, DirPinMode::ReadHiWriteLo); // Stream
-  dInterface->begin(1000000, 50);                                                                                                       // baudrate, timeout
+  dInterface->begin(1000000, 50);                                                                                                       // baudrate, timeout (ms)
   motor = new DynamixelMotor(*dInterface, 5);                                                                                           // Interface , ID
 
   motor->init(); // This will get the returnStatusLevel of the servo
   Serial.printf("Status return level = %u\n", motor->statusReturnLevel());
-  motor->statusReturnLevel(1);
+  motor->statusReturnLevel(1); // Enabling read commands
   Serial.printf("new return level = %u\n", motor->statusReturnLevel());
   // Status packet delay = 20us
   motor->write(5, (byte)250);
 
+  // Disable torque, enable full range of dynamixel motion, and re-enable torque
   motor->enableTorque(false);
   motor->jointMode(1, 0xFFF);
   motor->enableTorque();
@@ -403,19 +411,20 @@ void loop()
 
   bool rcSteeringTimeout = (millis() - rcSteeringLastEdge) >= 50.0;
   bool rcThrottleTimeout = (millis() - rcThrottleLastEdge) >= 50.0;
+  bool rcTimeout = rcSteeringTimeout || rcThrottleTimeout;
 
   // Capture most recent RC steering sample.
   rcSteeringSampleIndex++;
-  rcSteeringSampleIndex %= 5;
+  rcSteeringSampleIndex %= RC_SAMPLING_WINDOW;
   rcSteeringSamples[rcSteeringSampleIndex] = rcSteeringWidth;
 
   // Calculating the average of the past 5 RC steering samples.
   float rcSteeringAvg = 0.0;
-  for (int i = 0; i < 5; i++)
+  for (int i = 0; i < RC_SAMPLING_WINDOW; i++)
   {
     rcSteeringAvg += rcSteeringSamples[i];
   }
-  rcSteeringAvg /= 5;
+  rcSteeringAvg /= RC_SAMPLING_WINDOW;
 
   // Determining the state of the throttle trigger on the RC controller.
   bool autoMode = rcThrottleWidth < (RC_THROTTLE_CENTER - RC_THROTTLE_DEADZONE);
@@ -423,11 +432,11 @@ void loop()
   bool brakeMode = !autoMode && !teleMode;
 
   // Controlling hardware thru RC.
-  float steeringCommand = rcToDynamixelWidth(rcSteeringAvg);
-  bool brakeCommand = brakeMode;
+  float steeringCommand = rcTimeout ? getDynamixelCenter() : rcToDynamixelWidth(rcSteeringAvg);
+  bool brakeCommand = rcTimeout ? true : brakeMode;
 
   // If auton is enabled, it will set inputs to ROS inputs.
-  if (autoMode)
+  if (autoMode && !rcTimeout)
   {
     steeringCommand = rosAngleToDynamixelWidth(rosSteeringAngle);
     brakeCommand = 0.5 < rosBrake;

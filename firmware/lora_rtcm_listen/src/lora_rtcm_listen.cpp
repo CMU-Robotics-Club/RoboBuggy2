@@ -23,7 +23,7 @@
 
 #define LORA_HEADER "W3VC/1"
 #define LORA_HEADER_LENGTH 6
-#define LORA_PAYLOAD_LENGTH 249
+#define LORA_PAYLOAD_LENGTH (255 - LORA_HEADER_LENGTH)
 #define LORA_FIXED_FREQ 902.5
 
 #define USE_USBCON
@@ -94,6 +94,7 @@ RadioMessage message;
 // is received by the module
 void setRxFlag(void) {
   receivedFlag = true;
+  digitalWrite(LED_BUILTIN, HIGH);
 }
 
 // this function is called when FhssChangeChannel interrupt occurs
@@ -170,6 +171,8 @@ void setup() {
     nh.logerror(debug_chars);
     while (true);
   }
+
+  pinMode(LED_BUILTIN, OUTPUT);
 }
 
 void loop() {
@@ -198,6 +201,8 @@ void loop() {
       rtcm.data = &message.data[0];
       rtcm.data_length = message.length;
       rtcm_pub.publish(&rtcm);
+
+      digitalWrite(LED_BUILTIN, LOW);
     }
 
     lora.snr = snr;
