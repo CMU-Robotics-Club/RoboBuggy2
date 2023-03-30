@@ -17,6 +17,8 @@ from pure_pursuit_controller import PurePursuitController
 from stanley_controller import StanleyController
 from model_predictive_controller import ModelPredictiveController
 from brake_controller import BrakeController
+# from model_predictive_controller import ModelPredictiveController
+from model_predictive_interpolation import ModelPredictiveController
 from pose import Pose
 
 
@@ -66,9 +68,22 @@ class AutonSystem:
         self.tick_caller()
 
 
+        self.tick_caller()
+
     def update_speed(self, msg):
         with self.lock:
             self.speed = msg.data
+    
+    def update_msg(self, msg):
+        with self.lock:
+            self.msg = msg
+        
+    def tick_caller(self):
+        while(self.msg == None):
+            rospy.sleep(0.001)
+        while (True):
+            self.tick()
+            rospy.sleep(0.001)
 
     def update_msg(self, msg):
         with self.lock:

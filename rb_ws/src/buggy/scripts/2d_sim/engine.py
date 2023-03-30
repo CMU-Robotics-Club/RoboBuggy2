@@ -27,52 +27,48 @@ class Simulator:
             heading (float): degrees start heading of buggy
         """
         # for X11 matplotlib (direction included)
-        self.plot_publisher = rospy.Publisher("sim_2d/utm",
-                                              Pose,
-                                              queue_size=1)
+        self.plot_publisher = rospy.Publisher("sim_2d/utm", Pose, queue_size=1)
 
         # simulate the INS's outputs (noise included)
-        self.pose_publisher = rospy.Publisher("nav/odom",
-                                              Odometry,
-                                              queue_size=1)
+        self.pose_publisher = rospy.Publisher("nav/odom", Odometry, queue_size=1)
 
-        self.steering_subscriber = rospy.Subscriber("buggy/input/steering",
-                                                    Float64,
-                                                    self.update_steering_angle)
-        self.velocity_subscriber = rospy.Subscriber("buggy/velocity",
-                                                    Float64,
-                                                    self.update_velocity)
+        self.steering_subscriber = rospy.Subscriber(
+            "buggy/input/steering", Float64, self.update_steering_angle
+        )
+        self.velocity_subscriber = rospy.Subscriber(
+            "buggy/velocity", Float64, self.update_velocity
+        )
 
         # to plot on Foxglove (no noise)
-        self.navsatfix_publisher = rospy.Publisher("state/pose_navsat",
-                                                   NavSatFix,
-                                                   queue_size=1)
+        self.navsatfix_publisher = rospy.Publisher(
+            "state/pose_navsat", NavSatFix, queue_size=1
+        )
 
         # to plot on Foxglove (with noise)
-        self.navsatfix_noisy_publisher = rospy.Publisher("state/pose_navsat_noisy",
-                                                         NavSatFix,
-                                                         queue_size=1)
+        self.navsatfix_noisy_publisher = rospy.Publisher(
+            "state/pose_navsat_noisy", NavSatFix, queue_size=1
+        )
 
         # Start position for End of Hill 2
-        # self.e_utm = Simulator.UTM_EAST_ZERO + 15
-        # self.n_utm = Simulator.UTM_NORTH_ZERO - 10
+        self.e_utm = Simulator.UTM_EAST_ZERO - 3
+        self.n_utm = Simulator.UTM_NORTH_ZERO - 10
 
         # Start position for Outdoor track
         # self.e_utm = Simulator.UTM_EAST_ZERO + 110
         # self.n_utm = Simulator.UTM_NORTH_ZERO + 296
 
         # Start positions for Outdoor track
-        utm_coords = utm.from_latlon(Simulator.START_LAT, Simulator.START_LONG)
-        self.e_utm = utm_coords[0]
-        self.n_utm = utm_coords[1]
+        # utm_coords = utm.from_latlon(Simulator.START_LAT, Simulator.START_LONG)
+        # self.e_utm = utm_coords[0]
+        # self.n_utm = utm_coords[1]
 
         self.heading = heading  # degrees
-        self.velocity = 25  # m/s
+        self.velocity = 5  # m/s
 
         self.steering_angle = 0  # degrees
 
-        self.rate = 200  # Hz
-        self.pub_skip = 5  # publish every pub_skip ticks
+        self.rate = 100  # Hz
+        self.pub_skip = 10  # publish every pub_skip ticks
 
         self.lock = threading.Lock()
 
@@ -127,8 +123,7 @@ class Simulator:
                          0])
 
     def step(self):
-        """Complete the step at a certain Hz here. Do physics
-        """
+        """Complete the step at a certain Hz here. Do physics"""
         with self.lock:
             heading = self.heading
             e_utm = self.e_utm
@@ -136,18 +131,23 @@ class Simulator:
             velocity = self.velocity
             steering_angle = self.steering_angle
 
-        x_0 = np.array([e_utm, n_utm, np.deg2rad(heading), np.deg2rad(steering_angle)])
-        dt = 1.0 / self.rate
+        # Calculate new position
+        if steering_angle == 0.0:
+            # Straight
+            e_utm_new = e_utm + (velocity / self.rate) * np.cos(np.deg2rad(heading))
+            n_utm_new = n_utm + (velocity / self.rate) * np.sin(np.deg2rad(heading))
+            heading_new = heading
+        else:
+            # steering radius
+            radius = self.get_steering_arc()
 
-        k1 = self.dynamics(x_0, velocity)
-        k2 = self.dynamics(x_0 + dt / 2.0 * k1, velocity)
-        k3 = self.dynamics(x_0 + dt / 2.0 * k2, velocity)
-        k4 = self.dynamics(x_0 + dt * k3, velocity)
+            distance = velocity / self.rate
 
-        x_1 = x_0 + (1/6) * (k1 + 2*k2 + 2*k3 + k4) * dt
-
-        e_utm_new, n_utm_new, heading_new, _ = x_1
-        heading_new = np.rad2deg(heading_new)
+            delta_heading = distance / radius
+            heading_new = heading + np.rad2deg(delta_heading) / 2
+            e_utm_new = e_utm + (velocity / self.rate) * np.cos(np.deg2rad(heading_new))
+            n_utm_new = n_utm + (velocity / self.rate) * np.sin(np.deg2rad(heading_new))
+            heading_new = heading_new + np.rad2deg(delta_heading) / 2
 
         with self.lock:
             self.e_utm = e_utm_new
@@ -155,8 +155,7 @@ class Simulator:
             self.heading = heading_new
 
     def publish(self):
-        """Publishes the pose the arrow in visualizer should be at
-        """
+        """Publishes the pose the arrow in visualizer should be at"""
         p = Pose()
 
         time_stamp = rospy.Time.now()
@@ -170,8 +169,12 @@ class Simulator:
         self.plot_publisher.publish(p)  # publish to X11 matplotlib window
 
         # NavSatFix for usage with X11 matplotlib AND Foxglove plotting
-        (lat, long) = utm.to_latlon(p.position.x, p.position.y,
-                                    Simulator.UTM_ZONE_NUM, Simulator.UTM_ZONE_LETTER)
+        (lat, long) = utm.to_latlon(
+            p.position.x,
+            p.position.y,
+            Simulator.UTM_ZONE_NUM,
+            Simulator.UTM_ZONE_LETTER,
+        )
 
         nsf = NavSatFix()
         nsf.latitude = lat
@@ -224,18 +227,49 @@ class Simulator:
         odom.twist = TwistWithCovariance(twist=odom_twist)
 
         # This is just dummy data
-        odom.pose.covariance = [0.01, 0, 0, 0, 0, 0,
-                                0, 0.01, 0, 0, 0, 0,
-                                0, 0, 0.01, 0, 0, 0,
-                                0, 0, 0, 0.01, 0, 0,
-                                0, 0, 0, 0, 0.01, 0,
-                                0, 0, 0, 0, 0, 0.01]
+        odom.pose.covariance = [
+            0.01,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0.01,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0.01,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0.01,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0.01,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0.01,
+        ]
 
         self.pose_publisher.publish(odom)
 
     def loop(self):
-        """Loop for the main simulator engine
-        """
+        """Loop for the main simulator engine"""
         rate = rospy.Rate(self.rate)
         pub_tick_count = 0
 
@@ -254,5 +288,5 @@ class Simulator:
 
 if __name__ == "__main__":
     rospy.init_node("sim_2d_engine")
-    sim = Simulator(0)
+    sim = Simulator(210)
     sim.loop()

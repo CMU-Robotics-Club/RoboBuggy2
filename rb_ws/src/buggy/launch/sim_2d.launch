@@ -5,6 +5,8 @@
 <launch>
     <arg name="controller"      default="stanley" />
     <node name="foxglove" pkg="foxglove_bridge" type="foxglove_bridge" />
+    <node name="mpc_calculator" pkg="buggy" type="model_predictive_controller.py" output="screen"/>
+
     
     <node name="sim_2d_engine" pkg="buggy" type="engine.py" output="screen"/>
     <!-- <node name="sim_2d_visualizer" pkg="buggy" type="grapher.py" output="screen"/> -->
