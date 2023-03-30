@@ -67,11 +67,12 @@ class Simulator:
         self.n_utm = utm_coords[1]
 
         self.heading = heading  # degrees
-        self.velocity = 0  # m/s
+        self.velocity = 25  # m/s
 
         self.steering_angle = 0  # degrees
 
-        self.rate = 50  # Hz
+        self.rate = 200  # Hz
+        self.pub_skip = 5  # publish every pub_skip ticks
 
         self.lock = threading.Lock()
 
@@ -187,10 +188,10 @@ class Simulator:
         heading_noisy = heading
 
         if (Simulator.NOISE):
-            lat_noisy = lat + np.random.normal(0, 1e-8)  # ~1cm error
-            long_noisy = long + np.random.normal(0, 1e-8)  # ~1cm error
+            lat_noisy = lat + np.random.normal(0, 1e-6)  # ~1cm error
+            long_noisy = long + np.random.normal(0, 1e-6)  # ~1cm error
             velocity_noisy = velocity + np.random.normal(0, 0.15)
-            heading_noisy = heading + np.random.normal(0, 0.05)
+            heading_noisy = heading + np.random.normal(0, 0.0005)
 
             # Publish a new point on Foxglove to indicate the noisy location
             nsf_noisy = NavSatFix()
@@ -236,9 +237,18 @@ class Simulator:
         """Loop for the main simulator engine
         """
         rate = rospy.Rate(self.rate)
+        pub_tick_count = 0
+
         while not rospy.is_shutdown():
             self.step()
-            self.publish()
+
+            # Publish every self.pub_skip ticks
+            if pub_tick_count == self.pub_skip:
+                self.publish()
+                pub_tick_count = 0
+            else:
+                pub_tick_count += 1
+
             rate.sleep()
 
 

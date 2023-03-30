@@ -15,6 +15,7 @@ from world import World
 from controller import Controller
 from pure_pursuit_controller import PurePursuitController
 from stanley_controller import StanleyController
+from model_predictive_controller import ModelPredictiveController
 from brake_controller import BrakeController
 from pose import Pose
 
@@ -43,8 +44,12 @@ class AutonSystem:
         self.brake_controller = brake_controller
 
         self.lock = Lock()
+        self.ticks = 0
 
-        rospy.Subscriber("nav/odom", Odometry, self.tick)
+        
+        self.msg = None
+
+        rospy.Subscriber("nav/odom", Odometry, self.update_msg)
         self.steer_publisher = rospy.Publisher(
             "buggy/input/steering", Float64, queue_size=1
         )
@@ -58,14 +63,30 @@ class AutonSystem:
         self.heading_publisher = rospy.Publisher(
             "auton/debug/heading", Float32, queue_size=1
         )
+        self.tick_caller()
+
 
     def update_speed(self, msg):
         with self.lock:
             self.speed = msg.data
 
-    def tick(self, msg):
+    def update_msg(self, msg):
+        with self.lock:
+            self.msg = msg
+        
+    def tick_caller(self):
+        while(self.msg == None):
+            rospy.sleep(0.001)
+        while (True):
+            self.tick()
+            self.ticks += 1
+            rospy.sleep(0.001)
+
+    def tick(self):
         # Received an updated pose from the state estimator
         # Compute the new control output and publish it to the buggy
+        with self.lock:
+            msg = self.msg
         current_rospose = msg.pose.pose
 
         # Check if the pose covariance is a sane value. Otherwise ignore the message
@@ -86,12 +107,6 @@ class AutonSystem:
             pose, self.trajectory, current_speed
         )
 
-        # Plot projected forward/back positions
-        if (self.ticks % 5 == 0):
-            self.controller.plot_trajectory(
-                pose, self.trajectory, current_speed
-            )
-
         # Publish control output
         steering_angle_deg = np.rad2deg(steering_angle)
         self.steer_publisher.publish(Float64(steering_angle_deg))
@@ -102,7 +117,12 @@ class AutonSystem:
         # Publish debug data
         self.heading_publisher.publish(Float32(pose.theta))
 
-        self.ticks += 1
+        # Plot projected forward/back positions
+        if (self.ticks % 5 == 0):
+            self.controller.plot_trajectory(
+                pose, self.trajectory, current_speed
+            )
+
 
 
 if __name__ == "__main__":
@@ -117,7 +137,8 @@ if __name__ == "__main__":
         ctrller = StanleyController()
     elif (arg == "pure_pursuit"):
         ctrller = PurePursuitController()
-
+    elif (arg == "mpc"):
+        ctrller = ModelPredictiveController()
     if (ctrller == None):
         raise Exception("Invalid Controller Argument")
 

@@ -135,7 +135,7 @@ gnss1_rf_error_detection_data_rate : -1  # Rate of gnss1/rf_error_detection topi
 #     For GQ7 - in the vehicle frame wrt IMU origin (meters)
 #     For all other models - in the IMU frame wrt IMU origin (meters)
 #     Note: Make this as accurate as possible for good performance
-gnss1_antenna_offset : [-0.127, 0.127, 0.0]
+gnss1_antenna_offset : [-0.6007, 0.0, 0.2225]
 
 # GNSS2 settings are only applicable for multi-GNSS systems (e.g. GQ7) 
 gnss2_data_rate : 100
@@ -155,7 +155,7 @@ gnss2_rf_error_detection_data_rate : -1  # Rate of gnss1/rf_error_detection topi
 
 # Antenna #2 lever arm offset vector (In the vehicle frame wrt IMU origin (meters) )
 # Note: Make this as accurate as possible for good performance 
-gnss2_antenna_offset : [0.597, 0.127, 0.0]
+gnss2_antenna_offset : [0.4968, 0.0, 0.3268]
 
 # (GQ7 Only) Enable RTK dongle interface
 # Note: Enabling this will cause the node to publish on one of two topics depending
@@ -277,7 +277,7 @@ filter_vel_in_vehicle_frame : True
 # (GQ7 Only) Reference point lever arm offset control.
 #   Note: This offset will affect the position and velocity measurements in the following topics: nav/odom, nav/relative_pos/odom
 #   Note: This offset is in the vehicle reference frame.
-filter_lever_arm_offset: [0.0, 0.0, 0.0]
+filter_lever_arm_offset: [0.3835, 0.0, 0.0671]
 
 # (GQ7 Only) Hardware Odometer Control
 enable_hardware_odometer : False

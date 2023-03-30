@@ -6,3 +6,5 @@ pymap3d
 matplotlib
 utm
 scipy
+osqp
+numba

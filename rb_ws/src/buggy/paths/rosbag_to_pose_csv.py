@@ -3,7 +3,7 @@ import rosbag
 import argparse
 import uuid
 import json
-
+import csv
 from tf.transformations import euler_from_quaternion
 
 def main():
@@ -41,18 +41,15 @@ def main():
         (roll, pitch, yaw) = euler_from_quaternion (orientation_list)
 
 
-        waypoints.append(
-            {
-                "key": str(uuid.uuid4()),
-                "lat": lat,
-                "lon": lon,
-                "active": False,
-            }
-        )
+        waypoints.append([str(lat), str(lon), str(yaw)])
 
-    # Write to JSON file
-    with open(args.output_file, "w") as f:
-        json.dump(waypoints, f, indent=4)
+    # Write to csv file
+    with open(args.output_file, 'w', newline='') as csvfile:
+        writer = csv.writer(csvfile, delimiter=',',
+                            quotechar='|', quoting=csv.QUOTE_MINIMAL)
+        for row in waypoints:
+            writer.writerow(row)
+        
 
 
 if __name__ == "__main__":
