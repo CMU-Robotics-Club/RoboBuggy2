@@ -188,10 +188,10 @@ class Simulator:
         heading_noisy = heading
 
         if (Simulator.NOISE):
-            lat_noisy = lat + np.random.normal(0, 1e-6)  # ~1cm error
-            long_noisy = long + np.random.normal(0, 1e-6)  # ~1cm error
-            velocity_noisy = velocity + np.random.normal(0, 0.15)
-            heading_noisy = heading + np.random.normal(0, 0.0005)
+            lat_noisy = lat + np.random.normal(0, 1e-8)  # ~.1cm error
+            long_noisy = long + np.random.normal(0, 1e-8)  # ~.1cm error
+            velocity_noisy = velocity + np.random.normal(0, 0.01)
+            heading_noisy = heading + np.random.normal(0, 0.01)
 
             # Publish a new point on Foxglove to indicate the noisy location
             nsf_noisy = NavSatFix()

@@ -1,3 +1,4 @@
+#!/usr/bin/env python3
 from abc import ABC, abstractmethod
 
 import time
@@ -10,13 +11,19 @@ import scipy
 from scipy import sparse
 
 import rospy
+from std_msgs.msg import Float32, Float64, Float64MultiArray, MultiArrayDimension, Bool
+from nav_msgs.msg import Odometry
 from sensor_msgs.msg import NavSatFix
 from geometry_msgs.msg import Pose as ROSPose
+from geometry_msgs.msg import Pose2D
+from rospy.numpy_msg import numpy_msg
 
 from pose import Pose
 from trajectory import Trajectory
 from controller import Controller
 from world import World
+
+from threading import Lock
 
 import matplotlib.pyplot as plt
 
@@ -29,30 +36,31 @@ class ModelPredictiveController(Controller):
     DEBUG = False
     PLOT = False
     TIME = False
+    ROS = True
 
     # MPC Params
     WHEELBASE = 1.3
     MIN_SPEED = 1.0
     MPC_TIMESTEP = 0.02
-    MPC_HORIZON = 250
-    LOOKAHEAD_TIME = 0.05  # seconds
+    MPC_HORIZON = 125
+    LOOKAHEAD_TIME = 0.1  # seconds
     N_STATES = 4
     N_CONTROLS = 1
 
     # MPC Cost Weights
-    state_cost = np.array([0.0001, 100, 1, 1])  # x, y, theta, steer
-    control_cost = np.array([1])  # d_steer
-    final_state_cost = 10.0 * np.array([0.0001, 100, 1, 1])  # x, y, theta, steer
+    state_cost = np.array([0.0001, 250, 5, 25])  # x, y, theta, steer
+    control_cost = np.array([5])  # d_steer
+    final_state_cost = 2 * np.array([0.0001, 250, 5, 25])  # x, y, theta, steer
 
     # State constraints (relative to the reference)
     state_lb = np.array([-np.inf, -np.inf, -np.inf, -np.pi / 9])  # x, y, theta, steer
     state_ub = np.array([np.inf, np.inf, np.inf, np.pi / 9])  # x, y, theta, steer
 
     # Control constraints
-    # control_lb = np.array([-np.pi / 2])  # d_steer
-    # control_ub = np.array([np.pi / 2])  # d_steer
-    control_lb = np.array([-np.inf])  # d_steer
-    control_ub = np.array([np.inf])  # d_steer
+    control_lb = np.array([-np.pi * 2])  # d_steer
+    control_ub = np.array([np.pi * 2])  # d_steer
+    # control_lb = np.array([-np.inf])  # d_steer
+    # control_ub = np.array([np.inf])  # d_steer
 
     # Solver params
     solver_settings: dict = {
@@ -79,7 +87,10 @@ class ModelPredictiveController(Controller):
     state_cost_diag = np.diag(state_cost)
     control_cost_diag = np.diag(control_cost)
 
-    def __init__(self) -> None:
+    def __init__(self, ref_trajectory=None, ROS=False) -> None:
+        # instantiate parent
+        super(ModelPredictiveController, self).__init__()
+
         # Internal variables
         self.current_traj_index = 0  # Where in the trajectory we are currently
         self.current_speed = 0  # Speed of the buggy used for the MPC calculation. Assumed to be constant for now
@@ -101,6 +112,51 @@ class ModelPredictiveController(Controller):
             np.hstack((self.control_jacobian(), -np.eye(self.N_STATES))),
             format="csc",
         )
+
+        self.ROS = ROS
+        self.lock = Lock()
+        self.ref_trajectory = ref_trajectory
+
+        if self.ROS:
+            rospy.Subscriber('mpc/speed', Float64, self.update_speed)
+            rospy.Subscriber('mpc/current_pose', Pose2D, self.update_trajectory)
+            self.trajectory_publisher = rospy.Publisher('mpc/sol_trajectory',
+                                                        Float64MultiArray,
+                                                        queue_size=1)
+            self.status_publisher = rospy.Publisher('mpc/solver_status',
+                                                    Bool,
+                                                    queue_size=1)
+            rospy.init_node('mpc_calculator')
+
+    def update_speed(self, msg):
+        with self.lock:
+            self.current_speed = msg.data
+
+    def update_trajectory(self, msg):
+        self.status_publisher.publish(True)
+
+        pose = Pose(msg.x, msg.y, msg.theta)
+        cur_time_s = rospy.get_time()
+        t = np.linspace(cur_time_s + self.MPC_TIMESTEP,
+                        cur_time_s + (self.MPC_HORIZON - 1) * self.MPC_TIMESTEP,
+                        num=self.MPC_HORIZON)
+        t = t.reshape((self.MPC_HORIZON, 1))
+        sol_trajectory = self.compute_trajectory(pose, self.ref_trajectory, self.current_speed)
+
+        timed_traj = np.hstack([t, sol_trajectory], dtype=float)
+
+        n_msg = Float64MultiArray()
+        # n_msg.data = timed_traj
+        n_msg.data = np.reshape(timed_traj, (1 + self.N_STATES) * self.MPC_HORIZON)
+        n_msg.layout.dim = [MultiArrayDimension(), MultiArrayDimension()]
+        n_msg.layout.dim[0].label = "timestep"
+        n_msg.layout.dim[0].size = self.MPC_HORIZON
+        n_msg.layout.dim[0].stride = (1 + self.N_STATES) * self.MPC_HORIZON
+        n_msg.layout.dim[1].label = "time, states"
+        n_msg.layout.dim[1].size = (1 + self.N_STATES)
+        n_msg.layout.dim[1].stride = (1 + self.N_STATES)
+
+        self.trajectory_publisher.publish(n_msg)
 
     def state(self, x, y, theta, steer):
         """Return the state vector. This describes where the buggy currently is (plus some
@@ -266,6 +322,7 @@ class ModelPredictiveController(Controller):
         )
 
     @staticmethod
+    @njit
     def transform_trajectory(trajectory, transform_matrix):
         """Transform a trajectory by a translation and rotation
 
@@ -278,23 +335,24 @@ class ModelPredictiveController(Controller):
         )
         traj_transformed = transform_matrix @ traj_homogeneous
 
-        return np.hstack(
+        new_thetas = trajectory[:, 2] + np.arctan2(
+            transform_matrix[1, 0], transform_matrix[0, 0]
+        )
+        new_thetas = np.arctan2(np.sin(new_thetas), np.cos(new_thetas))
+
+        return np.stack(
             (
-                traj_transformed[0:2, :].T,
-                trajectory[:, 2]
-                + np.arctan2(transform_matrix[1, 0], transform_matrix[0, 0]),
-                trajectory[:, 3],
-            )
+                traj_transformed[0, :].ravel(),
+                traj_transformed[1, :].ravel(),
+                new_thetas.ravel(),
+                trajectory[:, 3].ravel(),
+            ),
+            -1,
         )
 
     first_iteration = True
 
-    def compute_control(
-        self,
-        current_pose: Pose,
-        trajectory: Trajectory,
-        current_speed: float,
-    ):
+    def compute_trajectory(self, current_pose: Pose, trajectory: Trajectory, current_speed: float):
         """
         Computes the desired control output given the current state and reference trajectory
 
@@ -325,7 +383,7 @@ class ModelPredictiveController(Controller):
             current_pose.x,
             current_pose.y,
             start_index=self.current_traj_index,
-            end_index=self.current_traj_index + 100,
+            end_index=self.current_traj_index + 20,
             subsample_resolution=1000,
         )
         self.current_traj_index = max(traj_index, self.current_traj_index)
@@ -358,6 +416,9 @@ class ModelPredictiveController(Controller):
         reference_trajectory = self.transform_trajectory(
             reference_trajectory, inverted_pose.to_mat()
         )
+
+        if self.TIME:
+            ref_transform_time = 1000.0 * (time.time() - t)
 
         # print("Current pose: ", current_pose)
         # print("Reference pose: ", reference_trajectory[0, :])
@@ -459,10 +520,7 @@ class ModelPredictiveController(Controller):
         lb = np.hstack(
             (
                 -self.state_jacobian(reference_trajectory[0, :])
-                @ (
-                    self.state(current_pose.x, current_pose.y, current_pose.theta, 0)
-                    - reference_trajectory[0, :]
-                ),
+                @ (self.state(0, 0, 0, 0) - reference_trajectory[0, :]),
                 np.zeros(self.N_STATES * (self.MPC_HORIZON - 1)),
                 np.tile(self.state_lb, self.MPC_HORIZON) + reference_trajectory.ravel(),
                 np.tile(self.control_lb, self.MPC_HORIZON) + reference_control.ravel(),
@@ -471,10 +529,7 @@ class ModelPredictiveController(Controller):
         ub = np.hstack(
             (
                 -self.state_jacobian(reference_trajectory[0, :])
-                @ (
-                    self.state(current_pose.x, current_pose.y, current_pose.theta, 0)
-                    - reference_trajectory[0, :]
-                ),
+                @ (self.state(0, 0, 0, 0) - reference_trajectory[0, :]),
                 np.zeros(self.N_STATES * (self.MPC_HORIZON - 1)),
                 np.tile(self.state_ub, self.MPC_HORIZON) + reference_trajectory.ravel(),
                 np.tile(self.control_ub, self.MPC_HORIZON) + reference_control.ravel(),
@@ -523,6 +578,11 @@ class ModelPredictiveController(Controller):
             t = time.time()
         results = self.solver.solve()
         steer_angle = results.x[self.N_CONTROLS + self.N_STATES - 1]
+        solution_trajectory = np.reshape(results.x, (self.MPC_HORIZON, self.N_STATES + self.N_CONTROLS))
+        state_trajectory = solution_trajectory[:, self.N_CONTROLS:(self.N_CONTROLS + self.N_STATES)]
+        state_trajectory += reference_trajectory
+        steer_rate_trajectory = solution_trajectory[:, :self.N_CONTROLS]
+
         if self.TIME:
             solve_time = 1000 * (time.time() - t)
 
@@ -612,6 +672,7 @@ class ModelPredictiveController(Controller):
 
         if self.TIME:
             print(" Ref Traj: ", ref_time)
+            print(" Transform: ", ref_transform_time)
             print(" Create H: ", create_mat_time_H)
             print(" Create D: ", create_mat_time_D)
             print(" Create bounds: ", create_mat_time_bounds)
@@ -619,32 +680,44 @@ class ModelPredictiveController(Controller):
             print(" Solve: ", solve_time)
             print(" Plot/pub: ", plot_time)
             print("Total time: ", 1000 * (time.time() - totaltime))
+
+        return state_trajectory
+        # return steer_angle
+
+    def compute_control(self, current_pose: Pose, trajectory: Trajectory, current_speed: float):
+        state_trajectory = self.compute_trajectory(current_pose, trajectory, current_speed)
+        steer_angle = state_trajectory[0, self.N_STATES - 1]
+
         return steer_angle
 
 
 if __name__ == "__main__":
-    # ModelPredictiveController.DEBUG = True
+    mpc_controller = ModelPredictiveController(
+        ref_trajectory=Trajectory("/rb_ws/src/buggy/paths/quartermiletrack.json"),
+        ROS=True)
+
+    while not rospy.is_shutdown():
+        rospy.spin()
+    # # ModelPredictiveController.DEBUG = True
     # ModelPredictiveController.PLOT = True
-    ModelPredictiveController.TIME = True
-    mpc_controller = ModelPredictiveController()
-
-    trajectory = Trajectory("/rb_ws/src/buggy/paths/quartermiletrack.json")
-
-    # Offset initial pose slightly
-    # initial_pose = Pose(
-    #     # *trajectory.get_position_by_distance(10), trajectory.get_heading_by_distance(10)
-    #     *trajectory.get_position_by_index(20), trajectory.get_heading_by_index(20)
-    # )
-    # initial_pose.x -= 3
-    # initial_pose.y += 4
-    # initial_pose.theta += 0.1
-    # print(initial_pose)
-    initial_pose = Pose(x=707.5893698488362, y=540, theta=-0.0292735217760258)
-
-    mpc_controller.compute_control(initial_pose, trajectory, 5)
-    mpc_controller.compute_control(initial_pose, trajectory, 5)
-    mpc_controller.compute_control(initial_pose, trajectory, 5)
-    ModelPredictiveController.PLOT = False
-
-    for _ in range(100):
-        mpc_controller.compute_control(initial_pose, trajectory, 5)
+    # mpc_controller = ModelPredictiveController()
+    #
+    # trajectory = Trajectory("/rb_ws/src/buggy/paths/quartermiletrack.json")
+    #
+    # # Offset initial pose slightly
+    # # initial_pose = Pose(
+    # #     # *trajectory.get_position_by_distance(10), trajectory.get_heading_by_distance(10)
+    # #     *trajectory.get_position_by_index(20), trajectory.get_heading_by_index(20)
+    # # )
+    # # initial_pose.x -= 3
+    # # initial_pose.y += 4
+    # # initial_pose.theta += 0.1
+    # # print(initial_pose)
+    # initial_pose = Pose(x=707.5893698488362, y=540, theta=-0.0292735217760258)
+    #
+    # mpc_controller.compute_control(initial_pose, trajectory, 5)
+    # mpc_controller.compute_control(initial_pose, trajectory, 5)
+    # ModelPredictiveController.PLOT = False
+    #
+    # for _ in range(100):
+    #     mpc_controller.compute_control(initial_pose, trajectory, 5)
