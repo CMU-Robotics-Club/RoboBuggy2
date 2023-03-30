@@ -21,6 +21,10 @@ RUN echo 'cd rb_ws' >> ~/.bashrc
 RUN echo 'catkin_make >/dev/null' >> ~/.bashrc
 RUN echo 'source devel/setup.bash' >> ~/.bashrc
 
+# shoestring fix since installing numba from pythonrequirements 
+# smh breaks
+RUN pip3 install numba
+
 # RUN echo "exec firefox" > ~/.xinitrc && chmod +x ~/.xinitrc
 # CMD ["x11vnc", "-create", "-forever"]
 
