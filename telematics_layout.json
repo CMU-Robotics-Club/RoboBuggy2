@@ -1,0 +1,140 @@
+{
+  "configById": {
+    "RawMessages!2tdn5ex": {
+      "diffEnabled": false,
+      "diffMethod": "custom",
+      "diffTopicPath": "",
+      "showFullMessageForDiff": false,
+      "topicPath": "/gnss1/fix_FloatArray_Covariance.data"
+    },
+    "RawMessages!h4fq2i": {
+      "diffEnabled": false,
+      "diffMethod": "custom",
+      "diffTopicPath": "",
+      "showFullMessageForDiff": false,
+      "topicPath": "/gnss2/fix_FloatArray_Covariance.data"
+    },
+    "RawMessages!10romgq": {
+      "diffEnabled": false,
+      "diffMethod": "custom",
+      "diffTopicPath": "",
+      "showFullMessageForDiff": false,
+      "topicPath": "/gnss1/fix_Pose.pose.position"
+    },
+    "RawMessages!2evb0jz": {
+      "diffEnabled": false,
+      "diffMethod": "custom",
+      "diffTopicPath": "",
+      "showFullMessageForDiff": false,
+      "topicPath": "/gnss2/fix_Pose.pose.position"
+    },
+    "RawMessages!1z4jr30": {
+      "diffEnabled": false,
+      "diffMethod": "custom",
+      "diffTopicPath": "",
+      "showFullMessageForDiff": false,
+      "topicPath": "/gnss1/fix_info_republished"
+    },
+    "RawMessages!40ciyaf": {
+      "diffEnabled": false,
+      "diffMethod": "custom",
+      "diffTopicPath": "",
+      "showFullMessageForDiff": false,
+      "topicPath": "/gnss2/fix_info_republished"
+    },
+    "RawMessages!vgb77d": {
+      "diffEnabled": false,
+      "diffMethod": "custom",
+      "diffTopicPath": "",
+      "showFullMessageForDiff": false,
+      "topicPath": "/nav/odom.pose.pose.position"
+    },
+    "map!1dymz4q": {
+      "center": {
+        "lat": 40.43935344174364,
+        "lon": -79.94659781455995
+      },
+      "customTileUrl": "http://192.168.1.217:8080/data/v3/{z}/{x}/{y}.png",
+      "disabledTopics": [],
+      "followTopic": "",
+      "layer": "map",
+      "topicColors": {
+        "/gnss1/fix": "#e34f4f",
+        "/gnss2/fix": "#4fd5e3"
+      },
+      "zoomLevel": 17,
+      "maxNativeZoom": 20
+    },
+    "ImageViewPanel!3mnp456": {
+      "cameraTopic": "",
+      "enabledMarkerTopics": [],
+      "mode": "fit",
+      "pan": {
+        "x": 0,
+        "y": 0
+      },
+      "rotation": 0,
+      "synchronize": false,
+      "transformMarkers": false,
+      "zoom": 1
+    },
+    "RawMessages!os6rgs": {
+      "diffEnabled": false,
+      "diffMethod": "custom",
+      "diffTopicPath": "",
+      "showFullMessageForDiff": false,
+      "topicPath": "/gnss2/fix_info",
+      "expansion": "none"
+    }
+  },
+  "globalVariables": {},
+  "userNodes": {},
+  "playbackConfig": {
+    "speed": 1
+  },
+  "layout": {
+    "direction": "row",
+    "first": {
+      "first": "RawMessages!2tdn5ex",
+      "second": {
+        "first": "RawMessages!h4fq2i",
+        "second": {
+          "first": "RawMessages!10romgq",
+          "second": "RawMessages!2evb0jz",
+          "direction": "column"
+        },
+        "direction": "column",
+        "splitPercentage": 31.35313215570409
+      },
+      "direction": "column",
+      "splitPercentage": 28.87323736821297
+    },
+    "second": {
+      "direction": "row",
+      "first": {
+        "first": "RawMessages!1z4jr30",
+        "second": {
+          "first": "RawMessages!40ciyaf",
+          "second": "RawMessages!vgb77d",
+          "direction": "column",
+          "splitPercentage": 16.526609231506754
+        },
+        "direction": "column",
+        "splitPercentage": 16.19718193826581
+      },
+      "second": {
+        "direction": "row",
+        "first": "map!1dymz4q",
+        "second": {
+          "first": "ImageViewPanel!3mnp456",
+          "second": "RawMessages!os6rgs",
+          "direction": "column",
+          "splitPercentage": 30
+        },
+        "splitPercentage": 98
+      },
+      "splitPercentage": 29.88861280306922
+    },
+    "splitPercentage": 24.83335061432977
+  }
+}

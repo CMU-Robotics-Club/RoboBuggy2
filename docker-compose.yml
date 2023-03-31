@@ -1,0 +1,31 @@
+services:
+  main:
+    build: .
+    volumes:
+      - ./rb_ws:/rb_ws
+      - "${RLSENSE_PORT:-/dev/null}:/dev/bus/usb"
+      - /tmp/.X11-unix:/tmp/.X11-unix
+    devices:
+      - "${TEENSY_PORT:-/dev/null}:/dev/ttyUSB0"
+      - "${WEBCAM_PORT:-/dev/null}:/dev/ttyUSB1"
+      - "${GPS_PORT:-/dev/null}:/dev/ttyACM0"
+      - "${FEATHER_PORT:-/dev/null}:/dev/ttyACM1"
+    stdin_open: true # docker run -i
+    tty: true        # docker run -t
+    environment:
+      - DISPLAY=host.docker.internal:0
+    ports:
+       - "0.0.0.0:8765:8765"      # foxglove bridge
+       - "0.0.0.0:8760:8760"      # Asset server for loading stuff into foxglove
+    platform: "linux/amd64"
+    device_cgroup_rules:
+       - "c *:* rmw"
+  tileserver:
+    image: maptiler/tileserver-gl
+    volumes:
+      - "./maps:/data"
+    stdin_open: true # docker run -i
+    tty: true        # docker run -t
+    command: ["-p", "80", "-c", "/data/conf.json"]
+    ports:
+      - "8080:80"
