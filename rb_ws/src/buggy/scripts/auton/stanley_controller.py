@@ -59,6 +59,7 @@ class StanleyController(Controller):
         y = current_pose.y
 
         # Assume current pose is rear of buggy, project it to center of front axle
+        # 10 is a good number to search forward along the index
         front_x = x + StanleyController.WHEELBASE * np.cos(heading)
         front_y = y + StanleyController.WHEELBASE * np.sin(heading)
 

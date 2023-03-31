@@ -6,9 +6,9 @@ from controller import Controller
 class BrakeController:
     MAX_LATERAL_ACCEL = 0.9 # in "g" based on regular vehicle
     BRAKING_GAIN = 2.0
-    def __init__(self):
+    def __init__(self, use_binary_braking = True):
         # NOTE: Add more stuff here to keep track of PID stuff once I and D are implemented.
-        pass
+        self.binary_braking = use_binary_braking
 
     @staticmethod
     def calculate_lateral_accel(linear_speed: float, steering_angle: float) -> float:
@@ -45,7 +45,10 @@ class BrakeController:
         Returns:
             float: 0-1 (1 = full brake)
         """
-        return self._compute_binary_braking(speed, steering_angle)
+        if self.binary_braking:
+            return self._compute_binary_braking(speed, steering_angle)
+        else:
+            return self._compute_modulated_braking(speed, steering_angle)
     
     def _compute_binary_braking(self, speed: float, steering_angle: float) -> float:
         """Binary braking - using lateral acceleration

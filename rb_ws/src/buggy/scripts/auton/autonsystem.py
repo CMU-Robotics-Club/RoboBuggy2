@@ -61,29 +61,17 @@ class AutonSystem:
         self.brake_debug_publisher = rospy.Publisher(
             "auton/debug/brake", Float64, queue_size=1
         )
-
         self.heading_publisher = rospy.Publisher(
             "auton/debug/heading", Float32, queue_size=1
         )
-        self.tick_caller()
-
-
+        self.distance_publisher = rospy.Publisher(
+            "auton/debug/distance", Float64, queue_size=1
+        )
         self.tick_caller()
 
     def update_speed(self, msg):
         with self.lock:
             self.speed = msg.data
-    
-    def update_msg(self, msg):
-        with self.lock:
-            self.msg = msg
-        
-    def tick_caller(self):
-        while(self.msg == None):
-            rospy.sleep(0.001)
-        while (True):
-            self.tick()
-            rospy.sleep(0.001)
 
     def update_msg(self, msg):
         with self.lock:
@@ -128,6 +116,9 @@ class AutonSystem:
         brake_cmd = self.brake_controller.compute_braking(current_speed, steering_angle_deg)
         self.brake_debug_publisher.publish(Float64(brake_cmd))
         self.brake_publisher.publish(Float64(0)) # No braking for now, just look at debug data
+        self.distance_publisher.publish(
+            Float64(self.trajectory.get_distance_from_index(self.controller.current_traj_index))
+        )
 
         # Publish debug data
         self.heading_publisher.publish(Float32(pose.theta))
