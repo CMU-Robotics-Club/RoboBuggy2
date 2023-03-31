@@ -23,8 +23,6 @@
         <param name="baud" type="int" value="115200"/>
     </node>
     <node name="foxglove" pkg="foxglove_bridge" type="foxglove_bridge" />
-    <node name="asset_server" pkg="buggy" type="asset_server.py" args="--directory='/rb_ws/src/buggy/assets'" />
-    <node name="asset_publish" pkg="buggy" type="asset_publish.py" />
     <node name="telematics" pkg="buggy" type="telematics.py" />
 
     <!-- ENABLE AUTON -->

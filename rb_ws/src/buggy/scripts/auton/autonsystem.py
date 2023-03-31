@@ -78,9 +78,15 @@ class AutonSystem:
             self.msg = msg
         
     def tick_caller(self):
-        while(self.msg == None):
+        while (self.msg == None): # with no message, we wait
             rospy.sleep(0.001)
-        while (True):
+        
+        # wait for covariance matrix to be better
+        while (self.msg.pose.covariance[0] ** 2 + self.msg.pose.covariance[7] ** 2 > 1**2):
+            # Covariance larger than one meter. We definitely can't trust the pose
+            rospy.sleep(0.001)
+
+        while (True): # start the actual control loop
             self.tick()
             self.ticks += 1
             rospy.sleep(0.001)
@@ -91,11 +97,6 @@ class AutonSystem:
         with self.lock:
             msg = self.msg
         current_rospose = msg.pose.pose
-
-        # Check if the pose covariance is a sane value. Otherwise ignore the message
-        if msg.pose.covariance[0] ** 2 + msg.pose.covariance[7] ** 2 > 1**2:
-            # Covariance larger than one meter. We definitely can't trust the pose
-            return
 
         current_speed = np.sqrt(
             msg.twist.twist.linear.x**2 + msg.twist.twist.linear.y**2
@@ -124,7 +125,7 @@ class AutonSystem:
         self.heading_publisher.publish(Float32(pose.theta))
 
         # Plot projected forward/back positions
-        if (self.ticks % 5 == 0):
+        if (self.ticks % 50 == 0):
             self.controller.plot_trajectory(
                 pose, self.trajectory, current_speed
             )
