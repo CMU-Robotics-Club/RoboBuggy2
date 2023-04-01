@@ -78,15 +78,16 @@ class AutonSystem:
             self.msg = msg
         
     def tick_caller(self):
-        while (self.msg == None): # with no message, we wait
+        while ((not rospy.is_shutdown()) and (self.msg == None)): # with no message, we wait
             rospy.sleep(0.001)
         
         # wait for covariance matrix to be better
-        while (self.msg.pose.covariance[0] ** 2 + self.msg.pose.covariance[7] ** 2 > 1**2):
+        while ((not rospy.is_shutdown()) and
+               (self.msg.pose.covariance[0] ** 2 + self.msg.pose.covariance[7] ** 2 > 1**2)):
             # Covariance larger than one meter. We definitely can't trust the pose
             rospy.sleep(0.001)
 
-        while (True): # start the actual control loop
+        while (not rospy.is_shutdown()): # start the actual control loop
             self.tick()
             self.ticks += 1
             rospy.sleep(0.001)
@@ -117,9 +118,6 @@ class AutonSystem:
         brake_cmd = self.brake_controller.compute_braking(current_speed, steering_angle_deg)
         self.brake_debug_publisher.publish(Float64(brake_cmd))
         self.brake_publisher.publish(Float64(0)) # No braking for now, just look at debug data
-        self.distance_publisher.publish(
-            Float64(self.trajectory.get_distance_from_index(self.controller.current_traj_index))
-        )
 
         # Publish debug data
         self.heading_publisher.publish(Float32(pose.theta))
@@ -129,6 +127,9 @@ class AutonSystem:
             self.controller.plot_trajectory(
                 pose, self.trajectory, current_speed
             )
+            distance_msg = Float64(self.trajectory.get_distance_from_index(
+                self.controller.current_traj_index))
+            self.distance_publisher.publish(distance_msg)
 
 
 
