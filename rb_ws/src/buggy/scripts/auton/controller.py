@@ -23,7 +23,7 @@ class Controller(ABC):
 
     current_traj_index = 0
 
-    def __init__(self) -> None:
+    def __init__(self, start_index) -> None:
         self.trajectory_forward_1 = rospy.Publisher(
             "auton/debug/forward1_navsat", NavSatFix, queue_size=1
         )
@@ -39,6 +39,8 @@ class Controller(ABC):
         # Make lists of publishers for easy iteration
         self.forward_publishers = [self.trajectory_forward_1, self.trajectory_forward_2, self.trajectory_forward_3]
         self.backward_publishers = [self.trajectory_backward_1]
+        
+        self.current_traj_index = start_index
 
     @abstractmethod
     def compute_control(

@@ -87,9 +87,9 @@ class ModelPredictiveController(Controller):
     state_cost_diag = np.diag(state_cost)
     control_cost_diag = np.diag(control_cost)
 
-    def __init__(self, ref_trajectory=None, ROS=False) -> None:
+    def __init__(self, start_index=0, ref_trajectory=None, ROS=False) -> None:
         # instantiate parent
-        super(ModelPredictiveController, self).__init__()
+        super(ModelPredictiveController, self).__init__(start_index)
 
         # Internal variables
         self.current_traj_index = 0  # Where in the trajectory we are currently
