@@ -49,9 +49,13 @@ class Simulator:
             "state/pose_navsat_noisy", NavSatFix, queue_size=1
         )
 
+        # Start position for Start of Course
+        self.e_utm = Simulator.UTM_EAST_ZERO + 60
+        self.n_utm = Simulator.UTM_NORTH_ZERO + 150
+
         # Start position for End of Hill 2
-        self.e_utm = Simulator.UTM_EAST_ZERO - 3
-        self.n_utm = Simulator.UTM_NORTH_ZERO - 10
+        # self.e_utm = Simulator.UTM_EAST_ZERO - 3
+        # self.n_utm = Simulator.UTM_NORTH_ZERO - 10
 
         # Start position for Outdoor track
         # self.e_utm = Simulator.UTM_EAST_ZERO + 110
@@ -63,7 +67,7 @@ class Simulator:
         # self.n_utm = utm_coords[1]
 
         self.heading = heading  # degrees
-        self.velocity = 5  # m/s
+        self.velocity = 15  # m/s
 
         self.steering_angle = 0  # degrees
 
@@ -288,5 +292,5 @@ class Simulator:
 
 if __name__ == "__main__":
     rospy.init_node("sim_2d_engine")
-    sim = Simulator(210)
+    sim = Simulator(-110)
     sim.loop()
