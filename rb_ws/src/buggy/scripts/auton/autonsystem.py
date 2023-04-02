@@ -64,31 +64,38 @@ class AutonSystem:
         self.brake_debug_publisher = rospy.Publisher(
             "auton/debug/brake", Float64, queue_size=1
         )
-
         self.heading_publisher = rospy.Publisher(
             "auton/debug/heading", Float32, queue_size=1
         )
 
+        self.distance_publisher = rospy.Publisher(
+            "auton/debug/distance", Float64, queue_size=1
+        )
+
         self.auton_rate = 1000
         self.rosrate = rospy.Rate(self.auton_rate)
+
         self.tick_caller()
 
     def update_speed(self, msg):
         with self.lock:
             self.speed = msg.data
-        
+
     def update_msg(self, msg):
         with self.lock:
             self.msg = msg
         
     def tick_caller(self):
-        done_calibration = False
-        while(self.msg == None or not done_calibration):
-            if (self.msg is not None):
-                done_calibration = self.msg.pose.covariance[0] ** 2 + self.msg.pose.covariance[7] ** 2 < 1**2
-            self.rosrate.sleep()
+        while ((not rospy.is_shutdown()) and (self.msg == None)): # with no message, we wait
+            rospy.sleep(0.001)
+        
+        # wait for covariance matrix to be better
+        while ((not rospy.is_shutdown()) and
+               (self.msg.pose.covariance[0] ** 2 + self.msg.pose.covariance[7] ** 2 > 1**2)):
+            # Covariance larger than one meter. We definitely can't trust the pose
+            rospy.sleep(0.001)
 
-        while (True):
+        while (not rospy.is_shutdown()): # start the actual control loop
             self.tick()
             self.ticks += 1
             self.rosrate.sleep()
@@ -131,10 +138,13 @@ class AutonSystem:
         self.heading_publisher.publish(Float32(pose.theta))
 
         # Plot projected forward/back positions
-        if (self.ticks % 5 == 0):
+        if (self.ticks % 50 == 0):
             self.controller.plot_trajectory(
                 pose, self.trajectory, current_speed
             )
+            distance_msg = Float64(self.trajectory.get_distance_from_index(
+                self.controller.current_traj_index))
+            self.distance_publisher.publish(distance_msg)
 
 if __name__ == "__main__":
     rospy.init_node("auton_system")

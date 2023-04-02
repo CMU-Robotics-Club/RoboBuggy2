@@ -50,6 +50,7 @@ class PurePursuitController(Controller):
         if self.current_traj_index >= trajectory.get_num_points() - 1:
             return 0
 
+        # 10 is a good number to search forward along the index
         traj_index = trajectory.get_closest_index_on_path(
             current_pose.x,
             current_pose.y,

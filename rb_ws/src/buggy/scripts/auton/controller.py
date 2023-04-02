@@ -19,7 +19,10 @@ class Controller(ABC):
     Example schemes include Pure Pursuit, Stanley, and LQR.
     """
 
-    WHEELBASE = 1.3
+    NAND_WHEELBASE = 1.3
+    SS_WHEELBASE = 1.3
+    
+    WHEELBASE = NAND_WHEELBASE
 
     current_traj_index = 0
 
@@ -72,14 +75,7 @@ class Controller(ABC):
         """
 
         # Compute distance along path from current position
-        traj_index = trajectory.get_closest_index_on_path(
-            current_pose.x,
-            current_pose.y,
-            start_index=self.current_traj_index,
-            end_index=self.current_traj_index + 10,
-        )
-
-        traj_dist = trajectory.get_distance_from_index(traj_index)
+        traj_dist = trajectory.get_distance_from_index(self.current_traj_index)
 
         # Plot forward projections
         for i in range(1, len(self.forward_publishers)+1):
