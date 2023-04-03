@@ -72,7 +72,7 @@ class AutonSystem:
             "auton/debug/distance", Float64, queue_size=1
         )
 
-        self.auton_rate = 1000
+        self.auton_rate = 100
         self.rosrate = rospy.Rate(self.auton_rate)
 
         self.tick_caller()
@@ -94,7 +94,8 @@ class AutonSystem:
                (self.msg.pose.covariance[0] ** 2 + self.msg.pose.covariance[7] ** 2 > 1**2)):
             # Covariance larger than one meter. We definitely can't trust the pose
             rospy.sleep(0.001)
-
+            print("Waiting for Covariance to be better: ",  rospy.get_rostime())
+        print("done checking covariance")
         while (not rospy.is_shutdown()): # start the actual control loop
             self.tick()
             self.ticks += 1
@@ -156,7 +157,7 @@ if __name__ == "__main__":
     print("\n\nStarting Controller: " + str(arg_ctrl) + "\n\n")
     print("\n\nStarting at distance: " + str(arg_start_dist) + "\n\n")
 
-    trajectory = Trajectory("/rb_ws/src/buggy/paths/buggycourse_safe_1.json")
+    trajectory = Trajectory("/rb_ws/src/buggy/paths/frew_parkinglot_1.json")
     # calculate starting index
     start_index = trajectory.get_index_from_distance(start_dist)
 
