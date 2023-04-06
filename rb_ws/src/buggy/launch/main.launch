@@ -3,6 +3,7 @@
 <launch>
     <arg name="controller"      default="stanley" />
     <arg name="start_dist"      default="0.0" />
+    <arg name="path"      default="buggycourse_safe_1.json" />
     <include file="$(find microstrain_inertial_driver)/launch/microstrain.launch">
         <arg name="params_file" value="/rb_ws/src/buggy/INS_params.yml"/>
     </include>
@@ -27,5 +28,5 @@
     <node name="telematics" pkg="buggy" type="telematics.py" />
 
     <!-- ENABLE AUTON -->
-    <node name="auton_system" pkg="buggy" type="autonsystem.py" output="screen" args="$(arg controller) $(arg start_dist)"/>
+    <node name="auton_system" pkg="buggy" type="autonsystem.py" output="screen" args="$(arg controller) $(arg start_dist) $(arg path)"/>
 </launch>
