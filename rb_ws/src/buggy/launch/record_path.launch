@@ -1,0 +1,4 @@
+<launch>
+        <include file="$(find microstrain_inertial_driver)/launch/microstrain.launch" arg name="name" value="INS"/>
+        <node name="satnav_logger" pkg="buggy" type="satnav_logger.py" output="screen"></node>
+</launch>
