@@ -21,8 +21,8 @@ class PurePursuitController(Controller):
     MIN_LOOK_AHEAD_DIST = 0.5
     MAX_LOOK_AHEAD_DIST = 10
 
-    def __init__(self) -> None:
-        super(PurePursuitController, self).__init__()
+    def __init__(self, start_index=0) -> None:
+        super(PurePursuitController, self).__init__(start_index)
         self.debug_reference_pos_publisher = rospy.Publisher(
             "auton/debug/reference_navsat", NavSatFix, queue_size=1
         )
@@ -50,6 +50,7 @@ class PurePursuitController(Controller):
         if self.current_traj_index >= trajectory.get_num_points() - 1:
             return 0
 
+        # 10 is a good number to search forward along the index
         traj_index = trajectory.get_closest_index_on_path(
             current_pose.x,
             current_pose.y,

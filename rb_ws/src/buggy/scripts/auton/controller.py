@@ -19,11 +19,14 @@ class Controller(ABC):
     Example schemes include Pure Pursuit, Stanley, and LQR.
     """
 
-    WHEELBASE = 1.3
+    NAND_WHEELBASE = 1.3
+    SS_WHEELBASE = 1.3
+    
+    WHEELBASE = NAND_WHEELBASE
 
     current_traj_index = 0
 
-    def __init__(self) -> None:
+    def __init__(self, start_index) -> None:
         self.trajectory_forward_1 = rospy.Publisher(
             "auton/debug/forward1_navsat", NavSatFix, queue_size=1
         )
@@ -39,6 +42,8 @@ class Controller(ABC):
         # Make lists of publishers for easy iteration
         self.forward_publishers = [self.trajectory_forward_1, self.trajectory_forward_2, self.trajectory_forward_3]
         self.backward_publishers = [self.trajectory_backward_1]
+        
+        self.current_traj_index = start_index
 
     @abstractmethod
     def compute_control(
@@ -70,14 +75,7 @@ class Controller(ABC):
         """
 
         # Compute distance along path from current position
-        traj_index = trajectory.get_closest_index_on_path(
-            current_pose.x,
-            current_pose.y,
-            start_index=self.current_traj_index,
-            end_index=self.current_traj_index + 10,
-        )
-
-        traj_dist = trajectory.get_distance_from_index(traj_index)
+        traj_dist = trajectory.get_distance_from_index(self.current_traj_index)
 
         # Plot forward projections
         for i in range(1, len(self.forward_publishers)+1):

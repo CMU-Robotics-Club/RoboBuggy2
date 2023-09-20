@@ -2,6 +2,7 @@
 
 <launch>
     <arg name="controller"      default="stanley" />
+    <arg name="start_dist"      default="0.0" />
     <include file="$(find microstrain_inertial_driver)/launch/microstrain.launch">
         <arg name="params_file" value="/rb_ws/src/buggy/INS_params.yml"/>
     </include>
@@ -23,10 +24,8 @@
         <param name="baud" type="int" value="115200"/>
     </node>
     <node name="foxglove" pkg="foxglove_bridge" type="foxglove_bridge" />
-    <node name="asset_server" pkg="buggy" type="asset_server.py" args="--directory='/rb_ws/src/buggy/assets'" />
-    <node name="asset_publish" pkg="buggy" type="asset_publish.py" />
     <node name="telematics" pkg="buggy" type="telematics.py" />
 
     <!-- ENABLE AUTON -->
-    <node name="auton_system" pkg="buggy" type="autonsystem.py" output="screen" args="$(arg controller)"/>
+    <node name="auton_system" pkg="buggy" type="autonsystem.py" output="screen" args="$(arg controller) $(arg start_dist)"/>
 </launch>

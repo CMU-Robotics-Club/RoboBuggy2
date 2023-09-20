@@ -94,6 +94,8 @@ class World:
         Returns:
             numpy.ndarray [size: (N,2)]: array of lat, lon pairs
         """
+
+        # Pittsburgh is in UTM zone 17T.
         utm_coords = utm.to_latlon(
             coords[:, 0] + World.WORLD_EAST_ZERO,
             coords[:, 1] + World.WORLD_NORTH_ZERO,
