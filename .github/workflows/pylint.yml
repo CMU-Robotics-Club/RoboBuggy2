@@ -20,4 +20,5 @@ jobs:
         pip install pylint
     - name: Analysing the code with pylint
       run: |
-        pylint --rc-file=/.github/workflows.pylintrc $(git ls-files '*.py')
+        cd rb_ws
+        pylint --rc-file=/.github/workflows/.pylintrc $(git ls-files '*.py')
