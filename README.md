@@ -35,13 +35,14 @@ A complete re-write of the old RoboBuggy.
 - In the main directory, just run `./setup_dev.sh` or `./setup_prod.sh` as appropriate.
 - Run `exec_docker` to get into Docker environment and setup all the aliases.
 
-### Open Docker
-- Open WSL
-- Type `cd` to go to the WSL's default directory 
-- Type `cd Robobuggy2`
-- Then do `explorer.exe .` to open the file explorer to the /Robobuggy2 directory 
-- Then do `./setup_dev.sh` to launch the docker container
-- Then you can go in the docker container using the `docker exec -it robobuggy2-main-1 bash`
+---
+## Open Docker Every Time You Reboot Your Computer
+- Open WSL.
+- Type `cd` to go to the WSL's default directory.
+- Type `cd Robobuggy2`.
+- Then do `explorer.exe .` to open the file explorer to the /Robobuggy2 directory. 
+- Then do `./setup_dev.sh` to launch the docker container.
+- Then you can go in the docker container using the `docker exec -it robobuggy2-main-1 bash`.
         
 
 ---
