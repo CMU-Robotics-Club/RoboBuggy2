@@ -79,4 +79,10 @@ disable=
     missing-docstring,
     invalid-name,
     bad-whitespace,
-    consider-using-enumerate
+    consider-using-enumerate,
+    too-many-instance-attributes,
+    import-error,
+    invalid-name,
+    too-many-locals,
+    superfluous-parens,
+    singleton-comparison
