@@ -9,20 +9,21 @@ A complete re-write of the old RoboBuggy.
 
 
 ---
-## Installation
+## Installation (for Windows)
+### Install Softwares: WSL, Ubuntu, Foxglove
+- Go to Microsoft Store to install "Windows Subsystem for Linux" and "Ubuntu 20.04.6 LTS".
+- Go install Foxglove https://foxglove.dev/.
+
 ### Docker
 - You will need [Docker](https://docs.docker.com/get-docker/) installed.
 
-- Once installed, the Docker image can be built as follows from the repository's root directory:
+### Set up repo in WSL
+- To set up ssh key, follow this link: https://docs.github.com/en/authentication/connecting-to-github-with-ssh.
+- In the website above, see these two pages: "Generating a new SSH key and adding it to the ssh-agent" and "Adding a new SSH key to your GitHub account".
 
-        docker compose build --no-cache
-        docker compose --env-file .env.dev up
-
-- Then in another terminal window, in order to access the running Docker's CLI, run:
-
-        docker exec -it robobuggy2-main-1 bash
-
-- Now you should be presented with a bash CLI as you're used to.
+### Clone
+- In your terminal type: `$ git clone git@github.com:CMU-Robotics-Club/RoboBuggy.git`.
+- The password above is find in github: code -> local -> Clone SSH.
 
 ### ROS
 - Navigate to `/rb_ws`. This is the catkin workspace where we will be doing all our ROS stuff.
@@ -30,19 +31,17 @@ A complete re-write of the old RoboBuggy.
         
         catkin_make
         source /rb_ws/devel/setup.bash  # sets variables so that our package is visible to ROS commands
-
-### Alternate Shortcut
-- In the main directory, just run `./setup_dev.sh` or `./setup_prod.sh` as appropriate.
-- Run `exec_docker` to get into Docker environment and setup all the aliases.
+- To learn ROS on your own, follow the guide on https://wiki.ros.org/ROS/Tutorials. Start from the first and install Ros on your own computer instead of using the Docker.
 
 ---
-## Open Docker Every Time You Reboot Your Computer
+## Open Docker 
 - Open WSL.
 - Type `cd` to go to the WSL's default directory.
 - Type `cd Robobuggy2`.
 - Then do `explorer.exe .` to open the file explorer to the /Robobuggy2 directory. 
-- Then do `./setup_dev.sh` to launch the docker container.
+- Then do `./setup_dev.sh` in the main directory (RoboBuggy2) to launch the docker container.
 - Then you can go in the docker container using the `docker exec -it robobuggy2-main-1 bash`.
+- To run 2D simulation on Foxglove, use `roslaunch buggy sim_2d.launch`.
         
 
 ---
