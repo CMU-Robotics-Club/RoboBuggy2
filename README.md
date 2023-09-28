@@ -41,6 +41,7 @@ A complete re-write of the old RoboBuggy.
 - Then do `explorer.exe .` to open the file explorer to the /Robobuggy2 directory. 
 - Then do `./setup_dev.sh` in the main directory (RoboBuggy2) to launch the docker container.
 - Then you can go in the docker container using the `docker exec -it robobuggy2-main-1 bash`.
+- When you are done, type Ctrl+C and use `$exit` to exit.
 
   ## 2D Simulation
 - To run 2D simulation on Foxglove, use `$ roslaunch buggy sim_2d.launch`.
