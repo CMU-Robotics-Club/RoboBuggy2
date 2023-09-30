@@ -51,11 +51,6 @@ A complete re-write of the old RoboBuggy.
         
 
 ---
-## 3D Simulation Quickstart
-
-Watch [this](https://youtu.be/kEL3-sF9TTE) video to get started with visualizing the simulation.
-
-
 ### Controls
 
 Edit `rb_ws/src/buggy/scripts/controller.py`. Skeleton code for interacting with existing topics is provided. 
