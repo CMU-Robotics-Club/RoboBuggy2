@@ -64,6 +64,7 @@ If you get an error about not finding package `buggy`, remember to run `source /
 Examples (from the same run):
 - Foxglove playback of simulated file example: [link](https://youtu.be/dpa5oH69eJI)
 - [![Watch the video](https://img.youtube.com/vi/dpa5oH69eJI/hqdefault.jpg)](https://www.youtube.com/embed/dpa5oH69eJI)
+- [<img src="https://img.youtube.com/vi/dpa5oH69eJI/hqdefault.jpg" width="600" height="300"/>](https://www.youtube.com/embed/dpa5oH69eJI)
 - Matplotlib live simulation example: [link](https://youtu.be/6Xji-FtDQfo)
 - [![Watch the video](https://img.youtube.com/vi/6Xji-FtDQfo/hqdefault.jpg)](https://www.youtube.com/embed/6Xji-FtDQfo)
 
