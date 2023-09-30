@@ -63,10 +63,13 @@ If you get an error about not finding package `buggy`, remember to run `source /
 ## 2D Simulation Quickstart
 Examples (from the same run):
 - Foxglove playback of simulated file example: [link](https://youtu.be/dpa5oH69eJI)
+- [![Watch the video](https://img.youtube.com/vi/dpa5oH69eJI/hqdefault.jpg)](https://www.youtube.com/embed/dpa5oH69eJI)
 - Matplotlib live simulation example: [link](https://youtu.be/6Xji-FtDQfo)
+- [![Watch the video](https://img.youtube.com/vi/6Xji-FtDQfo/hqdefault.jpg)](https://www.youtube.com/embed/6Xji-FtDQfo)
 
 Control Example:
 - Foxglove output (via sending steering + velocity commands): [link](https://youtu.be/AOsecwWmqyw)
+- [![Watch the video](https://img.youtube.com/vi/AOsecwWmqyw/hqdefault.jpg)](https://www.youtube.com/embed/AOsecwWmqyw)
 
 Instructions:
 - Install the appropriate X11 server on your computer for your respective operating systems (Xming for Windows, XQuartz for Mac, etc.).
