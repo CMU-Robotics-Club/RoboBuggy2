@@ -40,7 +40,7 @@ class AutonSystem:
     
     ticks = 0
 
-    def __init__(self, trajectory, controller, brake_controller) -> None:
+    def __init__(self, trajectory, controller, brake_controller, buggy_name) -> None:
         self.trajectory = trajectory
         self.controller = controller
         self.brake_controller = brake_controller
@@ -53,23 +53,23 @@ class AutonSystem:
 
         rospy.Subscriber("nav/odom", Odometry, self.update_msg)
         self.covariance_warning_publisher = rospy.Publisher(
-            "buggy/debug/is_high_covariance", Bool, queue_size=1
+            buggy_name + "/debug/is_high_covariance", Bool, queue_size=1
         )
         self.steer_publisher = rospy.Publisher(
-            "buggy/input/steering", Float64, queue_size=1
+            buggy_name + "/input/steering", Float64, queue_size=1
         )
         self.brake_publisher = rospy.Publisher(
-            "buggy/input/brake", Float64, queue_size=1
+            buggy_name + "/input/brake", Float64, queue_size=1
         )
         self.brake_debug_publisher = rospy.Publisher(
-            "auton/debug/brake", Float64, queue_size=1
+            buggy_name + "/auton/debug/brake", Float64, queue_size=1
         )
         self.heading_publisher = rospy.Publisher(
-            "auton/debug/heading", Float32, queue_size=1
+             buggy_name + "/auton/debug/heading", Float32, queue_size=1
         )
 
         self.distance_publisher = rospy.Publisher(
-            "auton/debug/distance", Float64, queue_size=1
+             buggy_name + "/auton/debug/distance", Float64, queue_size=1
         )
 
         self.auton_rate = 100
@@ -154,6 +154,7 @@ if __name__ == "__main__":
     arg_start_dist = sys.argv[2]
     arg_path = sys.argv[3]
     start_dist = float(arg_start_dist)
+    buggy_name = sys.argv[4]
 
     print("\n\nStarting Controller: " + str(arg_ctrl) + "\n\n")
     print("\n\nUsing path: /rb_ws/src/buggy/paths/" + str(arg_path) + "\n\n")
@@ -178,7 +179,8 @@ if __name__ == "__main__":
     auton_system = AutonSystem(
         trajectory,
         ctrller,
-        BrakeController()
+        BrakeController(),
+        buggy_name
     )
     while not rospy.is_shutdown():
         rospy.spin()

@@ -8,6 +8,7 @@ import threading
 import numpy as np
 import utm
 import time
+import sys
 
 
 class Simulator:
@@ -21,7 +22,7 @@ class Simulator:
     START_LONG = -79.9409643423245
     NOISE = True  # Noisy outputs for nav/odom?
 
-    def __init__(self, heading: float):
+    def __init__(self, starting_pose, buggy_name):
         """
         Args:
             heading (float): degrees start heading of buggy
@@ -33,10 +34,10 @@ class Simulator:
         self.pose_publisher = rospy.Publisher("nav/odom", Odometry, queue_size=1)
 
         self.steering_subscriber = rospy.Subscriber(
-            "buggy/input/steering", Float64, self.update_steering_angle
+            buggy_name + "/input/steering", Float64, self.update_steering_angle
         )
         self.velocity_subscriber = rospy.Subscriber(
-            "buggy/velocity", Float64, self.update_velocity
+             buggy_name + "velocity", Float64, self.update_velocity
         )
 
         # to plot on Foxglove (no noise)
@@ -49,9 +50,11 @@ class Simulator:
             "state/pose_navsat_noisy", NavSatFix, queue_size=1
         )
 
-        # Start position for Start of Course
-        self.e_utm = Simulator.UTM_EAST_ZERO + 60
-        self.n_utm = Simulator.UTM_NORTH_ZERO + 150
+        # (UTM east, UTM north, HEADING(degs))
+        self.starting_poses = {
+            "Hill1_SC": (Simulator.UTM_EAST_ZERO + 60, Simulator.UTM_NORTH_ZERO + 150, -110),
+            "Hill1_NAND": (Simulator.UTM_EAST_ZERO + 55, Simulator.UTM_NORTH_ZERO + 155, -110),
+        }
 
         # Start position for End of Hill 2
         # self.e_utm = Simulator.UTM_EAST_ZERO - 3
@@ -66,7 +69,7 @@ class Simulator:
         # self.e_utm = utm_coords[0]
         # self.n_utm = utm_coords[1]
 
-        self.heading = heading  # degrees
+        self.e_utm, self.n_utm, self.heading = self.starting_poses[starting_pose]        
         self.velocity = 15  # m/s
 
         self.steering_angle = 0  # degrees
@@ -161,7 +164,6 @@ class Simulator:
     def publish(self):
         """Publishes the pose the arrow in visualizer should be at"""
         p = Pose()
-
         time_stamp = rospy.Time.now()
 
         with self.lock:
@@ -292,5 +294,8 @@ class Simulator:
 
 if __name__ == "__main__":
     rospy.init_node("sim_2d_engine")
-    sim = Simulator(-110)
+    print("sim 2d eng args:")
+    print(sys.argv)
+    starting_pose = sys.argv[1]
+    sim = Simulator(starting_pose)
     sim.loop()
