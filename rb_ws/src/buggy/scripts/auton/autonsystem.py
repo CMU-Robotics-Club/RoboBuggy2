@@ -168,11 +168,11 @@ if __name__ == "__main__":
     # Add Controllers Here
     ctrller = None
     if (arg_ctrl == "stanley"):
-        ctrller = StanleyController(start_index)
+        ctrller = StanleyController(buggy_name, start_index)
     elif (arg_ctrl == "pure_pursuit"):
-        ctrller = PurePursuitController(start_index)
+        ctrller = PurePursuitController(buggy_name, start_index)
     elif (arg_ctrl == "mpc"):
-        ctrller = ModelPredictiveController(start_index)
+        ctrller = ModelPredictiveController(buggy_name, start_index)
     if (ctrller == None):
         raise Exception("Invalid Controller Argument")
     

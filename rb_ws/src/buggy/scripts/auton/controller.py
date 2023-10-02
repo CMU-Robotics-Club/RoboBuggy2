@@ -26,18 +26,19 @@ class Controller(ABC):
 
     current_traj_index = 0
 
-    def __init__(self, start_index) -> None:
+    def __init__(self, start_index, buggy_name) -> None:
+        self.buggy_name = buggy_name
         self.trajectory_forward_1 = rospy.Publisher(
-            "auton/debug/forward1_navsat", NavSatFix, queue_size=1
+            buggy_name + "/auton/debug/forward1_navsat", NavSatFix, queue_size=1
         )
         self.trajectory_forward_2 = rospy.Publisher(
-            "auton/debug/forward2_navsat", NavSatFix, queue_size=1
+            buggy_name + "/auton/debug/forward2_navsat", NavSatFix, queue_size=1
         )
         self.trajectory_forward_3 = rospy.Publisher(
-            "auton/debug/forward3_navsat", NavSatFix, queue_size=1
+            buggy_name + "/auton/debug/forward3_navsat", NavSatFix, queue_size=1
         )
         self.trajectory_backward_1 = rospy.Publisher(
-            "auton/debug/backward1_navsat", NavSatFix, queue_size=1
+            buggy_name + "/auton/debug/backward1_navsat", NavSatFix, queue_size=1
         )
         # Make lists of publishers for easy iteration
         self.forward_publishers = [self.trajectory_forward_1, self.trajectory_forward_2, self.trajectory_forward_3]

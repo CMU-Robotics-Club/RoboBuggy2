@@ -25,13 +25,13 @@ class StanleyController(Controller):
     CROSS_TRACK_GAIN = 1
     HEADING_GAIN = 0.75
 
-    def __init__(self, start_index=0) -> None:
-        super(StanleyController, self).__init__(start_index)
+    def __init__(self, buggy_name, start_index=0) -> None:
+        super(StanleyController, self).__init__(start_index, buggy_name)
         self.debug_reference_pos_publisher = rospy.Publisher(
-            "auton/debug/reference_navsat", NavSatFix, queue_size=1
+            buggy_name + "/auton/debug/reference_navsat", NavSatFix, queue_size=1
         )
         self.debug_error_publisher = rospy.Publisher(
-            "auton/debug/error", ROSPose, queue_size=1
+            buggy_name + "/auton/debug/error", ROSPose, queue_size=1
         )
 
     def compute_control(

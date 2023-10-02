@@ -22,7 +22,7 @@ class Simulator:
     START_LONG = -79.9409643423245
     NOISE = True  # Noisy outputs for nav/odom?
 
-    def __init__(self, starting_pose, buggy_name):
+    def __init__(self, starting_pose, velocity, buggy_name):
         """
         Args:
             heading (float): degrees start heading of buggy
@@ -37,23 +37,23 @@ class Simulator:
             buggy_name + "/input/steering", Float64, self.update_steering_angle
         )
         self.velocity_subscriber = rospy.Subscriber(
-             buggy_name + "velocity", Float64, self.update_velocity
+            buggy_name + "/velocity", Float64, self.update_velocity
         )
 
         # to plot on Foxglove (no noise)
         self.navsatfix_publisher = rospy.Publisher(
-            "state/pose_navsat", NavSatFix, queue_size=1
+            buggy_name + "state/pose_navsat", NavSatFix, queue_size=1
         )
 
         # to plot on Foxglove (with noise)
         self.navsatfix_noisy_publisher = rospy.Publisher(
-            "state/pose_navsat_noisy", NavSatFix, queue_size=1
+            buggy_name + "state/pose_navsat_noisy", NavSatFix, queue_size=1
         )
 
         # (UTM east, UTM north, HEADING(degs))
         self.starting_poses = {
             "Hill1_SC": (Simulator.UTM_EAST_ZERO + 60, Simulator.UTM_NORTH_ZERO + 150, -110),
-            "Hill1_NAND": (Simulator.UTM_EAST_ZERO + 55, Simulator.UTM_NORTH_ZERO + 155, -110),
+            "Hill1_NAND": (Simulator.UTM_EAST_ZERO + 55, Simulator.UTM_NORTH_ZERO + 165, -125),
         }
 
         # Start position for End of Hill 2
@@ -70,7 +70,7 @@ class Simulator:
         # self.n_utm = utm_coords[1]
 
         self.e_utm, self.n_utm, self.heading = self.starting_poses[starting_pose]        
-        self.velocity = 15  # m/s
+        self.velocity = velocity # m/s
 
         self.steering_angle = 0  # degrees
 
@@ -297,5 +297,7 @@ if __name__ == "__main__":
     print("sim 2d eng args:")
     print(sys.argv)
     starting_pose = sys.argv[1]
-    sim = Simulator(starting_pose)
+    velocity = float(sys.argv[2])
+    buggy_name = sys.argv[3]
+    sim = Simulator(starting_pose, velocity, buggy_name)
     sim.loop()
