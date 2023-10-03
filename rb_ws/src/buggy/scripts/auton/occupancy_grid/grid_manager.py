@@ -44,17 +44,17 @@ class OccupancyGrid:
             raise Exception("Cannot compute homography")
     
     def get_pixel_from_utm(self, utm_coord: np.array):
-        utm_coord_homogenous = np.array([[utm_coord[0]], [utm_coord[1]], [1]])
+        ones = np.ones(utm_coord.shape[0])
+        utm_coord_homogenous = np.array([utm_coord[0], utm_coord[1], ones])
         loc =  self.homography @ utm_coord_homogenous
-        return loc[0]/loc[2], loc[1]/loc[2]
+        return np.array([loc[0]/loc[2], loc[1]/loc[2]]).T
 
     def get_pixel_from_latlon(self, latlon_coord: np.array):
         utm_coord = utm.from_latlon(latlon_coord[:, 0], latlon_coord[:, 1])
         ones = np.ones(latlon_coord.shape[0])
         utm_coord_homogenous = np.array([utm_coord[0], utm_coord[1], ones])
         loc =  self.homography @ utm_coord_homogenous
-        print(loc)
-        return loc[0]/loc[2], loc[1]/loc[2]
+        return np.array([loc[0]/loc[2], loc[1]/loc[2]]).T
         
 
     # def get_cost(self, coords: np.array):
@@ -64,7 +64,7 @@ class OccupancyGrid:
 
 if __name__ == "__main__":
     grid = OccupancyGrid()
-    latlon = np.array([[40.438834, -79.946334], [40.440482, -79.942299], [40.443738, -79.941774]])
+    latlon = np.array([[40.441798, -79.943976]])
     print(grid.get_pixel_from_latlon(latlon))
     cv2.imshow("IMG", grid.sat_img)
     cv2.waitKey(0)
