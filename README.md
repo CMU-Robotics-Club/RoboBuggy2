@@ -11,19 +11,22 @@ A complete re-write of the old RoboBuggy.
 ---
 ## Installation (for Windows)
 ### Install Softwares: WSL, Ubuntu, Foxglove
-- Go to Microsoft Store to install "Windows Subsystem for Linux" and "Ubuntu 20.04.6 LTS".
+- Go to Microsoft Store to install "Ubuntu 20.04.6 LTS".
 - Go install Foxglove https://foxglove.dev/.
 
 ### Docker
 - You will need [Docker](https://docs.docker.com/get-docker/) installed.
 
 ### Set up repo in WSL
-- To set up ssh key, follow this link: https://docs.github.com/en/authentication/connecting-to-github-with-ssh.
-- In the website above, see these two pages: "Generating a new SSH key and adding it to the ssh-agent" and "Adding a new SSH key to your GitHub account".
+- To set up ssh key, follow this link: [Connecting to GitHub with SSH](https://docs.github.com/en/authentication/connecting-to-github-with-ssh).
+- Note: Ensure that the SSH keys are generated while in the WSL terminal
+- In the website above, see these two pages: [Generating a new SSH key and adding it to the ssh-agent](https://docs.github.com/en/authentication/connecting-to-github-with-ssh/generating-a-new-ssh-key-and-adding-it-to-the-ssh-agent) and ["Adding a new SSH key to your GitHub account"](https://docs.github.com/en/authentication/connecting-to-github-with-ssh/adding-a-new-ssh-key-to-your-github-account).
 
 ### Clone
 - In your terminal type: `$ git clone git@github.com:CMU-Robotics-Club/RoboBuggy.git`.
-- The password above is find in github: code -> local -> Clone SSH.
+- The clone link above is find in github: code -> local -> Clone SSH.
+- ![image](https://github.com/CMU-Robotics-Club/RoboBuggy2/assets/116482510/8ea809f7-35f9-4517-b98d-42e2e869d233)
+
 
 ### ROS
 - Navigate to `/rb_ws`. This is the catkin workspace where we will be doing all our ROS stuff.
@@ -31,7 +34,7 @@ A complete re-write of the old RoboBuggy.
         
         catkin_make
         source /rb_ws/devel/setup.bash  # sets variables so that our package is visible to ROS commands
-- To learn ROS on your own, follow the guide on https://wiki.ros.org/ROS/Tutorials. Start from the first and install Ros on your own computer instead of using the Docker.
+- To learn ROS on your own, follow the guide on https://wiki.ros.org/ROS/Tutorials. Start from the first and install Ros using a Virtual Machine.
 
 ---
 ## Open Docker 
