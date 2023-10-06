@@ -48,9 +48,11 @@ A complete re-write of the old RoboBuggy.
 
   ## 2D Simulation
 - To run 2D simulation on Foxglove, use `$ roslaunch buggy sim_2d.launch`.
-- Open Foxglove, choose the third one to start link.
+- Open Foxglove, choose the third option "start link".
+- ![image](https://github.com/CMU-Robotics-Club/RoboBuggy2/assets/116482510/66965d34-502b-4130-976e-1419c0ac5f69)
 - On the top, click Layout, then "Import from file".
-- Go to RoboBuggy2 and choose the file "telematics layout".
+- ![image](https://github.com/CMU-Robotics-Club/RoboBuggy2/assets/116482510/2aa04083-46b3-42a5-bcc1-99cf7ccdb3d2)
+- Go to RoboBuggy2 and choose the file [telematics layout](telematics_layout.json)
         
 
 ---
