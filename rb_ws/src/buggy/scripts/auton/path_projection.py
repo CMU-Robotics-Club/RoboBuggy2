@@ -1,19 +1,5 @@
 import numpy as np
-#from pose import Pose
-
-class Pose:
-    """
-    A data structure for storing 2D poses, as well as a set of
-    convenience methods for transforming/manipulating poses
-
-    """
-    x = None
-    y = None
-    theta = None
-    def __init__(self, x, y, theta):
-        self.x = x
-        self.y = y
-        self.theta = theta
+from pose import Pose
 
 class Projector:
     """
@@ -28,61 +14,63 @@ class Projector:
         Project buggy motion analytically. Assumes constant velocity and turning angle for the duration. 
 
         Args:
-            pose (Pose): Pose containing x, y, and heading, in m, m, and rad
-            command (float): Turning angle, in rad
+            pose (Pose): Pose containing utm_e, utm_n, and heading, in UTM coords and degrees
+            command (float): Turning angle, in degrees
             v (float): Buggy velocity, in m/s
             time (float): Time to look ahead, in s
             resolution (int): Number of points to output per second
 
         Returns:
-            list: List containing 3-tuples of x, y, theta positions along the projected arc.
+            list: List containing 3-tuples of utm_e, utm_n, heading positions along the projected arc.
         """
-        dtheta = v * np.tan(command) / self.wheelbase
+        dtheta = v * np.tan(np.deg2rad(command)) / self.wheelbase
         ts = 1/resolution
         t = 0
         output = []
         
         for i in range(int(resolution * time)):
             t += ts
-            theta = t * dtheta + pose.theta
+            theta = t * dtheta + np.deg2rad(pose.theta)
             x = pose.x + (v / dtheta) * np.sin(theta)
             y = pose.y + (v / dtheta) * (1-np.cos(theta))
 
-            output.append((x, y, theta))
+            output.append((x, y, np.rad2deg(theta)))
         
         return output
 
-    def project_discrete(self, pose: Pose, command: float, v: float, time: float, resolution: int, sim_ts: float) -> list:
+    def project_discrete(self, pose: Pose, command: float, v: float, time: float, resolution: int, sim_rate: int) -> list:
         """
         Project buggy motion discretely, performing kinematics at each sim_ts. Assumes constant velocity and turning angle for the duration. 
 
         Args:
-            pose (Pose): Pose containing x, y, and heading, in m, m, and rad
-            command (float): Turning angle, in rad
+            pose (Pose): Pose containing utm_e, utm_n, and heading, in UTM coords and degrees
+            command (float): Turning angle, in degrees
             v (float): Buggy velocity, in m/s
             time (float): Time to look ahead, in s
             resolution (int): Number of points to output per second
-            sim_ts (float): Performs a timestep of kinematics for every sim_ts seconds.
+            sim_rate (int): Number of simulation timesteps per second
 
         Returns:
-            list: List containing 3-tuples of x, y, theta positions along the projected arc.
+            list: List containing 3-tuples of utm_e, utm_n, heading positions along the projected arc.
         """
         ts = 1/resolution
+        sim_ts = 1/sim_rate
         t = 0
         output = []
         x = pose.x
         y = pose.y
-        theta = pose.theta
+        theta = np.deg2rad(pose.theta)
+        comm = np.deg2rad(command)
         next_out = ts
 
         while t < time:
             x += sim_ts * v * np.cos(theta)
             y += sim_ts * v * np.sin(theta)
-            theta += sim_ts * (v/self.wheelbase) * np.tan(command)
+            theta += sim_ts * (v/self.wheelbase) * np.tan(comm)
 
             t += sim_ts
             if t >= next_out:
-                output.append((x, y, theta))
+                output.append((x, y, np.rad2deg(theta)))
                 next_out += ts
         
         return output
