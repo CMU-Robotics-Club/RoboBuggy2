@@ -2,8 +2,11 @@
 
 import numpy as np
 import cv2
+import sys
 from matplotlib import pyplot as plt
 import utm
+sys.path.append('rb_ws/src/buggy/scripts/auton')
+from pose import Pose
 
 class OccupancyGrid:
     def __init__(self):
@@ -45,7 +48,7 @@ class OccupancyGrid:
     
     def get_pixel_from_utm(self, utm_coord: np.array):
         ones = np.ones(utm_coord.shape[0])
-        utm_coord_homogenous = np.array([utm_coord[0], utm_coord[1], ones])
+        utm_coord_homogenous = np.array([utm_coord[:, 0], utm_coord[:, 1], ones])
         loc =  self.homography @ utm_coord_homogenous
         return np.array([loc[0]/loc[2], loc[1]/loc[2]]).T
 
@@ -55,16 +58,28 @@ class OccupancyGrid:
         utm_coord_homogenous = np.array([utm_coord[0], utm_coord[1], ones])
         loc =  self.homography @ utm_coord_homogenous
         return np.array([loc[0]/loc[2], loc[1]/loc[2]]).T
+    
+    def plot_points(self, coords: list):
+        coords = np.array(coords)
+        utm_coords = coords[:, 0:2]
+        pixel_coords = self.get_pixel_from_utm(utm_coords).astype(int)
+        self.sat_img[pixel_coords[:, 0], pixel_coords[:, 1]] = 255
         
 
-    # def get_cost(self, coords: np.array):
-    #     # coords is 2d array, col0 = x, col1 = y UTM coordinates
+    def get_cost(self, coords: np.array):
+        # coords is 2d array, col0 = x, col1 = y UTM coordinates
+        coords = np.array(coords)
+        utm_coords = coords[:, 0:2]
+        pixel_coords = self.get_pixel_from_utm(utm_coords).astype(int)
+        total = np.sum(self.grid[pixel_coords[:, 0], pixel_coords[:, 1]])
+        print(total)
+
         
 
 
 if __name__ == "__main__":
     grid = OccupancyGrid()
-    latlon = np.array([[40.441798, -79.943976]])
+    latlon = np.array([[40.441798, -79.943976], [40.441798, -79.943976]])
     print(grid.get_pixel_from_latlon(latlon))
     cv2.imshow("IMG", grid.sat_img)
     cv2.waitKey(0)
