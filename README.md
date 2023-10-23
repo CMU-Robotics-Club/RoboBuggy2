@@ -62,9 +62,7 @@ A complete re-write of the old RoboBuggy.
 
 ---
 ## Open Docker 
-- Type `cd` to go to the default directory.
-- Type `cd Robobuggy2`.
-- Then do `explorer.exe .` to open the file explorer to the /Robobuggy2 directory. 
+- Use `cd` to change the working directory to be `RoboBuggy2`
 - Then do `./setup_dev.sh` in the main directory (RoboBuggy2) to launch the docker container.
 - Then you can go in the docker container using the `docker exec -it robobuggy2-main-1 bash`.
 - When you are done, type Ctrl+C and use `$exit` to exit.
