@@ -31,8 +31,12 @@ class Projector:
         for i in range(int(resolution * time)):
             t += ts
             theta = t * dtheta + np.deg2rad(pose.theta)
-            x = pose.x + (v / dtheta) * np.sin(theta)
-            y = pose.y + (v / dtheta) * (1-np.cos(theta))
+            if dtheta != 0:
+                x = pose.x + (v / dtheta) * np.sin(theta)
+                y = pose.y + (v / dtheta) * (1-np.cos(theta))
+            else:
+                x = pose.x + t * v * np.cos(theta)
+                y = pose.y + t * v * np.sin(theta)
 
             output.append((x, y, np.rad2deg(theta)))
         
