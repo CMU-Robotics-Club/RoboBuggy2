@@ -40,18 +40,19 @@ class AutonSystem:
     
     ticks = 0
 
-    def __init__(self, trajectory, controller, brake_controller, buggy_name) -> None:
+    def __init__(self, trajectory, controller, brake_controller, buggy_name, is_sim) -> None:
         self.trajectory = trajectory
         self.controller = controller
         self.brake_controller = brake_controller
 
         self.lock = Lock()
         self.ticks = 0
-
-        
         self.msg = None
+        
+        if (is_sim):
+            rospy.Subscriber(buggy_name + "/nav/odom", Odometry, self.update_msg)
 
-        rospy.Subscriber("nav/odom", Odometry, self.update_msg)
+
         self.covariance_warning_publisher = rospy.Publisher(
             buggy_name + "/debug/is_high_covariance", Bool, queue_size=1
         )
@@ -67,7 +68,6 @@ class AutonSystem:
         self.heading_publisher = rospy.Publisher(
              buggy_name + "/auton/debug/heading", Float32, queue_size=1
         )
-
         self.distance_publisher = rospy.Publisher(
              buggy_name + "/auton/debug/distance", Float64, queue_size=1
         )
@@ -155,6 +155,7 @@ if __name__ == "__main__":
     arg_path = sys.argv[3]
     start_dist = float(arg_start_dist)
     buggy_name = sys.argv[4]
+    is_sim = sys.argv[5] == "True"
 
     print("\n\nStarting Controller: " + str(arg_ctrl) + "\n\n")
     print("\n\nUsing path: /rb_ws/src/buggy/paths/" + str(arg_path) + "\n\n")
@@ -163,7 +164,6 @@ if __name__ == "__main__":
     trajectory = Trajectory("/rb_ws/src/buggy/paths/" + arg_path)
     # calculate starting index
     start_index = trajectory.get_index_from_distance(start_dist)
-
 
     # Add Controllers Here
     ctrller = None
@@ -180,7 +180,8 @@ if __name__ == "__main__":
         trajectory,
         ctrller,
         BrakeController(),
-        buggy_name
+        buggy_name,
+        is_sim
     )
     while not rospy.is_shutdown():
         rospy.spin()

@@ -19,11 +19,10 @@ class Controller(ABC):
     Example schemes include Pure Pursuit, Stanley, and LQR.
     """
 
+    # TODO: add case for buggy intrinsics
     NAND_WHEELBASE = 1.3
-    SS_WHEELBASE = 1.3
-    
-    WHEELBASE = NAND_WHEELBASE
-
+    SC_WHEELBASE = 1.104
+    WHEELBASE = SC_WHEELBASE
     current_traj_index = 0
 
     def __init__(self, start_index, buggy_name) -> None:
@@ -43,7 +42,6 @@ class Controller(ABC):
         # Make lists of publishers for easy iteration
         self.forward_publishers = [self.trajectory_forward_1, self.trajectory_forward_2, self.trajectory_forward_3]
         self.backward_publishers = [self.trajectory_backward_1]
-        
         self.current_traj_index = start_index
 
     @abstractmethod

@@ -28,10 +28,10 @@ class Simulator:
             heading (float): degrees start heading of buggy
         """
         # for X11 matplotlib (direction included)
-        self.plot_publisher = rospy.Publisher("sim_2d/utm", Pose, queue_size=1)
+        self.plot_publisher = rospy.Publisher(buggy_name + "/sim_2d/utm", Pose, queue_size=1)
 
         # simulate the INS's outputs (noise included)
-        self.pose_publisher = rospy.Publisher("nav/odom", Odometry, queue_size=1)
+        self.pose_publisher = rospy.Publisher(buggy_name + "/nav/odom", Odometry, queue_size=1)
 
         self.steering_subscriber = rospy.Subscriber(
             buggy_name + "/input/steering", Float64, self.update_steering_angle
@@ -42,12 +42,12 @@ class Simulator:
 
         # to plot on Foxglove (no noise)
         self.navsatfix_publisher = rospy.Publisher(
-            buggy_name + "state/pose_navsat", NavSatFix, queue_size=1
+            buggy_name + "/state/pose_navsat", NavSatFix, queue_size=1
         )
 
         # to plot on Foxglove (with noise)
         self.navsatfix_noisy_publisher = rospy.Publisher(
-            buggy_name + "state/pose_navsat_noisy", NavSatFix, queue_size=1
+            buggy_name + "/state/pose_navsat_noisy", NavSatFix, queue_size=1
         )
 
         # (UTM east, UTM north, HEADING(degs))
@@ -73,7 +73,6 @@ class Simulator:
         self.velocity = velocity # m/s
 
         self.steering_angle = 0  # degrees
-
         self.rate = 100  # Hz
         self.pub_skip = 10  # publish every pub_skip ticks
 
