@@ -119,9 +119,8 @@ Commands:
 
 ---
 ### Connecting to and Launching the RoboBuggy
-When launching the buggy
--Connect to the Wi-Fi named ShortCircuit
-The password is ShortCircuit
+When launching the buggy:
+- Connect to the Wi-Fi named ShortCircuit.The password is ShortCircuit
 -	In the command line window: 
 SSH to the computer on ShortCircuit and go to folder
 `$ ssh nuc@192.168.1.217`
