@@ -118,7 +118,33 @@ Commands:
 - Velocity: `/buggy/velocity` in m/s (std_msgs/Float64)
 
 ---
+### Connecting to and Launching the RoboBuggy
+When launching the buggy
+-Connect to the Wi-Fi named ShortCircuit
+The password is ShortCircuit
+-	In the command line window: 
+SSH to the computer on ShortCircuit and go to folder
+`$ ssh nuc@192.168.1.217`
+password: we trust you
+Then `$ cd RoboBuggy2`
+-	Setup the docker
+`$ ./setup_prod.sh`
+-	Go to docker container
+`$ docker_exec`
+-	Open foxglove and do local connection to “ws://192.168.1.217/8765”
+-	Roslauch in docker container by `$ roslaunch buggy main.launch`
+(wait until no longer prints “waiting for covariance to be better”)
 
+When shutting down the buggy:
+-	Stop roslauch
+`$ ^C  (Ctrl+C)`
+-	Leave the docker container
+`$ exit`
+-	Shutdown the ShortCircuit computer
+`$ sudo shutdown now`
+
+
+---
 ## Development
 
 TODO: 
