@@ -14,4 +14,6 @@
     <node name="sim_2d_controller" pkg="buggy" type="controller_2d.py" output="screen"/>
 
     <node name="auton_system" pkg="buggy" type="autonsystem.py" output="screen" args="$(arg controller) $(arg start_dist)"/>
+
+    <node name="velocity_updater" pkg="buggy" type="velocity_updater.py" output="screen"/>
 </launch>

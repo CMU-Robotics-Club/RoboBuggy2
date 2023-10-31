@@ -20,7 +20,10 @@ class VelocityUpdater:
         self.vel_publisher.publish(new_velocity)
 
 if __name__ == "__main__":
+    rospy.init_node("velocity_updater")
     vel = VelocityUpdater()
+    rate = rospy.Rate(100)
 
     while not rospy.is_shutdown():
         vel.tick()
+        rate.sleep()
