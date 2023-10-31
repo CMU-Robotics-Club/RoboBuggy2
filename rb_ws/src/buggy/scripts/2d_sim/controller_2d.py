@@ -35,6 +35,7 @@ class Controller:
         Args:
             vel (float): velocity (m/s)
         """
+        vel  = 0;
         msg = Float64()
         msg.data = vel
 
