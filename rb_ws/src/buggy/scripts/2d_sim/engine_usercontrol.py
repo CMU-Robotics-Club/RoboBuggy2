@@ -158,12 +158,7 @@ class Simulator:
             self.n_utm = n_utm_new
             self.heading = heading_new
         
-        event = keyboard.read_event()
-        if event.event_type == 'down':
-            if event.name == 'w':
-                self.velocity += 1
-            if event.name == 's':
-                self.velocity -= 1
+        
 
     def publish(self):
         """Publishes the pose the arrow in visualizer should be at"""

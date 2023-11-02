@@ -8,6 +8,7 @@ import threading
 import numpy as np
 import utm
 import time
+import keyboard
 
 
 class Simulator:
@@ -135,6 +136,13 @@ class Simulator:
             velocity = self.velocity
             steering_angle = self.steering_angle
 
+        if (keyboard.is_pressed('w')):
+            print("increasing v")
+            self.velocity += 1
+        elif (keyboard.is_pressed('s')):
+            print("decreasing v")
+            self.velocity -= 1
+            
         # Calculate new position
         if steering_angle == 0.0:
             # Straight
