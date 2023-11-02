@@ -12,10 +12,17 @@ class VelocityUpdater:
         )
         self.buggy_vel = 0.0
         
-        self.rate = 100
+        self.time = 0.0
+
         self.lock = threading.Lock()
 
+    def calculate_accel(self) -> float:
+        if self.time < 20.0: return 1.0
+        else: return 0.0
+
     def tick(self):
+        accel = self.calculate_accel()
+
         new_velocity = Float64()
         new_velocity.data = self.buggy_vel + accel / self.RATE
 
@@ -32,3 +39,4 @@ if __name__ == "__main__":
 
     while not rospy.is_shutdown():
         vel.tick()
+        rate.sleep()
