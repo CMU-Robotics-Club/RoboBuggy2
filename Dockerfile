@@ -1,4 +1,8 @@
+FROM nvidia/cuda:11.6.2-base-ubuntu20.04 as CUDA
+
 FROM osrf/ros:noetic-desktop-full-focal
+
+COPY --from=CUDA /usr/local/cuda /usr/local/
 
 
 RUN apt update
@@ -14,8 +18,14 @@ RUN apt-get install -y -qq \
   ros-noetic-realsense2-camera \
   ros-noetic-realsense2-description
 
+# Run this now to cache it separately from other requirements
+COPY cuda-requirements.txt cuda-requirements.txt
+RUN pip3 install -r cuda-requirements.txt
+
+
 COPY python-requirements.txt python-requirements.txt
 RUN pip3 install -r python-requirements.txt
+
 RUN echo 'source "/opt/ros/$ROS_DISTRO/setup.bash" --' >> ~/.bashrc
 RUN echo 'cd rb_ws' >> ~/.bashrc
 RUN echo 'catkin_make >/dev/null' >> ~/.bashrc
@@ -30,4 +40,3 @@ RUN pip3 install numba
 
 # add mouse to tmux
 RUN echo 'set -g mouse on' >> ~/.tmux.conf
-
