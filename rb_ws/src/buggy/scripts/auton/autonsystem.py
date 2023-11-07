@@ -157,7 +157,7 @@ if __name__ == "__main__":
     print("\n\nStarting Controller: " + str(arg_ctrl) + "\n\n")
     print("\n\nStarting at distance: " + str(arg_start_dist) + "\n\n")
 
-    trajectory = Trajectory("/rb_ws/src/buggy/paths/frew_parkinglot_1.json")
+    trajectory = Trajectory("/rb_ws/src/buggy/paths/buggycourse_safe_1.json")
     # calculate starting index
     start_index = trajectory.get_index_from_distance(start_dist)
 
