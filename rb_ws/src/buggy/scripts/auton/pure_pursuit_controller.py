@@ -21,16 +21,16 @@ class PurePursuitController(Controller):
     MIN_LOOK_AHEAD_DIST = 0.5
     MAX_LOOK_AHEAD_DIST = 10
 
-    def __init__(self, start_index=0) -> None:
-        super(PurePursuitController, self).__init__(start_index)
+    def __init__(self, buggy_name, start_index=0) -> None:
+        super(PurePursuitController, self).__init__(start_index, buggy_name)
         self.debug_reference_pos_publisher = rospy.Publisher(
-            "auton/debug/reference_navsat", NavSatFix, queue_size=1
+            buggy_name + "/auton/debug/reference_navsat", NavSatFix, queue_size=1
         )
         self.debug_track_pos_publisher = rospy.Publisher(
-            "auton/debug/track_navsat", NavSatFix, queue_size=1
+            buggy_name + "/auton/debug/track_navsat", NavSatFix, queue_size=1
         )
         self.debug_error_publisher = rospy.Publisher(
-            "auton/debug/error", ROSPose, queue_size=1
+            buggy_name + "/auton/debug/error", ROSPose, queue_size=1
         )
 
     def compute_control(
