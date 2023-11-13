@@ -1,4 +1,4 @@
-<img width="612" alt="Screenshot 2023-11-13 at 3 18 30 PM" src="https://github.com/CMU-Robotics-Club/RoboBuggy2/assets/45720415/b24ef776-021b-4b76-bba5-12e989172ad6"># RoboBuggy2
+# RoboBuggy2
 A complete re-write of the old RoboBuggy.
 
 ---
