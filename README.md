@@ -23,7 +23,7 @@ A complete re-write of the old RoboBuggy.
 - In the website above, see these two pages: [Generating a new SSH key and adding it to the ssh-agent](https://docs.github.com/en/authentication/connecting-to-github-with-ssh/generating-a-new-ssh-key-and-adding-it-to-the-ssh-agent) and ["Adding a new SSH key to your GitHub account"](https://docs.github.com/en/authentication/connecting-to-github-with-ssh/adding-a-new-ssh-key-to-your-github-account).
 
 ### Clone
-- In your terminal type: `$ git clone git@github.com:CMU-Robotics-Club/RoboBuggy.git`.
+- In your terminal type: `$ git clone https://github.com/CMU-Robotics-Club/RoboBuggy2.git`.
 - The clone link above is find in github: code -> local -> Clone SSH.
 - ![image](https://github.com/CMU-Robotics-Club/RoboBuggy2/assets/116482510/8ea809f7-35f9-4517-b98d-42e2e869d233)
 
@@ -67,37 +67,41 @@ A complete re-write of the old RoboBuggy.
 - Then you can go in the docker container using the `docker exec -it robobuggy2-main-1 bash`.
 - When you are done, type Ctrl+C and use `$exit` to exit.
 
-  ## 2D Simulation
-- To run 2D simulation on Foxglove, use `$ roslaunch buggy sim_2d.launch`.
-- In Foxglove for MacOS, make sure to click "Open Connection" on startup and then use this address `ws://localhost:8765` for Foxglove Websocket
-- Open Foxglove, choose the third option "start link".
-- ![image](https://github.com/CMU-Robotics-Club/RoboBuggy2/assets/116482510/66965d34-502b-4130-976e-1419c0ac5f69)
-- On the top, click Layout, then "Import from file".
+## 2D Simulation
+- Boot up the docker container
+- Run `roslaunch buggy sim_2d_single.launch` to simulate 1 buggy 
+- See `rb_ws/src/buggy/launch/sim_2d_single.launch` to view all available launch options
+ 
+- Run `roslaunch buggy sim_2d_2buggies.launch` to simulate 2 buggies
+- <img width="612" alt="Screenshot 2023-11-13 at 3 18 30 PM" src="https://github.com/CMU-Robotics-Club/RoboBuggy2/assets/45720415/b204aa05-8792-414e-a868-6fbc0d11ab9d">
+
+- See `rb_ws/src/buggy/launch/sim_2d_2buggies.launch` to view all available launch options
+- To prevent topic name collision, a topic named `t` associated with buggy named `x` have format `x\t`. The 
+- names are `SC` and `Nand` in the 2 buggy simulator. In the one buggy simulator, the name can be defined as a launch arg.
+- See [**Foxglove Visualization**](#foxglove-visualization) for visualizing the simulation. Beware that since topic names
+- are user-defined, you will need to adjust the topic names in each panel.
+
+### Simulator notes
+Feedback:
+- Longitude + Latitude for Foxglove visualization on map: `/state/pose_navsat` (sensor_msgs/NavSatFix)
+- UTM coordinates (assume we're in Zone 17T): `/sim_2d/utm` (geometry_msgs/Pose - position.x = Easting meters , position.y = Northing meters, position.z = heading in degrees from East axis + is CCW)
+- INS Simulation: `/nav/odom` (nsg_msgs/Odometry) (**Noise** is implemented to vary ~1cm)
+Commands:
+- Steering angle: `/buggy/steering` in degrees (std_msgs/Float64)
+- Velocity: `/buggy/velocity` in m/s (std_msgs/Float64)
+
+  
+## Foxglove Visualization
+- Foxglove is used to visualize both the simulator and the actual buggy's movements.
+- First, you need to import the layout definition into Foxglove. On the top bar, click Layout, then "Import from file".
 - ![image](https://github.com/CMU-Robotics-Club/RoboBuggy2/assets/116482510/2aa04083-46b3-42a5-bcc1-99cf7ccdb3d2)
 - Go to RoboBuggy2 and choose the file [telematics layout](telematics_layout.json)
-        
+- To visualize the simulator, launch the simulator and then launch Foxglove and select "Open Connection" on startup.
+- Use this address `ws://localhost:8765` for Foxglove Websocket
+- Open Foxglove, choose the third option "start link".
+- ![image](https://github.com/CMU-Robotics-Club/RoboBuggy2/assets/116482510/66965d34-502b-4130-976e-1419c0ac5f69)
 
----
-### Controls
-
-Edit `rb_ws/src/buggy/scripts/controller.py`. Skeleton code for interacting with existing topics is provided. 
-
-To launch the simulation against your controls code, run the following command: `roslaunch buggy main.launch simulation:=true`.
-
-If you get an error about not finding package `buggy`, remember to run `source /rb_ws/devel/setup.bash`. 
-
----
-## 2D Simulation Quickstart
-Examples (from the same run):
-- Foxglove playback of simulated file example: [link](https://youtu.be/dpa5oH69eJI)
-- [![Watch the video](https://img.youtube.com/vi/dpa5oH69eJI/hqdefault.jpg)](https://www.youtube.com/embed/dpa5oH69eJI)
-- Matplotlib live simulation example: [link](https://youtu.be/6Xji-FtDQfo)
-- [![Watch the video](https://img.youtube.com/vi/6Xji-FtDQfo/hqdefault.jpg)](https://www.youtube.com/embed/6Xji-FtDQfo)
-
-Control Example:
-- Foxglove output (via sending steering + velocity commands): [link](https://youtu.be/AOsecwWmqyw)
-- [![Watch the video](https://img.youtube.com/vi/AOsecwWmqyw/hqdefault.jpg)](https://www.youtube.com/embed/AOsecwWmqyw)
-
+## X11 Setup
 Instructions:
 - Install the appropriate X11 server on your computer for your respective operating systems (Xming for Windows, XQuartz for Mac, etc.).
 - Mac: In XQuartz settings, ensure that the "Allow connections from network clients" under "Security" is checked.
@@ -105,26 +109,14 @@ Instructions:
 - While in a bash shell with the X11 server running, run `xhost +local:docker`.
 - Boot up the docker container using the "Alternate Shortcut" above.
 - Run `xeyes` while INSIDE the Docker container to test X11 forwarding. If this works, we're good.
-- Run `roslaunch buggy sim_2d.launch controller:=CONTROLLER_TYPE` for the simulator.
-
-### Using the Simulator
-Feedback:
-- Longitude + Latitude for Foxglove visualization on map: `/state/pose_navsat` (sensor_msgs/NavSatFix)
-- UTM coordinates (assume we're in Zone 17T): `/sim_2d/utm` (geometry_msgs/Pose - position.x = Easting meters , position.y = Northing meters, position.z = heading in degrees from East axis + is CCW)
-- INS Simulation: `/nav/odom` (nsg_msgs/Odometry) (**Noise** is implemented to vary ~1cm)
-
-Commands:
-- Steering angle: `/buggy/steering` in degrees (std_msgs/Float64)
-- Velocity: `/buggy/velocity` in m/s (std_msgs/Float64)
 
 ---
 ### Connecting to and Launching the RoboBuggy
 When launching the buggy:
-- Connect to the Wi-Fi named ShortCircuit.The password is ShortCircuit
+- Connect to the Wi-Fi named ShortCircuit.
 -	In the command line window: 
 SSH to the computer on ShortCircuit and go to folder
 `$ ssh nuc@192.168.1.217`
-password: we trust you
 Then `$ cd RoboBuggy2`
 -	Setup the docker
 `$ ./setup_prod.sh`
@@ -141,16 +133,3 @@ When shutting down the buggy:
 `$ exit`
 -	Shutdown the ShortCircuit computer
 `$ sudo shutdown now`
-
-
----
-## Development
-
-TODO: 
- - pusher.py: apply simulated pushing force if buggy is in certain areas  
- - steering_mux.py: Decide where to listen for steering inputs given a state
-   - dead-mans (lock right(?))
-   - Teleop (Input from foxglove teleop panel)
-   - Controls (auton)
- - instrument_*.py
-   - INS, 

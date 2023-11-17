@@ -87,9 +87,9 @@ class ModelPredictiveController(Controller):
     state_cost_diag = np.diag(state_cost)
     control_cost_diag = np.diag(control_cost)
 
-    def __init__(self, start_index=0, ref_trajectory=None, ROS=False) -> None:
+    def __init__(self, buggy_name, start_index=0, ref_trajectory=None, ROS=False) -> None:
         # instantiate parent
-        super(ModelPredictiveController, self).__init__(start_index)
+        super(ModelPredictiveController, self).__init__(start_index, buggy_name)
 
         # Internal variables
         self.current_traj_index = 0  # Where in the trajectory we are currently
@@ -99,10 +99,10 @@ class ModelPredictiveController(Controller):
         self.solver: osqp.OSQP = None
 
         self.debug_reference_pos_publisher = rospy.Publisher(
-            "auton/debug/reference_navsat", NavSatFix, queue_size=1
+            buggy_name + "/auton/debug/reference_navsat", NavSatFix, queue_size=1
         )
         self.debug_error_publisher = rospy.Publisher(
-            "auton/debug/error", ROSPose, queue_size=1
+            buggy_name + "/auton/debug/error", ROSPose, queue_size=1
         )
 
         self.solver = osqp.OSQP()
