@@ -1,7 +1,6 @@
 #! /usr/bin/env python3
 import rospy
 from controller_2d import Controller
-from std_msgs.msg import Float64
 from geometry_msgs.msg import Pose
 from geometry_msgs.msg import Point
 import threading
@@ -9,7 +8,9 @@ import math
 
 class VelocityUpdater:
     RATE = 100
-    CHECKPOINTS = [
+    # Bubbles for updating acceleration based on position
+    # represented as 4-tuples: (x-pos, y-pos, radius, acceleration)
+    CHECKPOINTS: 'list[tuple[float,float,float,float]]' = [
         (589701, 4477160, 20, 0.5)
     ]
 
@@ -19,7 +20,6 @@ class VelocityUpdater:
         )
 
         self.buggy_vel = 15.0
-        self.time = 0.0
         self.accel = 0.0
 
         self.position = Point()
@@ -32,24 +32,32 @@ class VelocityUpdater:
         self.lock = threading.Lock()
     
     def update_position(self, new_pose: Pose):
-        '''Callback function to update internal position variable'''
+        '''Callback function to update internal position variable when new
+        buggy position is published
+        
+        Args:
+            new_pose (Pose): Pose object from topic
+        '''
         with self.lock:
             self.position = new_pose.position
 
     def calculate_accel(self):
+        '''Check if the position of the buggy is in any of the checkpoints set
+        in self.CHECKPOINTS, and update acceleration of buggy accordingly
+        '''
         for (x,y,r,a) in self.CHECKPOINTS:
             dist = math.sqrt((x - self.position.x)**2 + (y - self.position.y)**2)
             if dist < r:
                 self.accel = a
+                break
 
     def step(self):
+        '''Update acceleration and velocity of buggy for one timestep'''
         self.calculate_accel()
 
         new_velocity = self.buggy_vel + self.accel / self.RATE
         self.buggy_vel = new_velocity
         self.controller.set_velocity(new_velocity)
-
-        self.time += 1 / self.RATE
 
 
 if __name__ == "__main__":
