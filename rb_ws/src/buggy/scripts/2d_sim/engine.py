@@ -147,10 +147,6 @@ class Simulator:
             n_utm = self.n_utm
             velocity = self.velocity
             steering_angle = self.steering_angle
-
-        #if (Simulator.TEST_MANUALV_FLAG): #if manual toggle is flipped
-            #print("should change velocity (but how)")
-            # self.update_velocity(data=3); # 3 should be the data from the subscriber? get data from wherever it was published to 
         
         # Calculate new position
         if steering_angle == 0.0:

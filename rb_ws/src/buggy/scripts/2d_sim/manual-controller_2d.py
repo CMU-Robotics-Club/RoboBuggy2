@@ -14,7 +14,7 @@ class ManualController (Controller):
     def set_steering(self, angle: float):
         Controller.set_steering(self, angle)
     
-    def set_velocity(self, vel: float): # ACTUALLY MODIFY THIS ONE 
+    def set_velocity(self, vel: float):  
         """Set the velocity and publish to simulator engine
 
         Args:
