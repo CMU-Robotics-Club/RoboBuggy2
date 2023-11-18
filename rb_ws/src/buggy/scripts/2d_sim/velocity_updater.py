@@ -1,5 +1,6 @@
 #! /usr/bin/env python3
 import rospy
+import sys
 from controller_2d import Controller
 from geometry_msgs.msg import Pose
 from geometry_msgs.msg import Point
@@ -14,12 +15,12 @@ class VelocityUpdater:
         (589701, 4477160, 20, 0.5)
     ]
 
-    def __init__(self):
+    def __init__(self, buggy_name: str, init_vel: float):
         self.pose_subscriber = rospy.Subscriber(
-            "sim_2d/utm", Pose, self.update_position
+            buggy_name + "/sim_2d/utm", Pose, self.update_position
         )
 
-        self.buggy_vel = 15.0
+        self.buggy_vel = init_vel
         self.accel = 0.0
 
         self.position = Point()
@@ -61,8 +62,11 @@ class VelocityUpdater:
 
 
 if __name__ == "__main__":
-    rospy.init_node("velocity_updater")
-    vel = VelocityUpdater()
+    rospy.init_node("vel_updater")
+
+    init_vel = float(sys.argv[1])
+    buggy_name = sys.argv[2]
+    vel = VelocityUpdater(init_vel, buggy_name)
     rate = rospy.Rate(vel.RATE)
 
     while not rospy.is_shutdown():
