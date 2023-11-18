@@ -15,7 +15,7 @@ class VelocityUpdater:
         (589701, 4477160, 20, 0.5)
     ]
 
-    def __init__(self, buggy_name: str, init_vel: float):
+    def __init__(self, init_vel: float, buggy_name: str):
         self.pose_subscriber = rospy.Subscriber(
             buggy_name + "/sim_2d/utm", Pose, self.update_position
         )
@@ -28,7 +28,7 @@ class VelocityUpdater:
         self.position.y = 0
         self.position.z = 0
 
-        self.controller = Controller()
+        self.controller = Controller(buggy_name)
 
         self.lock = threading.Lock()
     
