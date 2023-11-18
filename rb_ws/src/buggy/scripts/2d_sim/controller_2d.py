@@ -8,6 +8,7 @@ class Controller:
     def __init__(self):
         self.steering_publisher = rospy.Publisher("sim_2d/steering", Float64, queue_size=10)
         self.velocity_publisher = rospy.Publisher("buggy/velocity", Float64, queue_size=10)
+        
         self.steering_angle = 0
         self.velocity = 0
 
@@ -35,7 +36,6 @@ class Controller:
         Args:
             vel (float): velocity (m/s)
         """
-        vel  = 0;
         msg = Float64()
         msg.data = vel
 
@@ -50,5 +50,6 @@ if __name__ == "__main__":
     rate = rospy.Rate(5)
     i = 0
     while not rospy.is_shutdown():
+        controller.set_velocity(15)
         rate.sleep()
 

@@ -41,6 +41,7 @@ class AutonSystem:
     ticks = 0
 
     def __init__(self, trajectory, controller, brake_controller) -> None:
+        print("autonsystem initializer")
         self.trajectory = trajectory
         self.controller = controller
         self.brake_controller = brake_controller
@@ -51,6 +52,7 @@ class AutonSystem:
         
         self.msg = None
 
+        # where ARE these 
         rospy.Subscriber("nav/odom", Odometry, self.update_msg)
         self.covariance_warning_publisher = rospy.Publisher(
             "buggy/debug/is_high_covariance", Bool, queue_size=1
@@ -148,21 +150,28 @@ class AutonSystem:
             self.distance_publisher.publish(distance_msg)
 
 if __name__ == "__main__":
+    print("7: autonsys main started")
     rospy.init_node("auton_system")
 
     arg_ctrl = sys.argv[1]
+    print("8: argument controller")
+    print(arg_ctrl);
     arg_start_dist = sys.argv[2]
+    print("9: starting distance")
+    print(arg_start_dist)
+
     start_dist = float(arg_start_dist)
 
     print("\n\nStarting Controller: " + str(arg_ctrl) + "\n\n")
     print("\n\nStarting at distance: " + str(arg_start_dist) + "\n\n")
 
-    trajectory = Trajectory("/rb_ws/src/buggy/paths/frew_parkinglot_1.json")
+    trajectory = Trajectory("/rb_ws/src/buggy/paths/buggycourse_safe_1.json")
     # calculate starting index
     start_index = trajectory.get_index_from_distance(start_dist)
 
 
     # Add Controllers Here
+    # TODO: is manual controller another type of controller? do i modify this else if loop??
     ctrller = None
     if (arg_ctrl == "stanley"):
         ctrller = StanleyController(start_index)
