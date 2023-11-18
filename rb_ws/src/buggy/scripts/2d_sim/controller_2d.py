@@ -5,10 +5,9 @@ import threading
 import numpy as np
 
 class Controller:
-    def __init__(self):
-        self.steering_publisher = rospy.Publisher("sim_2d/steering", Float64, queue_size=10)
-        self.velocity_publisher = rospy.Publisher("buggy/velocity", Float64, queue_size=10)
-        
+    def __init__(self, buggy_name):
+        self.steering_publisher = rospy.Publisher(buggy_name + "/input/steering", Float64, queue_size=10)
+        self.velocity_publisher = rospy.Publisher(buggy_name + "/velocity", Float64, queue_size=10)
         self.steering_angle = 0
         self.velocity = 0
 
@@ -46,7 +45,8 @@ class Controller:
 
 if __name__ == "__main__":
     rospy.init_node("sim_2d_controller")
-    controller = Controller()
+    buggy_name = sys.argv[1]
+    controller = Controller(buggy_name)
     rate = rospy.Rate(5)
     i = 0
     while not rospy.is_shutdown():
