@@ -19,7 +19,8 @@ jobs:
         python -m pip install --upgrade pip
         pip install pylint
         git fetch origin ${CI_MERGE_REQUEST_TARGET_BRANCH_NAME}
-        tmp_files=$(git diff --name-only main .)
+        echo CI_COMMIT_SHA=${GITHUB_SHA}
+        tmp_files=$(git diff --name-only main ${CI_COMMIT_SHA})
         echo "Changed files are $tmp_files"
         if [ -z "$(echo "$tmp_files" | grep "\.py")" ]; then exit 0; else echo "Python files are found"; fi
         tmp_pfiles=$(echo "$tmp_files" | grep "\.py")
