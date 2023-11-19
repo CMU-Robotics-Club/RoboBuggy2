@@ -27,7 +27,6 @@ jobs:
         if [ -z "$(echo "$tmp_files" | grep "\.py")" ]; then exit 0; else echo "Python files are found"; fi
         tmp_pfiles=$(echo "$tmp_files" | grep "\.py")
         echo "Python files are $tmp_pfiles"
-        cd rb_ws
         if [[ -z "$tmp_pfiles" ]]; then
           echo "No files to lint"
         else
