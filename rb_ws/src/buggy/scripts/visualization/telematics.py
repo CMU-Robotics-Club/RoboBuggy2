@@ -28,11 +28,11 @@ class Telematics:
         self.gnss1_fixinfo_publisher = rospy.Publisher("/gnss1/fix_info_republished", String, queue_size=10)
         self.gnss1_fixinfo_int_publisher = rospy.Publisher("/gnss1/fix_info_republished_int", Int8, queue_size=10)
         self.gnss1_fixinfo_subscriber = rospy.Subscriber("/gnss1/fix_info", GNSSFixInfo, self.republish_fixinfo, (self.gnss1_fixinfo_publisher, self.gnss1_fixinfo_int_publisher))
-        
+
         self.gnss2_fixinfo_publisher = rospy.Publisher("/gnss2/fix_info_republished", String, queue_size=10)
         self.gnss2_fixinfo_int_publisher = rospy.Publisher("/gnss2/fix_info_republished_int", Int8, queue_size=10)
         self.gnss2_fixinfo_subscriber = rospy.Subscriber("/gnss2/fix_info", GNSSFixInfo, self.republish_fixinfo, (self.gnss2_fixinfo_publisher, self.gnss2_fixinfo_int_publisher))
-        
+
     def convert_odometry_to_navsatfix(self, msg):
         """Convert Odometry-type to NavSatFix-type for plotting on Foxglove
         Args:
@@ -47,7 +47,7 @@ class Telematics:
         new_msg.longitude = long
         new_msg.altitude = down
         self.odom_publisher.publish(new_msg)
-    
+
     def convert_navsatfix_to_pose_covariance(self, msg, publishers):
         """Convert NavSatFix-type and related covariance matrix to Pose-type and array
         respectively for easy visualization in Foxglove.
@@ -69,14 +69,14 @@ class Telematics:
             round(msg.position_covariance[4], 4),
             round(msg.position_covariance[8], 4)]
         publishers[1].publish(covariance)
-    
+
     def republish_fixinfo(self, msg, publishers):
         """
         convert gnss/fixinfo to a string for visualization in foxglove
         """
         fix_type = msg.fix_type
         fix_string = "fix type: "
-        
+
         if (fix_type == 0):
             fix_string += "FIX_3D"
         elif (fix_type == 1):
@@ -91,17 +91,13 @@ class Telematics:
             fix_string += "FIX_RTK_FLOAT"
         else:
             fix_string += "FIX_RTK_FIXED"
-     
+
         fix_string += "\nsbas_used: "  + str(msg.sbas_used)      
         fix_string += "\ndngss_used: " + str(msg.dngss_used)
         publishers[0].publish(fix_string)
         publishers[1].publish(fix_type)
-        
-         
-            
 
 if __name__ == "__main__":
   rospy.init_node("telematics")
   telem = Telematics()
   rospy.spin()
-  
