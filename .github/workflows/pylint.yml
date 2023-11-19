@@ -26,9 +26,11 @@ jobs:
         if [ -z "$(echo "$tmp_files" | grep "\.py")" ]; then exit 0; else echo "Python files are found"; fi
         tmp_pfiles=$(echo "$tmp_files" | grep "\.py")
         echo "Python files are $tmp_pfiles"
-        mkdir ./pylint
-        pylint --output-format=text $tmp_pfiles | tee ./pylint/pylint.log || pylint-exit $?
     - name: Analysing the code with pylint
       run: |
         cd rb_ws
-        pylint --rc-file=/home/runner/work/RoboBuggy2/RoboBuggy2/.github/workflows/.pylintrc $tmp_pfiles
+        if [[ -z $tmp_pfiles ]]; then
+          echo "No files to lint"
+        else
+          pylint --rc-file=/home/runner/work/RoboBuggy2/RoboBuggy2/.github/workflows/.pylintrc $tmp_pfiles
+        fi
