@@ -14,10 +14,12 @@ jobs:
       uses: actions/setup-python@v3
       with:
         python-version: ${{ matrix.python-version }}
-    - name: Install dependencies and getting changed Python files
+    - name: Install dependencies
       run: |
         python -m pip install --upgrade pip
         pip install pylint
+    - name: Getting changed Python files and Analysing the code with pylint
+      run: |
         git fetch origin ${CI_MERGE_REQUEST_TARGET_BRANCH_NAME}
         echo CI_COMMIT_SHA=${GITHUB_SHA}
         tmp_files=$(git diff --name-only origin/main ${CI_COMMIT_SHA})
@@ -25,8 +27,6 @@ jobs:
         if [ -z "$(echo "$tmp_files" | grep "\.py")" ]; then exit 0; else echo "Python files are found"; fi
         tmp_pfiles=$(echo "$tmp_files" | grep "\.py")
         echo "Python files are $tmp_pfiles"
-    - name: Analysing the code with pylint
-      run: |
         cd rb_ws
         if [[ -z "$tmp_pfiles" ]]; then
           echo "No files to lint"
