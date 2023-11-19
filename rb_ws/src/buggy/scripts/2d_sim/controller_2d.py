@@ -1,4 +1,5 @@
 #! /usr/bin/env python3
+import sys
 import rospy
 from std_msgs.msg import Float64
 import threading
@@ -8,6 +9,7 @@ class Controller:
     def __init__(self, buggy_name):
         self.steering_publisher = rospy.Publisher(buggy_name + "/input/steering", Float64, queue_size=10)
         self.velocity_publisher = rospy.Publisher(buggy_name + "/velocity", Float64, queue_size=10)
+        self.manual_velocity_publisher = rospy.Publisher(buggy_name + "/man_velocity", Float64, queue_size=10)
         self.steering_angle = 0
         self.velocity = 0
 
