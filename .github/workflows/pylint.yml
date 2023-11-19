@@ -31,4 +31,4 @@ jobs:
     - name: Analysing the code with pylint
       run: |
         cd rb_ws
-        pylint --rc-file=/home/runner/work/RoboBuggy2/RoboBuggy2/.github/workflows/.pylintrc $(git ls-files '*.py')
+        pylint --rc-file=/home/runner/work/RoboBuggy2/RoboBuggy2/.github/workflows/.pylintrc $tmp_pfiles
