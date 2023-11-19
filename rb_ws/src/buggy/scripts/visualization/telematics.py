@@ -45,7 +45,7 @@ class Telematics:
         new_msg.header = msg.header
         new_msg.latitude = lat
         new_msg.longitude = long
-        new_msg.altitude = down 
+        new_msg.altitude = down
         self.odom_publisher.publish(new_msg)
     
     def convert_navsatfix_to_pose_covariance(self, msg, publishers):
