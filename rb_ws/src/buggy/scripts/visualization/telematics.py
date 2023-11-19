@@ -92,12 +92,12 @@ class Telematics:
         else:
             fix_string += "FIX_RTK_FIXED"
 
-        fix_string += "\nsbas_used: "  + str(msg.sbas_used)      
+        fix_string += "\nsbas_used: "  + str(msg.sbas_used)
         fix_string += "\ndngss_used: " + str(msg.dngss_used)
         publishers[0].publish(fix_string)
         publishers[1].publish(fix_type)
 
 if __name__ == "__main__":
-  rospy.init_node("telematics")
-  telem = Telematics()
-  rospy.spin()
+    rospy.init_node("telematics")
+    telem = Telematics()
+    rospy.spin()
