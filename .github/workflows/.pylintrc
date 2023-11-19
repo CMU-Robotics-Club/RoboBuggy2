@@ -1,7 +1,6 @@
 [MESSAGES CONTROL]
 
-disable=
-    all
+disable=all
 
 enable=
     bad-indentation,
