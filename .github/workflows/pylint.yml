@@ -28,7 +28,7 @@ jobs:
     - name: Analysing the code with pylint
       run: |
         cd rb_ws
-        if [[ -z $tmp_pfiles ]]; then
+        if [[ -z "$tmp_pfiles" ]]; then
           echo "No files to lint"
         else
           pylint --rc-file=/home/runner/work/RoboBuggy2/RoboBuggy2/.github/workflows/.pylintrc $tmp_pfiles
