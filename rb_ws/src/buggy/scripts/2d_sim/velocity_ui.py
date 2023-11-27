@@ -27,8 +27,8 @@ class VelocityUI:
         self.scale = tk.Scale(self.root, from_=0, to=300, orient=tk.HORIZONTAL, length=500, width=30)
         self.scale.pack()
 
-        self.root.bind("<Up>", lambda i: self.scale.set(self.scale.get() - 2))
-        self.root.bind("<Down>", lambda d: self.scale.set(self.scale.get() + 2))
+        self.root.bind("<Up>", lambda i: self.scale.set(self.scale.get() + 2))
+        self.root.bind("<Down>", lambda d: self.scale.set(self.scale.get() - 2))
 
 
        
