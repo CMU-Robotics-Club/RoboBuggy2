@@ -13,36 +13,30 @@ class VelocityUI:
        
 
     def __init__(self, init_vel: float, buggy_name: str):
-        # To provide the built in Foxglove UI a location to publish to
-        self.manual_velocity_publisher = rospy.Publisher(buggy_name + "/velocity", Float64, queue_size=10)
-
         self.buggy_vel = 0 # So the buggy doesn't start moving without user input
 
         self.controller = Controller(buggy_name)
         self.lock = threading.Lock()
 
-        root = tk.Tk()
+        self.root = tk.Tk()
 
-        root.title('Manual Velocity')
-        root.geometry('600x100')
-        root.configure(background = '#342d66')
+        self.root.title('Manual Velocity')
+        self.root.geometry('600x100')
+        self.root.configure(background = '#342d66')
 
-        self.scale = tk.Scale(root, from_=0, to=300, orient=tk.HORIZONTAL, length=500, width=30)
+        self.scale = tk.Scale(self.root, from_=0, to=300, orient=tk.HORIZONTAL, length=500, width=30)
         self.scale.pack()
 
-        root.mainloop()
+       
 
     def step(self):
+        self.root.update_idletasks()
+        self.root.update()
         '''Update velocity of buggy'''
-        print("calling step!")
-        print("v: " + self.scale.get())
+        print("v: " + str(self.scale.get()))
         self.buggy_vel = self.scale.get()/10
-        self.controller.set_velocity(self.buggy_vel())
-        # if (keyboard.is_pressed('w')):
-        #     self.controller.set_velocity(self.buggy_vel + 1)
-        # elif (keyboard.is_pressed('s')):
-        #     self.controller.set_velocity(self.buggy_vel - 1)
-            
+        self.controller.set_velocity(self.buggy_vel)
+          
 
 
 if __name__ == "__main__":
@@ -52,8 +46,6 @@ if __name__ == "__main__":
     buggy_name = sys.argv[2]
     vel = VelocityUI(init_vel, buggy_name)
     rate = rospy.Rate(100)
-    print("im working")
     while not rospy.is_shutdown():
-        print("stepping")
         vel.step()
         rate.sleep()
