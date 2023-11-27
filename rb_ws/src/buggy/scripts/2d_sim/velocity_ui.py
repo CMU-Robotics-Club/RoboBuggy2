@@ -27,13 +27,16 @@ class VelocityUI:
         self.scale = tk.Scale(self.root, from_=0, to=300, orient=tk.HORIZONTAL, length=500, width=30)
         self.scale.pack()
 
+        self.root.bind("<Up>", lambda i: self.scale.set(self.scale.get() - 2))
+        self.root.bind("<Down>", lambda d: self.scale.set(self.scale.get() + 2))
+
+
        
 
     def step(self):
         self.root.update_idletasks()
         self.root.update()
         '''Update velocity of buggy'''
-        print("v: " + str(self.scale.get()))
         self.buggy_vel = self.scale.get()/10
         self.controller.set_velocity(self.buggy_vel)
           

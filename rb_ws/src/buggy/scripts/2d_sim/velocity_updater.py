@@ -62,7 +62,6 @@ class VelocityUpdater:
 
 
 if __name__ == "__main__":
-    print("velocity updater main ??? \n\n\n")
     rospy.init_node("vel_updater")
 
     init_vel = float(sys.argv[1])

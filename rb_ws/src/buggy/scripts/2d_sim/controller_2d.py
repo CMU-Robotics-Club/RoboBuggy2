@@ -31,7 +31,6 @@ class Controller:
         self.steering_publisher.publish(msg)
     
     def set_velocity(self, vel: float):
-        print("setting vel in controller!")
         """Set the velocity and publish to simulator engine
 
         Args:
