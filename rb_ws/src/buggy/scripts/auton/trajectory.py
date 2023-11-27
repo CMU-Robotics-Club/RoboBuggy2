@@ -20,31 +20,45 @@ class Trajectory:
     Use https://rdudhagra.github.io/eracer-portal/ to make trajectories and save the JSON file
     """
 
-    def __init__(self, json_filepath, interpolator="CubicSpline") -> None:
+    def __init__(self, json_filepath=None, positions=[], interpolator="CubicSpline") -> None:
+        """
+        Args:
+            json_filepath (String): file path to the path json file (begins at /rb_ws)
+            positions [[float, float]]: reference trajectory
+            current_speed (float): current speed of the buggy
+
+        Returns:
+            float (desired steering angle)
+        """
         self.distances = np.zeros((0, 1))  # (N/dt x 1) [d, d, ...]
         self.positions = np.zeros((0, 2))  # (N x 2) [(x,y), (x,y), ...]
         self.indices = None  # (N x 1) [0, 1, 2, ...]
         self.interpolation = None  # scipy.interpolate.PPoly
-    
-        pos = []
-        # Load the json file
-        with open(json_filepath, "r") as f:
-            data = json.load(f)
 
-        # Iterate through the waypoints and extract the positions
-        num_waypoints = len(data)
-        for i in range(0, num_waypoints):
+        if not json_filepath is None:
+            pos = []
+            # Load the json file
+            with open(json_filepath, "r") as f:
+                data = json.load(f)
 
-            waypoint = data[i]
+            # Iterate through the waypoints and extract the positions
+            num_waypoints = len(data)
+            for i in range(0, num_waypoints):
 
-            lat = waypoint["lat"]
-            lon = waypoint["lon"]
+                waypoint = data[i]
 
-            # Convert to world coordinates
-            x, y = World.gps_to_world(lat, lon)
-            pos.append([x, y])
-        num_indices = len(pos)
+                lat = waypoint["lat"]
+                lon = waypoint["lon"]
 
+                # Convert to world coordinates
+                x, y = World.gps_to_world(lat, lon)
+                pos.append([x, y])
+        
+            num_indices = len(pos)
+        else:
+            pos = positions
+
+        
         if interpolator == "Akima":
             self.positions = np.array(pos)
             self.indices = np.arange(num_indices)

@@ -31,7 +31,7 @@ class AutonSystem:
     to compute the desired control output.
     """
 
-    trajectory: Trajectory = None
+    global_trajectory: Trajectory = None
     controller: Controller = None
     brake_controller: BrakeController = None
     lock = None
@@ -40,8 +40,8 @@ class AutonSystem:
     
     ticks = 0
 
-    def __init__(self, trajectory, controller, brake_controller, buggy_name, is_sim) -> None:
-        self.trajectory = trajectory
+    def __init__(self, global_trajectory, controller, brake_controller, buggy_name, is_sim) -> None:
+        self.global_trajectory = global_trajectory
         self.controller = controller
         self.brake_controller = brake_controller
 
@@ -123,9 +123,12 @@ class AutonSystem:
         pose_gps = Pose.rospose_to_pose(current_rospose)
         pose = World.gps_to_world_pose(pose_gps)
 
+        # generate local trajectory via path planner
+        local_trajectory = self.path_planner.compute_traj(pose, self.global_trajectory, current_speed)
+
         # Compute control output
         steering_angle = self.controller.compute_control(
-            pose, self.trajectory, current_speed
+            pose, local_trajectory, current_speed
         )
 
         # Publish control output
@@ -141,9 +144,9 @@ class AutonSystem:
         # Plot projected forward/back positions
         if (self.ticks % 50 == 0):
             self.controller.plot_trajectory(
-                pose, self.trajectory, current_speed
+                pose, self.global_trajectory, current_speed
             )
-            distance_msg = Float64(self.trajectory.get_distance_from_index(
+            distance_msg = Float64(self.global_trajectory.get_distance_from_index(
                 self.controller.current_traj_index))
             self.distance_publisher.publish(distance_msg)
 
@@ -161,7 +164,7 @@ if __name__ == "__main__":
     print("\n\nUsing path: /rb_ws/src/buggy/paths/" + str(arg_path) + "\n\n")
     print("\n\nStarting at distance: " + str(arg_start_dist) + "\n\n")
 
-    trajectory = Trajectory("/rb_ws/src/buggy/paths/" + arg_path)
+    trajectory = Trajectory(json_filepath="/rb_ws/src/buggy/paths/" + arg_path)
     # calculate starting index
     start_index = trajectory.get_index_from_distance(start_dist)
 
