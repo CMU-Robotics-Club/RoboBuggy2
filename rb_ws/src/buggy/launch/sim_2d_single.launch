@@ -14,7 +14,7 @@
 
     <node name="sim_2d_engine" pkg="buggy" type="engine.py" output="screen"
         args="$(arg starting_pose) $(arg velocity) $(arg buggy_name)"/>
-    <node name="velocity_ui" pkg="buggy" type="velocity_ui.py"
+    <node name="vel_updater" pkg="buggy" type="velocity_updater.py"
         output="screen" args="$(arg velocity) $(arg buggy_name)"/>
     <!-- autonsystem args: controller start_dist path buggy_name is_sim -->
     <node name="auton_system" pkg="buggy" type="autonsystem.py" output="screen" 
