@@ -1,0 +1,10 @@
+[MESSAGES CONTROL]
+
+disable=all
+
+enable=
+    bad-indentation,
+    trailing-whitespace,
+    wrong-import-order,
+    unused-variable,
+    unused-import
