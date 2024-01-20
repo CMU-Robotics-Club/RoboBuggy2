@@ -19,8 +19,13 @@ from model_predictive_controller import ModelPredictiveController
 from brake_controller import BrakeController
 # from model_predictive_controller import ModelPredictiveController
 from model_predictive_interpolation import ModelPredictiveController
+from path_planner import PathPlanner
 from pose import Pose
+import argparse
+import copy
+import cProfile
 
+import time
 
 class AutonSystem:
     """
@@ -29,162 +34,235 @@ class AutonSystem:
     On every tick, this class will read the current state of the buggy,
     compare it to the reference trajectory, and use a given controller
     to compute the desired control output.
+
+    On every 10th tick, this class will generate a new reference trajectory
+    based on the updated position of the other buggy.
     """
 
     global_trajectory: Trajectory = None
-    controller: Controller = None
+    local_controller: Controller = None
+    nominal_controller: Controller = None
     brake_controller: BrakeController = None
     lock = None
 
     steer_publisher = None
-    
     ticks = 0
 
-    def __init__(self, global_trajectory, controller, brake_controller, buggy_name, is_sim) -> None:
+    def __init__(self, global_trajectory, local_controller, nominal_controller, brake_controller, self_name, other_name) -> None:
         self.global_trajectory = global_trajectory
-        self.controller = controller
+
+        # local trajectory is initialized as global trajectory. If there is no other buggy,
+        # the local trajectory is never updated.
+
+        self.has_other_buggy = not other_name is None
+        self.local_trajectory = global_trajectory
+        self.nominal_controller = nominal_controller
+        self.local_controller = local_controller
         self.brake_controller = brake_controller
+
+        self.path_planner = PathPlanner()
+        self.other_steering = 0
 
         self.lock = Lock()
         self.ticks = 0
-        self.msg = None
+        self.self_odom_msg = None
+        self.other_odom_msg = None
         
-        if (is_sim):
-            rospy.Subscriber(buggy_name + "/nav/odom", Odometry, self.update_msg)
+        rospy.Subscriber(self_name + "/nav/odom", Odometry, self.update_self_odom)
+        if self.has_other_buggy:
+            rospy.Subscriber(other_name + "/nav/odom", Odometry, self.update_other_odom)
+            self.other_steer_subscriber = rospy.Subscriber(
+                other_name + "/input/steering", Float64, self.update_other_steering_angle
+            )
 
 
         self.covariance_warning_publisher = rospy.Publisher(
-            buggy_name + "/debug/is_high_covariance", Bool, queue_size=1
+            self_name + "/debug/is_high_covariance", Bool, queue_size=1
         )
         self.steer_publisher = rospy.Publisher(
-            buggy_name + "/input/steering", Float64, queue_size=1
+            self_name + "/input/steering", Float64, queue_size=1
         )
         self.brake_publisher = rospy.Publisher(
-            buggy_name + "/input/brake", Float64, queue_size=1
+            self_name + "/input/brake", Float64, queue_size=1
         )
         self.brake_debug_publisher = rospy.Publisher(
-            buggy_name + "/auton/debug/brake", Float64, queue_size=1
+            self_name + "/auton/debug/brake", Float64, queue_size=1
         )
         self.heading_publisher = rospy.Publisher(
-             buggy_name + "/auton/debug/heading", Float32, queue_size=1
+            self_name + "/auton/debug/heading", Float32, queue_size=1
         )
         self.distance_publisher = rospy.Publisher(
-             buggy_name + "/auton/debug/distance", Float64, queue_size=1
+            self_name + "/auton/debug/distance", Float64, queue_size=1
         )
 
-        self.auton_rate = 100
-        self.rosrate = rospy.Rate(self.auton_rate)
 
+        self.auton_rate = 20
+        self.rosrate = rospy.Rate(self.auton_rate)
         self.tick_caller()
 
-    def update_speed(self, msg):
+    def update_self_odom(self, msg):
         with self.lock:
-            self.speed = msg.data
+            self.self_odom_msg = msg
 
-    def update_msg(self, msg):
+    def update_other_odom(self, msg):
         with self.lock:
-            self.msg = msg
-        
+            self.other_odom_msg = msg
+    
+    def update_other_steering_angle(self, msg):
+        with self.lock:
+            self.other_steering = msg.data
+
+    def x(self, nominal_cmd):
+        self.planner_tick(nominal_cmd)
+
     def tick_caller(self):
-        while ((not rospy.is_shutdown()) and (self.msg == None)): # with no message, we wait
+        while ((not rospy.is_shutdown()) and
+            (self.self_odom_msg == None or 
+            (self.has_other_buggy and self.other_odom_msg == None))): # with no message, we wait
             rospy.sleep(0.001)
         
         # wait for covariance matrix to be better
         while ((not rospy.is_shutdown()) and
-               (self.msg.pose.covariance[0] ** 2 + self.msg.pose.covariance[7] ** 2 > 1**2)):
+               (self.self_odom_msg.pose.covariance[0] ** 2 + self.self_odom_msg.pose.covariance[7] ** 2 > 1**2)):
             # Covariance larger than one meter. We definitely can't trust the pose
             rospy.sleep(0.001)
             print("Waiting for Covariance to be better: ",  rospy.get_rostime())
         print("done checking covariance")
-        while (not rospy.is_shutdown()): # start the actual control loop
-            self.tick()
-            self.ticks += 1
-            self.rosrate.sleep()
 
-    def tick(self):
-        # Received an updated pose from the state estimator
-        # Compute the new control output and publish it to the buggy
+        # initialize global trajectory index
+
         with self.lock:
-            msg = self.msg
-        current_rospose = msg.pose.pose
+            self_pose, _ = self.get_world_pose_and_speed(self.self_odom_msg)
+        self.current_global_traj_index = self.global_trajectory.get_closest_index_on_path(self_pose.x, self_pose.y, 0)
 
+
+        while (not rospy.is_shutdown()): # start the actual control loop
+            # run the planner every 10 ticks
+            # thr main cycle runs at 100hz, the planner runs at 10hz, but looks 1 second ahead
+
+            if not self.other_odom_msg is None:         
+                # for debugging obstacle avoidance
+                with self.lock:
+                    self_pose, self_speed = self.get_world_pose_and_speed(self.self_odom_msg)
+                    other_pose, other_speed = self.get_world_pose_and_speed(self.other_odom_msg)
+                    distance = (self_pose.x - other_pose.x) ** 2 + (self_pose.y - other_pose.y) ** 2
+                    distance = np.sqrt(distance)
+                    self.distance_publisher.publish(Float64(distance))
+
+
+                nominal_cmd = self.nominal_controller_tick()
+                cProfile.runctx('self.x(nominal_cmd)', globals(), locals(), sort="cumtime")
+                # reset current index of local controller, since local trajectory is updated
+                self.local_controller.current_traj_index = 0
+            else:
+                self.local_controller_tick()
+
+            self.ticks += 1
+            # self.rosrate.sleep() 
+
+        
+    def get_world_pose_and_speed(self, msg):
+        current_rospose = msg.pose.pose
         # Check if the pose covariance is a sane value. Publish a warning if insane
         if msg.pose.covariance[0] ** 2 + msg.pose.covariance[7] ** 2 > 1**2:
             # Covariance larger than one meter. We definitely can't trust the pose
             self.covariance_warning_publisher.publish(Bool(True))
         else:
             self.covariance_warning_publisher.publish(Bool(False))
-
         current_speed = np.sqrt(
             msg.twist.twist.linear.x**2 + msg.twist.twist.linear.y**2
         )
 
         # Get data from message
         pose_gps = Pose.rospose_to_pose(current_rospose)
-        pose = World.gps_to_world_pose(pose_gps)
-
-        # generate local trajectory via path planner
-        local_trajectory = self.path_planner.compute_traj(pose, self.global_trajectory, current_speed)
+        return World.gps_to_world_pose(pose_gps), current_speed
+    
+    def local_controller_tick(self):
+        with self.lock:
+            self_pose, self_speed = self.get_world_pose_and_speed(self.self_odom_msg)
 
         # Compute control output
-        steering_angle = self.controller.compute_control(
-            pose, local_trajectory, current_speed
-        )
-
-        # Publish control output
+        steering_angle = self.local_controller.compute_control(
+            self_pose, self.local_trajectory, self_speed)
         steering_angle_deg = np.rad2deg(steering_angle)
         self.steer_publisher.publish(Float64(steering_angle_deg))
-        brake_cmd = self.brake_controller.compute_braking(current_speed, steering_angle_deg)
-        self.brake_debug_publisher.publish(Float64(brake_cmd))
-        self.brake_publisher.publish(Float64(0)) # No braking for now, just look at debug data
 
-        # Publish debug data
-        self.heading_publisher.publish(Float32(pose.theta))
+    def nominal_controller_tick(self):
+        with self.lock:
+            self_pose, self_speed = self.get_world_pose_and_speed(self.self_odom_msg)
 
-        # Plot projected forward/back positions
-        if (self.ticks % 50 == 0):
-            self.controller.plot_trajectory(
-                pose, self.global_trajectory, current_speed
-            )
-            distance_msg = Float64(self.global_trajectory.get_distance_from_index(
-                self.controller.current_traj_index))
-            self.distance_publisher.publish(distance_msg)
+        # Compute control output from global static trajectory
+        steering_angle = self.nominal_controller.compute_control(
+            self_pose, self.global_trajectory, self_speed)
+        steering_angle_deg = np.rad2deg(steering_angle)
+        return float(steering_angle_deg)
+
+    def planner_tick(self, nominal_steering_angle):
+        with self.lock:
+            self_pose, self_speed = self.get_world_pose_and_speed(self.self_odom_msg)
+            other_pose, other_speed = self.get_world_pose_and_speed(self.other_odom_msg)
+        # update local trajectory via path planner
+        cmd = self.path_planner.compute_traj(self_pose, 
+                                            other_pose,
+                                            self_speed, 
+                                            other_speed, 
+                                            nominal_steering_angle, 
+                                            self.other_steering)
+        self.steer_publisher.publish(Float64(cmd))
 
 if __name__ == "__main__":
     rospy.init_node("auton_system")
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--controller", type=str, help="set controller type", required=True)
+    parser.add_argument("--dist", type=float,
+        help="start buggy at meters distance along the path", required=True)
+    parser.add_argument("--traj", type=str, 
+        help="path to the trajectory file, relative to /rb_ws/src/buggy/paths/", 
+        required=True)
+    parser.add_argument("--self_name", type=str, help="name of ego-buggy", 
+        required=True)
+    parser.add_argument("--other_name", type=str, help="name of other buggy, if left unspecified, the autonsystem assumes it is the only buggy on the course",         
+        required=False)
+    
+    args, _ = parser.parse_known_args()
+    ctrl = args.controller
+    start_dist = args.dist
+    traj = args.traj
+    self_name = args.self_name
+    other_name = args.other_name
 
-    arg_ctrl = sys.argv[1]
-    arg_start_dist = sys.argv[2]
-    arg_path = sys.argv[3]
-    start_dist = float(arg_start_dist)
-    buggy_name = sys.argv[4]
-    is_sim = sys.argv[5] == "True"
+    print("\n\nStarting Controller: " + str(ctrl) + "\n\n")
+    print("\n\nUsing path: /rb_ws/src/buggy/paths/" + str(traj) + "\n\n")
+    print("\n\nStarting at distance: " + str(start_dist) + "\n\n")
 
-    print("\n\nStarting Controller: " + str(arg_ctrl) + "\n\n")
-    print("\n\nUsing path: /rb_ws/src/buggy/paths/" + str(arg_path) + "\n\n")
-    print("\n\nStarting at distance: " + str(arg_start_dist) + "\n\n")
+    trajectory = Trajectory(json_filepath="/rb_ws/src/buggy/paths/" + traj)
 
-    trajectory = Trajectory(json_filepath="/rb_ws/src/buggy/paths/" + arg_path)
     # calculate starting index
     start_index = trajectory.get_index_from_distance(start_dist)
 
     # Add Controllers Here
-    ctrller = None
-    if (arg_ctrl == "stanley"):
-        ctrller = StanleyController(buggy_name, start_index)
-    elif (arg_ctrl == "pure_pursuit"):
-        ctrller = PurePursuitController(buggy_name, start_index)
-    elif (arg_ctrl == "mpc"):
-        ctrller = ModelPredictiveController(buggy_name, start_index)
-    if (ctrller == None):
+    local_ctrller = None
+    nominal_ctrller = None
+    if (ctrl == "stanley"):
+        local_ctrller = StanleyController(self_name + "_local", start_index)
+        nominal_ctrller = StanleyController(self_name + "_nominal", start_index)
+    elif (ctrl == "pure_pursuit"):
+        local_ctrller = PurePursuitController(self_name + "_local", start_index)
+        nominal_ctrller = PurePursuitController(self_name + "_nominal", start_index)
+    elif (ctrl == "mpc"):
+        local_ctrller = ModelPredictiveController(self_name + "_local", start_index)
+        nominal_ctrller = ModelPredictiveController(self_name + "_nominal", start_index)
+    if (local_ctrller == None):
         raise Exception("Invalid Controller Argument")
     
     auton_system = AutonSystem(
         trajectory,
-        ctrller,
+        local_ctrller,
+        nominal_ctrller,
         BrakeController(),
-        buggy_name,
-        is_sim
+        self_name,
+        other_name
     )
+
     while not rospy.is_shutdown():
         rospy.spin()

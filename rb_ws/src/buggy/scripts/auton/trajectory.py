@@ -24,7 +24,7 @@ class Trajectory:
         """
         Args:
             json_filepath (String): file path to the path json file (begins at /rb_ws)
-            positions [[float, float]]: reference trajectory
+            positions [[float, float]]: reference trajectory in world coordinates
             current_speed (float): current speed of the buggy
 
         Returns:
@@ -53,18 +53,18 @@ class Trajectory:
                 # Convert to world coordinates
                 x, y = World.gps_to_world(lat, lon)
                 pos.append([x, y])
-        
-            num_indices = len(pos)
         else:
             pos = positions
 
         
+        num_indices = len(pos)
         if interpolator == "Akima":
             self.positions = np.array(pos)
             self.indices = np.arange(num_indices)
             self.interpolation = Akima1DInterpolator(self.indices, self.positions)
-        else:
-            temp_traj = Trajectory(json_filepath, interpolator="Akima")
+            self.interpolation.extrapolate = True
+        elif interpolator == "CubicSpline":
+            temp_traj = Trajectory(positions=pos, interpolator="Akima")
             tot_len = temp_traj.distances[-1]
             interp_dists = np.linspace(0, tot_len, num_indices)
 
@@ -76,7 +76,7 @@ class Trajectory:
             self.positions = np.array(self.positions)
 
             self.interpolation = CubicSpline(self.indices, self.positions)
-        self.interpolation.extrapolate = True
+            self.interpolation.extrapolate = True
 
         # Calculate the distances along the trajectory
         dt = 0.01

@@ -1,6 +1,8 @@
 #!/usr/bin/env python3
 
 import numpy as np
+import scipy
+
 import cv2
 import sys
 from matplotlib import pyplot as plt
@@ -34,7 +36,7 @@ class OccupancyGrid:
         # Y = North
         
         # the original grid, should never change
-        self.sat_img = np.array(cv2.cvtColor(cv2.imread("rb_ws/src/buggy/assets/sat_img_resized.png"), cv2.COLOR_BGR2GRAY), np.uint8)
+        self.sat_img = np.array(cv2.cvtColor(cv2.imread("/rb_ws/src/buggy/assets/sat_img_resized.png"), cv2.COLOR_BGR2GRAY), np.uint8)
 
         # For original sat_img.png
         # 145.77 pixels = 88.62m
@@ -45,13 +47,13 @@ class OccupancyGrid:
             self.grid_og = np.zeros(np.shape(self.sat_img))
             self.grid = np.zeros(np.shape(self.sat_img))
         else:
-            self.grid_og = np.array(cv2.cvtColor(cv2.imread("rb_ws/src/buggy/assets/sat_img_resized.png"), cv2.COLOR_BGR2GRAY), np.uint8)
+            self.grid_og = np.array(cv2.cvtColor(cv2.imread("/rb_ws/src/buggy/assets/sat_img_resized.png"), cv2.COLOR_BGR2GRAY), np.uint8)
             # this grid will vary from call to call since NAND will be plotted in here and removed by reverting it back to grid_og
-            self.grid = np.array(cv2.cvtColor(cv2.imread("rb_ws/src/buggy/assets/cost_grid.png"), cv2.COLOR_BGR2GRAY), np.uint8)
+            self.grid = np.array(cv2.cvtColor(cv2.imread("/rb_ws/src/buggy/assets/cost_grid.png"), cv2.COLOR_BGR2GRAY), np.uint8)
 
         
 
-        correspondence_f = open("rb_ws/src/buggy/assets/landmarks.json")
+        correspondence_f = open("/rb_ws/src/buggy/assets/landmarks.json")
         self.correspondence = json.load(correspondence_f)
         correspondence_f.close()
 
@@ -148,7 +150,7 @@ class OccupancyGrid:
         """Set the grid's cost 
 
         Args:
-            utm_coords (list): list of pixel coordinates to mark (x, y)
+            utm_coords (list): list of utm coordinates to mark (x, y)
                                 [[0,0],
                                  [100, 100],
                                  [125, 400]] as an example
@@ -157,14 +159,14 @@ class OccupancyGrid:
         utm_coords = np.array(utm_coords)
         utm_coords = utm_coords[:, 0:2]
         pxl_coords = self.get_pixel_from_utm(utm_coords).astype(int)
-        print(pxl_coords)
+
         self.grid[pxl_coords[:, 0], pxl_coords[:, 1]] = cost
 
     def set_cost_persistent(self, utm_coords: list, cost: list):
         """Set the grid's cost but further calls to reset_grid() will not remove these points
 
         Args:
-            utm_coords (list): list of pixel coordinates to mark (x, y)
+            utm_coords (list): list of utm coordinates to mark (x, y)
                                 [[0,0],
                                  [100, 100],
                                  [125, 400]] as an example
@@ -181,19 +183,18 @@ class OccupancyGrid:
         """
         self.grid = np.copy(self.grid_og)
 
-    def get_utm_cost(self, utm_coords: list):
+    def get_utm_cost(self, coords):
         """Get the cost of the trajectory passed in as utm_coordinates
 
         Args:
-            utm_coords (list): coordinates in utm
-                                [[0,0],
+            coords (np array): coordinates in utm
+                                 [[0,0],
                                  [100, 100],
                                  [125, 400]] as an example
 
         Returns:
             normalized cost: sum of all the pixels / number of pixels crossed
         """
-        coords = np.array(utm_coords)
         utm_coords = coords[:, 0:2]
         pxl_coords = self.get_pixel_from_utm(utm_coords).astype(int)
         filtered_pxl_coords = np.unique(pxl_coords[:, 0:2], axis=0)
