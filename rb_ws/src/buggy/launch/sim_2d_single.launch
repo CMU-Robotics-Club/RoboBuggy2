@@ -3,7 +3,7 @@
 <!-- <arg name="name" value="INS" /> -->
 
 <launch>
-    <arg name="autonsystem_args" default="--controller stanley --dist 0.0 --traj buggycourse_safe_1.json --self_name SC" />
+    <arg name="autonsystem_args" default="--controller mpc --dist 0.0 --traj buggycourse_safe_1.json --self_name SC" />
     <arg name="starting_pose"    default="Hill1_SC" />
     <arg name="velocity"         default="15.0" />
     <arg name="buggy_name"       default="SC" />
@@ -12,8 +12,9 @@
 
     <node name="sim_2d_engine" pkg="buggy" type="engine.py" output="screen"
         args="$(arg starting_pose) $(arg velocity) $(arg buggy_name)"/>
-    <node name="vel_updater" pkg="buggy" type="velocity_updater.py"
-        output="screen" args="$(arg velocity) $(arg buggy_name)"/>
+
+    <!-- <node name="vel_updater" pkg="buggy" type="velocity_updater.py"
+        output="screen" args="$(arg velocity) $(arg buggy_name)"/> -->
         
     <node name="auton_system" pkg="buggy" type="autonsystem.py" output="screen" 
         args="$(arg autonsystem_args)"/>
