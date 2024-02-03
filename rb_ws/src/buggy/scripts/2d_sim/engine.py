@@ -137,23 +137,16 @@ class Simulator:
             velocity = self.velocity
             steering_angle = self.steering_angle
 
-        # Calculate new position
-        if steering_angle == 0.0:
-            # Straight
-            e_utm_new = e_utm + (velocity / self.rate) * np.cos(np.deg2rad(heading))
-            n_utm_new = n_utm + (velocity / self.rate) * np.sin(np.deg2rad(heading))
-            heading_new = heading
-        else:
-            # steering radius
-            radius = self.get_steering_arc()
+        h = 1/self.rate
+        state = np.array([e_utm, n_utm, heading, steering_angle])
+        k1 = self.dynamics(state, velocity)
+        k2 = self.dynamics(state + h/2 * k1, velocity)
+        k3 = self.dynamics(state + h/2 * k2, velocity)
+        k4 = self.dynamics(state + h/2 * k3, velocity)
 
-            distance = velocity / self.rate
+        final_state = state + h/6 * (k1 + 2 * k2 + 2 * k3 + k4)
 
-            delta_heading = distance / radius
-            heading_new = heading + np.rad2deg(delta_heading) / 2
-            e_utm_new = e_utm + (velocity / self.rate) * np.cos(np.deg2rad(heading_new))
-            n_utm_new = n_utm + (velocity / self.rate) * np.sin(np.deg2rad(heading_new))
-            heading_new = heading_new + np.rad2deg(delta_heading) / 2
+        e_utm_new, n_utm_new, heading_new, _ = final_state
 
         with self.lock:
             self.e_utm = e_utm_new
