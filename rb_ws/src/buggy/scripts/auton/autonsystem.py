@@ -20,11 +20,9 @@ from model_predictive_controller import ModelPredictiveController
 # from model_predictive_interpolation import ModelPredictiveController
 from path_planner import PathPlanner
 from pose import Pose
-import argparse
-import copy
-import cProfile
 
-import time
+import argparse
+import cProfile
 
 class AutonSystem:
     """
@@ -40,14 +38,21 @@ class AutonSystem:
 
     global_trajectory: Trajectory = None
     local_controller: Controller = None
-    nominal_controller: Controller = None
     brake_controller: BrakeController = None
     lock = None
 
     steer_publisher = None
     ticks = 0
 
-    def __init__(self, global_trajectory, local_controller, nominal_controller, brake_controller, self_name, other_name) -> None:
+    def __init__(self,
+            global_trajectory, 
+            local_controller,
+            brake_controller, 
+            self_name, 
+            other_name,
+            profile) -> None:
+        
+
         self.global_trajectory = global_trajectory
 
         # local trajectory is initialized as global trajectory. If there is no other buggy,
@@ -55,7 +60,6 @@ class AutonSystem:
 
         self.has_other_buggy = not other_name is None
         self.cur_traj = global_trajectory
-        self.nominal_controller = nominal_controller
         self.local_controller = local_controller
         self.brake_controller = brake_controller
 
@@ -97,6 +101,8 @@ class AutonSystem:
 
         self.auton_rate = 100
         self.rosrate = rospy.Rate(self.auton_rate)
+
+        self.profile = profile
         self.tick_caller()
 
     def update_self_odom(self, msg):
@@ -110,9 +116,6 @@ class AutonSystem:
     def update_other_steering_angle(self, msg):
         with self.lock:
             self.other_steering = msg.data
-
-    def x(self):
-        self.planner_tick()
 
     def tick_caller(self):
         while ((not rospy.is_shutdown()) and
@@ -133,23 +136,28 @@ class AutonSystem:
         with self.lock:
             e, _ = self.get_world_pose_and_speed(self.self_odom_msg)
 
-        while (not rospy.is_shutdown()): # start the actual control loop
+        while (not rospy.is_shutdown()):
+            # start the actual control loop
             # run the planner every 10 ticks
             # thr main cycle runs at 100hz, the planner runs at 10hz, but looks 1 second ahead
-            if not self.other_odom_msg is None and self.ticks % 5 == 0:         
-                # for debugging obstacle avoidance
+
+            if not self.other_odom_msg is None and self.ticks % 10 == 0:         
+
+                # for debugging, publish distance to other buggy
                 with self.lock:
-                    self_pose, self_speed = self.get_world_pose_and_speed(self.self_odom_msg)
-                    other_pose, other_speed = self.get_world_pose_and_speed(self.other_odom_msg)
+                    self_pose, _ = self.get_world_pose_and_speed(self.self_odom_msg)
+                    other_pose, _ = self.get_world_pose_and_speed(self.other_odom_msg)
                     distance = (self_pose.x - other_pose.x) ** 2 + (self_pose.y - other_pose.y) ** 2
                     distance = np.sqrt(distance)
                     self.distance_publisher.publish(Float64(distance))
 
-                cProfile.runctx('self.x()', globals(), locals(), sort="cumtime")
-                # reset current index of local controller, since local trajectory is updated
-            else:
-                self.local_controller_tick()
-
+                # profiling
+                if self.profile:
+                    cProfile.runctx('self.planner_tick()', globals(), locals(), sort="cumtime")
+                else:
+                    self.planner_tick()
+            
+            self.local_controller_tick()
             self.ticks += 1
             self.rosrate.sleep() 
 
@@ -180,40 +188,49 @@ class AutonSystem:
         steering_angle_deg = np.rad2deg(steering_angle)
         self.steer_publisher.publish(Float64(steering_angle_deg))
 
-    def nominal_controller_tick(self):
-        with self.lock:
-            self_pose, self_speed = self.get_world_pose_and_speed(self.self_odom_msg)
-
-        # Compute control output from global static trajectory
-        steering_angle = self.nominal_controller.compute_control(
-            self_pose, self.global_trajectory, self_speed)
-        steering_angle_deg = np.rad2deg(steering_angle)
-        return float(steering_angle_deg)
-
     def planner_tick(self):
         with self.lock:
-            self_pose, self_speed = self.get_world_pose_and_speed(self.self_odom_msg)
             other_pose, other_speed = self.get_world_pose_and_speed(self.other_odom_msg)
         # update local trajectory via path planner
-        self.cur_traj = self.path_planner.compute_traj(self_pose, 
+        self.cur_traj = self.path_planner.compute_traj(
                                             other_pose,
-                                            self_speed, 
-                                            other_speed, 
-                                            0, 
-                                            self.other_steering)
+                                            other_speed)
 if __name__ == "__main__":
     rospy.init_node("auton_system")
     parser = argparse.ArgumentParser()
-    parser.add_argument("--controller", type=str, help="set controller type", required=True)
-    parser.add_argument("--dist", type=float,
-        help="start buggy at meters distance along the path", required=True)
-    parser.add_argument("--traj", type=str, 
+    parser.add_argument("--controller", 
+        type=str,
+        help="set controller type",
+        required=True)
+    
+    parser.add_argument(
+        "--dist", 
+        type=float,
+        help="start buggy at meters distance along the path",
+        required=True)
+    
+    parser.add_argument(
+        "--traj", 
+        type=str, 
         help="path to the trajectory file, relative to /rb_ws/src/buggy/paths/", 
         required=True)
-    parser.add_argument("--self_name", type=str, help="name of ego-buggy", 
+    
+    parser.add_argument(
+        "--self_name",
+        type=str,
+        help="name of ego-buggy", 
         required=True)
-    parser.add_argument("--other_name", type=str, help="name of other buggy, if left unspecified, the autonsystem assumes it is the only buggy on the course",         
+    
+    parser.add_argument(
+        "--other_name", 
+        type=str,
+        help="name of other buggy, if left unspecified, the autonsystem assumes it is the only buggy on the course",         
         required=False)
+    
+    parser.add_argument(
+        "--profile",
+        action='store_true',
+        help="turn on profiling for the path planner")
     
     args, _ = parser.parse_known_args()
     ctrl = args.controller
@@ -221,6 +238,7 @@ if __name__ == "__main__":
     traj = args.traj
     self_name = args.self_name
     other_name = args.other_name
+    profile = args.profile
 
     print("\n\nStarting Controller: " + str(ctrl) + "\n\n")
     print("\n\nUsing path: /rb_ws/src/buggy/paths/" + str(traj) + "\n\n")
@@ -233,28 +251,31 @@ if __name__ == "__main__":
 
     # Add Controllers Here
     local_ctrller = None
-    nominal_ctrller = None
     if (ctrl == "stanley"):
-        local_ctrller = StanleyController(self_name + "_local", start_index)
-        nominal_ctrller = StanleyController(self_name + "_nominal", start_index)
+        local_ctrller = StanleyController(
+            self_name, 
+            start_index=start_index)
+        
     elif (ctrl == "pure_pursuit"):
-        local_ctrller = PurePursuitController(self_name + "_local", start_index)
-        nominal_ctrller = PurePursuitController(self_name + "_nominal", start_index)
+        local_ctrller = PurePursuitController(
+            self_name, 
+            start_index=start_index)
+        
     elif (ctrl == "mpc"):
-        print(start_index)
-        print(self_name + "local")
-        local_ctrller = ModelPredictiveController(self_name + "_local")
-        nominal_ctrller = ModelPredictiveController(self_name + "_nominal")
+        local_ctrller = ModelPredictiveController(
+            self_name, 
+            start_index=start_index)
+
     if (local_ctrller == None):
         raise Exception("Invalid Controller Argument")
     
     auton_system = AutonSystem(
         trajectory,
         local_ctrller,
-        nominal_ctrller,
         BrakeController(),
         self_name,
-        other_name
+        other_name,
+        profile
     )
 
     while not rospy.is_shutdown():

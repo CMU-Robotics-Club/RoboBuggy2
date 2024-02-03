@@ -284,6 +284,14 @@ class Trajectory:
         return np.stack((x, y, theta, np.arctan(wheelbase * curvature)), axis=-1)
     
     def get_unit_normal_by_index(self, index):
+        """Gets the index of the closest point on the trajectory to the given point
+
+        Args:
+            index: Nx1 numpy array: indexes along trajectory
+        Returns:
+            Nx2 numpy array: unit normal of the trajectory at index
+        """
+
         derivative = self.interpolation(index, nu=1)
         unit_derivative = derivative / np.linalg.norm(derivative, axis=1)[:, None]
 

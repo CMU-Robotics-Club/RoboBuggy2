@@ -16,21 +16,22 @@ import copy
 LOOKAHEAD_TIME = 2.0 #s
 RESOLUTION = 30 #samples/s
 PASSING_OFFSET = 2 #m
-NOMINAL_STEERING_ERR_GAIN = 0.001
-MAX_STEERING_ANGLE = 20
-OTHER_BUGGY_COST = 1
-other_steering_angle = 0 # TODO: update this variable with NAND steering angle topic
+# in meters, the number of meters behind NAND before we start morphing the trajectory
+REAR_MARGIN = 10
+
+# in meters, the number of meters in front of NAND, 
+# before the morphed trajectory rejoins the nominal trajectory
+# WARNING: set this value to be greater than 10m/s * lookahead time (10 m/s is the upper limit
+# of NAND speed) Failure to do so can result violent u-turns in the new trajectory.
+
+FRONT_MARGIN = 30
 
 class PathPlanner():
     def __init__(self, nominal_traj) -> None:
         self.occupancy_grid = OccupancyGrid()
+
+        # TODO: update with NAND wheelbase
         self.path_projector = Projector(1.3)
-
-        # in degrees
-        self.candidate_steering_angles = np.linspace(-5, 5, num=20)
-
-        # range of possible change in steering angle of other buggy
-        self.other_steering_angles = np.linspace(-1, 1, num=2)
 
         self.debug_passing_traj_publisher = rospy.Publisher(
             "/auton/debug/passing_traj", NavSatFix, queue_size=1000
@@ -47,16 +48,13 @@ class PathPlanner():
         self.last_cmd = 0
         self.nominal_traj = nominal_traj
 
-    def compute_steering_angle_max_estimate(self, velocity):
-        return np.min(MAX_STEERING_ANGLE / velocity)
+        # TODO: estimate this value based on the curvature of NAND's recent positions
+        self.other_steering_angle = 0 
 
     def compute_traj(
-        self, current_pose: Pose, 
+        self,
         other_pose: Pose, #Currently NAND's location -- To be Changed
-        current_speed: float,
-        other_speed: float,
-        nominal_steering_angle: float,
-        other_steering_angle: float):
+        other_speed: float):
 
         # draw trajectory, such that the section of the
         # trajectory near NAND is replace by a new segment:
@@ -82,7 +80,7 @@ class PathPlanner():
         # TODO: put other buggy command
         other_future_poses = self.path_projector.project(
             other_pose,
-            0, 
+            self.other_steering_angle, 
             other_speed, 
             LOOKAHEAD_TIME, 
             RESOLUTION)
@@ -107,10 +105,8 @@ class PathPlanner():
         passing_targets = np.vstack((passing_targets, 
             other_future_poses + PASSING_OFFSET * future_pose_unit_normal))
         
-        
         pre_slice = self.nominal_traj.positions[:int(new_segment_start_idx), :]
         post_slice = self.nominal_traj.positions[int(new_segment_end_idx):, :]
-
         new_path = np.vstack((pre_slice, passing_targets, post_slice))
 
         # publish passing targets for debugging
@@ -121,6 +117,7 @@ class PathPlanner():
             reference_navsat.longitude = ref_gps[1]
             self.debug_passing_traj_publisher.publish(reference_navsat)
 
+        # for debugging:
         # publish the first and last point of the part of the original trajectory 
         # that got spliced out
         reference_navsat = NavSatFix()
@@ -137,38 +134,3 @@ class PathPlanner():
         
         # generate new path
         return Trajectory(json_filepath=None, positions=new_path)
-    
-        # for i in range(len(best_traj)):
-        #     reference_navsat = NavSatFix()
-        #     ref_gps = World.world_to_gps(*best_traj[i])
-        #     reference_navsat.latitude = ref_gps[0]
-        #     reference_navsat.longitude = ref_gps[1]
-        #     self.debug_local_traj_publisher.publish(reference_navsat)
-
-        # for i in range(len(side_padding_l)):
-        #     reference_navsat = NavSatFix()
-        #     ref_gps = World.utm_to_gps(*side_padding_l[i])
-        #     reference_navsat.latitude = ref_gps[0]
-        #     reference_navsat.longitude = ref_gps[1]
-        #     self.debug_local_traj_publisher.publish(reference_navsat)
-
-        # for i in range(len(side_padding_r)):
-        #     reference_navsat = NavSatFix()
-        #     ref_gps = World.utm_to_gps(*side_padding_r[i])
-        #     reference_navsat.latitude = ref_gps[0]
-        #     reference_navsat.longitude = ref_gps[1]
-        #     self.debug_local_traj_publisher.publish(reference_navsat)
-
-        # for i in range(len(other_future_poses)):
-        #     reference_navsat = NavSatFix()
-        #     ref_gps = World.utm_to_gps(*other_future_poses[i])
-        #     reference_navsat.latitude = ref_gps[0]
-        #     reference_navsat.longitude = ref_gps[1]
-        #     self.debug_local_traj_publisher.publish(reference_navsat)
-
-        # self.occupancy_grid.reset_grid()
-
-        # self.last_cmd = best_cmd
-
-        # return best_cmd
-
