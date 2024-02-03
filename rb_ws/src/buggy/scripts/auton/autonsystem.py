@@ -15,10 +15,9 @@ from world import World
 from controller import Controller
 from pure_pursuit_controller import PurePursuitController
 from stanley_controller import StanleyController
-from model_predictive_controller import ModelPredictiveController
 from brake_controller import BrakeController
-# from model_predictive_controller import ModelPredictiveController
-from model_predictive_interpolation import ModelPredictiveController
+from model_predictive_controller import ModelPredictiveController
+# from model_predictive_interpolation import ModelPredictiveController
 from path_planner import PathPlanner
 from pose import Pose
 import argparse
@@ -55,12 +54,12 @@ class AutonSystem:
         # the local trajectory is never updated.
 
         self.has_other_buggy = not other_name is None
-        self.local_trajectory = global_trajectory
+        self.cur_traj = global_trajectory
         self.nominal_controller = nominal_controller
         self.local_controller = local_controller
         self.brake_controller = brake_controller
 
-        self.path_planner = PathPlanner()
+        self.path_planner = PathPlanner(global_trajectory)
         self.other_steering = 0
 
         self.lock = Lock()
@@ -96,7 +95,7 @@ class AutonSystem:
         )
 
 
-        self.auton_rate = 20
+        self.auton_rate = 100
         self.rosrate = rospy.Rate(self.auton_rate)
         self.tick_caller()
 
@@ -112,8 +111,8 @@ class AutonSystem:
         with self.lock:
             self.other_steering = msg.data
 
-    def x(self, nominal_cmd):
-        self.planner_tick(nominal_cmd)
+    def x(self):
+        self.planner_tick()
 
     def tick_caller(self):
         while ((not rospy.is_shutdown()) and
@@ -132,15 +131,12 @@ class AutonSystem:
         # initialize global trajectory index
 
         with self.lock:
-            self_pose, _ = self.get_world_pose_and_speed(self.self_odom_msg)
-        self.current_global_traj_index = self.global_trajectory.get_closest_index_on_path(self_pose.x, self_pose.y, 0)
-
+            e, _ = self.get_world_pose_and_speed(self.self_odom_msg)
 
         while (not rospy.is_shutdown()): # start the actual control loop
             # run the planner every 10 ticks
             # thr main cycle runs at 100hz, the planner runs at 10hz, but looks 1 second ahead
-
-            if not self.other_odom_msg is None:         
+            if not self.other_odom_msg is None and self.ticks % 5 == 0:         
                 # for debugging obstacle avoidance
                 with self.lock:
                     self_pose, self_speed = self.get_world_pose_and_speed(self.self_odom_msg)
@@ -149,16 +145,13 @@ class AutonSystem:
                     distance = np.sqrt(distance)
                     self.distance_publisher.publish(Float64(distance))
 
-
-                nominal_cmd = self.nominal_controller_tick()
-                cProfile.runctx('self.x(nominal_cmd)', globals(), locals(), sort="cumtime")
+                cProfile.runctx('self.x()', globals(), locals(), sort="cumtime")
                 # reset current index of local controller, since local trajectory is updated
-                self.local_controller.current_traj_index = 0
             else:
                 self.local_controller_tick()
 
             self.ticks += 1
-            # self.rosrate.sleep() 
+            self.rosrate.sleep() 
 
         
     def get_world_pose_and_speed(self, msg):
@@ -183,7 +176,7 @@ class AutonSystem:
 
         # Compute control output
         steering_angle = self.local_controller.compute_control(
-            self_pose, self.local_trajectory, self_speed)
+            self_pose, self.cur_traj, self_speed)
         steering_angle_deg = np.rad2deg(steering_angle)
         self.steer_publisher.publish(Float64(steering_angle_deg))
 
@@ -197,19 +190,17 @@ class AutonSystem:
         steering_angle_deg = np.rad2deg(steering_angle)
         return float(steering_angle_deg)
 
-    def planner_tick(self, nominal_steering_angle):
+    def planner_tick(self):
         with self.lock:
             self_pose, self_speed = self.get_world_pose_and_speed(self.self_odom_msg)
             other_pose, other_speed = self.get_world_pose_and_speed(self.other_odom_msg)
         # update local trajectory via path planner
-        cmd = self.path_planner.compute_traj(self_pose, 
+        self.cur_traj = self.path_planner.compute_traj(self_pose, 
                                             other_pose,
                                             self_speed, 
                                             other_speed, 
-                                            nominal_steering_angle, 
+                                            0, 
                                             self.other_steering)
-        self.steer_publisher.publish(Float64(cmd))
-
 if __name__ == "__main__":
     rospy.init_node("auton_system")
     parser = argparse.ArgumentParser()
@@ -250,8 +241,10 @@ if __name__ == "__main__":
         local_ctrller = PurePursuitController(self_name + "_local", start_index)
         nominal_ctrller = PurePursuitController(self_name + "_nominal", start_index)
     elif (ctrl == "mpc"):
-        local_ctrller = ModelPredictiveController(self_name + "_local", start_index)
-        nominal_ctrller = ModelPredictiveController(self_name + "_nominal", start_index)
+        print(start_index)
+        print(self_name + "local")
+        local_ctrller = ModelPredictiveController(self_name + "_local")
+        nominal_ctrller = ModelPredictiveController(self_name + "_nominal")
     if (local_ctrller == None):
         raise Exception("Invalid Controller Argument")
     
