@@ -137,8 +137,9 @@ class Simulator:
             velocity = self.velocity
             steering_angle = self.steering_angle
 
+        # RK4 to calculate next position
         h = 1/self.rate
-        state = np.array([e_utm, n_utm, heading, steering_angle])
+        state = np.array([e_utm, n_utm, np.deg2rad(heading), np.deg2rad(steering_angle)])
         k1 = self.dynamics(state, velocity)
         k2 = self.dynamics(state + h/2 * k1, velocity)
         k3 = self.dynamics(state + h/2 * k2, velocity)
@@ -147,6 +148,7 @@ class Simulator:
         final_state = state + h/6 * (k1 + 2 * k2 + 2 * k3 + k4)
 
         e_utm_new, n_utm_new, heading_new, _ = final_state
+        heading_new = np.rad2deg(heading_new)
 
         with self.lock:
             self.e_utm = e_utm_new
