@@ -1,7 +1,8 @@
-import numpy as np
 import json
-import matplotlib.pyplot as plt
 import uuid
+import matplotlib.pyplot as plt
+import numpy as np
+
 from scipy.interpolate import Akima1DInterpolator, CubicSpline
 
 from world import World
@@ -56,9 +57,9 @@ class Trajectory:
                 # Convert to world coordinates
                 x, y = World.gps_to_world(lat, lon)
                 positions.append([x, y])
-            
+
             positions = np.array(positions)
-        
+
         num_indices = positions.shape[0]
 
         if interpolator == "Akima":
@@ -86,7 +87,7 @@ class Trajectory:
         ts = np.arange(len(self.positions) - 1, step=dt)  # times corresponding to each position (?)
         drdt = self.interpolation(
             ts, nu=1
-        )  # Calculate derivatives of interpolated path wrt indices 
+        )  # Calculate derivatives of interpolated path wrt indices
         ds = np.sqrt(drdt[:, 0] ** 2 + drdt[:, 1] ** 2) * dt # distances to each interpolated point
         s = np.cumsum(np.hstack([[0], ds[:-1]]))
         self.distances = s
@@ -113,7 +114,7 @@ class Trajectory:
         # theta = np.interp(index, self.indices, self.positions[:, 2])
         dxdt, dydt = self.interpolation(index, nu=1).reshape((-1, 2)).T
         theta = np.arctan2(dydt, dxdt)
-        
+
         return theta
 
     def get_heading_by_distance(self, distance):
@@ -282,7 +283,7 @@ class Trajectory:
         theta = np.arctan2(dydt, dxdt)
 
         return np.stack((x, y, theta, np.arctan(wheelbase * curvature)), axis=-1)
-    
+
     def get_unit_normal_by_index(self, index):
         """Gets the index of the closest point on the trajectory to the given point
 
@@ -298,7 +299,7 @@ class Trajectory:
         # (x, y), rotated by 90 deg ccw = (-y, x)
         unit_normal = np.vstack((-unit_derivative[:, 1], unit_derivative[:, 0])).T
         return unit_normal
-        
+
     def get_closest_index_on_path(
         self, x, y, start_index=0, end_index=None, subsample_resolution=10000
     ):
@@ -341,8 +342,8 @@ class Trajectory:
 
         # Return the rational index of the closest point
         return (
-            np.argmin(distances) / subsample_resolution * (end_index - start_index) 
-            + start_index 
+            np.argmin(distances) / subsample_resolution * (end_index - start_index)
+            + start_index
         )
 
 

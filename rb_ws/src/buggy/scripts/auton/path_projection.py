@@ -1,6 +1,6 @@
+# import time
 import numpy as np
 from pose import Pose
-import time
 
 class Projector:
     """
@@ -9,10 +9,10 @@ class Projector:
     def __init__(self, wheelbase: float):
         self.wheelbase = wheelbase
 
-    
+
     def project(self, pose: Pose, command: float, v: float, delta_t: float, resolution: int) -> list:
         """
-        Project buggy motion analytically. Assumes constant velocity and turning angle for the duration. 
+        Project buggy motion analytically. Assumes constant velocity and turning angle for the duration.
 
         Args:
             pose (Pose): Pose containing utm_e, utm_n, and heading, in UTM coords and radians
@@ -22,10 +22,12 @@ class Projector:
             resolution (int): Number of points to output per second
 
         Returns:
-            list: 2D List with shape ((time * resolutions), (2)), where the ith row is [utm_e, utm_n] at ith prediction
+            list: 2D List with shape ((time * resolutions), (2)),
+            where the ith row is [utm_e, utm_n] at ith prediction
         """
 
         # t_0 = time.perf_counter_ns()
+
         dtheta = v * np.tan(np.deg2rad(command)) / self.wheelbase
         ts = 1/resolution
         t = np.arange(0, delta_t, ts)
@@ -33,9 +35,9 @@ class Projector:
         theta = t * dtheta + theta_0
 
         if dtheta != 0:
-            # for each t, 
+            # for each t,
             # do the integral of cos(theta(t)) over t for x, between t=0 and t=delta_t
-            # do integral of sin(theta(t)) for y. 
+            # do integral of sin(theta(t)) for y.
             # theta(t) = theta_0 + delta_t * dtheta
             v_over_dtheta = v / dtheta
             x = pose.x + v_over_dtheta * (np.sin(theta) - np.sin(theta_0))
@@ -43,16 +45,16 @@ class Projector:
         else:
             x = pose.x + t * v * np.cos(theta)
             y = pose.y + t * v * np.sin(theta)
-        
-        output = np.vstack((x, y)).T
-        t_1 = time.perf_counter_ns()
 
+        output = np.vstack((x, y)).T
+        # t_1 = time.perf_counter_ns()
         # print("time per point (us):", (t_1 - t_0)/(1000 * resolution * delta_t))
+
         return output
 
     def project_discrete(self, pose: Pose, command: float, v: float, time: float, resolution: int, sim_rate: int) -> list:
         """
-        Project buggy motion discretely, performing kinematics at each sim_ts. Assumes constant velocity and turning angle for the duration. 
+        Project buggy motion discretely, performing kinematics at each sim_ts. Assumes constant velocity and turning angle for the duration.
 
         Args:
             pose (Pose): Pose containing utm_e, utm_n, and heading, in UTM coords and degrees
@@ -84,5 +86,5 @@ class Projector:
             if t >= next_out:
                 output.append((x, y, np.rad2deg(theta)))
                 next_out += ts
-        
+
         return output

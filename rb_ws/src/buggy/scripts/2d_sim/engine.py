@@ -1,14 +1,16 @@
 #! /usr/bin/env python3
+
+import sys
+import threading
+
 import rospy
 from geometry_msgs.msg import Pose, Twist, PoseWithCovariance, TwistWithCovariance
 from std_msgs.msg import Float64
 from sensor_msgs.msg import NavSatFix
 from nav_msgs.msg import Odometry
-import threading
 import numpy as np
 import utm
-import time
-import sys
+
 
 
 class Simulator:
@@ -70,7 +72,7 @@ class Simulator:
         # self.e_utm = utm_coords[0]
         # self.n_utm = utm_coords[1]
 
-        self.e_utm, self.n_utm, self.heading = self.starting_poses[starting_pose]        
+        self.e_utm, self.n_utm, self.heading = self.starting_poses[starting_pose]
         self.velocity = velocity # m/s
 
         self.steering_angle = 0  # degrees
@@ -122,7 +124,7 @@ class Simulator:
             dstate (np.Array): time derivative of state from dynamics
         """
         l = Simulator.WHEELBASE
-        x, y, theta, delta = state
+        _, _, theta, delta = state
 
         return np.array([v * np.cos(theta),
                          v * np.sin(theta),

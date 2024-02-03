@@ -1,29 +1,25 @@
 #!/usr/bin/env python3
-from abc import ABC, abstractmethod
 
 import time
+from threading import Lock
 
 from numba import njit
 
 import numpy as np
 import osqp
-import scipy
 from scipy import sparse
 
 import rospy
-from std_msgs.msg import Float32, Float64, Float64MultiArray, MultiArrayDimension, Bool
-from nav_msgs.msg import Odometry
+from std_msgs.msg import Float64, Float64MultiArray, MultiArrayDimension, Bool
 from sensor_msgs.msg import NavSatFix
 from geometry_msgs.msg import Pose as ROSPose
 from geometry_msgs.msg import Pose2D
-from rospy.numpy_msg import numpy_msg
 
 from pose import Pose
 from trajectory import Trajectory
 from controller import Controller
 from world import World
 
-from threading import Lock
 
 import matplotlib.pyplot as plt
 
@@ -437,7 +433,7 @@ class ModelPredictiveController(Controller):
         #      0  0  0  A2 B2 ... 0    0    0
         #      0  0  0  0  0  ... 0    0    0
         #      0  0  0  0  0  ... AN-1 BN-1 -I]
-        # 
+        #
         # D = [C; X; U]
         # X selects all the states from z
         # U selects all the controls from z
@@ -601,7 +597,7 @@ class ModelPredictiveController(Controller):
         if self.TIME:
             t = time.time()
         results = self.solver.solve()
-        
+
         steer_angle = results.x[self.N_CONTROLS + self.N_STATES - 1]
         solution_trajectory = np.reshape(results.x, (self.MPC_HORIZON, self.N_STATES + self.N_CONTROLS))
         state_trajectory = solution_trajectory[:, self.N_CONTROLS:(self.N_CONTROLS + self.N_STATES)]
@@ -609,9 +605,9 @@ class ModelPredictiveController(Controller):
         print("status", results.info.status, results.info.status_val)
         if not (results.info.status == "solved" or results.info.status == "solved inaccurate"):
             return reference_trajectory
-        
+
         state_trajectory += reference_trajectory
-        steer_rate_trajectory = solution_trajectory[:, :self.N_CONTROLS]
+        # steer_rate_trajectory = solution_trajectory[:, :self.N_CONTROLS]
 
         if self.TIME:
             solve_time = 1000 * (time.time() - t)
@@ -627,7 +623,7 @@ class ModelPredictiveController(Controller):
 
         if self.PLOT:
             # Plot the results
-            fig, [[ax1, ax2], [ax3, ax4]] = plt.subplots(2, 2)
+            _, [[ax1, ax2], [ax3, ax4]] = plt.subplots(2, 2)
 
             # Extract the states
             states = np.zeros((self.MPC_HORIZON, self.N_STATES))

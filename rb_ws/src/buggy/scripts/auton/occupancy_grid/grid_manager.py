@@ -1,15 +1,16 @@
 #!/usr/bin/env python3
 
-import numpy as np
-import scipy
-
-import cv2
 import sys
-from matplotlib import pyplot as plt
+import json
+
+import numpy as np
+# import scipy
+import cv2
+# from matplotlib import pyplot as plt
 import utm
+
 sys.path.append('rb_ws/src/buggy/scripts/auton')
 # from pose import Pose
-import json
 
 """
 ####################################
@@ -29,12 +30,12 @@ Normal Op:
 INIT_WITH_EMPTY_GRID = True
 class OccupancyGrid:
     def __init__(self):
-        
+
         # Grid 0, 0 is NW
         # 1 pixel = 0.5m
         # X = East
         # Y = North
-        
+
         # the original grid, should never change
         self.sat_img = np.array(cv2.cvtColor(cv2.imread("/rb_ws/src/buggy/assets/sat_img_resized.png"), cv2.COLOR_BGR2GRAY), np.uint8)
 
@@ -51,7 +52,7 @@ class OccupancyGrid:
             # this grid will vary from call to call since NAND will be plotted in here and removed by reverting it back to grid_og
             self.grid = np.array(cv2.cvtColor(cv2.imread("/rb_ws/src/buggy/assets/cost_grid.png"), cv2.COLOR_BGR2GRAY), np.uint8)
 
-        
+
 
         correspondence_f = open("/rb_ws/src/buggy/assets/landmarks.json")
         self.correspondence = json.load(correspondence_f)
@@ -70,10 +71,10 @@ class OccupancyGrid:
             sat_img_pixel = self.correspondence[i]["pixel"]
             sat_img_pixel.append(1) # homogenous coordinates
             pts_dst.append(sat_img_pixel)
-        
+
         self.pts_src = np.array(pts_src)
         self.pts_dst = np.array(pts_dst)
-            
+
 
         # REF_LOC_UTM_1 = utm.from_latlon(40.438834, -79.946334)
         # REF_LOC_UTM_1 = [REF_LOC_UTM_1[0], REF_LOC_UTM_1[1], 1]
@@ -88,7 +89,7 @@ class OccupancyGrid:
         # SAT_IMG_LOC_2 = [1043, 1048, 1]
         # SAT_IMG_LOC_3 = [1128, 290, 1]
         # SAT_IMG_LOC_4 = [406, 366, 1]
-    
+
         # pts_src = np.array([REF_LOC_UTM_1, REF_LOC_UTM_2, REF_LOC_UTM_3, REF_LOC_UTM_4])
         # pts_dst = np.array([SAT_IMG_LOC_1, SAT_IMG_LOC_2, SAT_IMG_LOC_3, SAT_IMG_LOC_4])
 
@@ -96,7 +97,7 @@ class OccupancyGrid:
 
         if not np.allclose(status, 1, atol=1e-5):
             raise Exception("Cannot compute homography")
-    
+
     def get_pixel_from_utm(self, utm_coord: np.array):
         """Calculate the pixel coordinates from the utm coordinates
 
@@ -131,7 +132,7 @@ class OccupancyGrid:
         utm_coord_homogenous = np.array([utm_coord[0], utm_coord[1], ones])
         loc =  self.homography @ utm_coord_homogenous
         return np.array([loc[0]/loc[2], loc[1]/loc[2]]).T
-    
+
     def plot_points(self, utm_coords: list):
         """Mark the points on the grid completely BLACK
 
@@ -147,7 +148,7 @@ class OccupancyGrid:
         self.grid[pixel_coords[:, 0], pixel_coords[:, 1]] = 255
 
     def set_cost(self, utm_coords: list, cost: list):
-        """Set the grid's cost 
+        """Set the grid's cost
 
         Args:
             utm_coords (list): list of utm coordinates to mark (x, y)
@@ -201,7 +202,7 @@ class OccupancyGrid:
         num_pixels_passed_thru = len(filtered_pxl_coords)
         total = np.sum(self.grid[filtered_pxl_coords[:, 0], filtered_pxl_coords[:, 1]])
         return total/num_pixels_passed_thru
-    
+
     def get_pxl_cost(self, pxl_coords: list):
         """Get the cost of the trajectory passed in as pxl_coordinates
 

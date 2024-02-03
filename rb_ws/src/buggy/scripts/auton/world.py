@@ -48,7 +48,7 @@ class World:
         y = utm_coords[1] - World.WORLD_NORTH_ZERO
 
         return x, y
-    
+
     @staticmethod
     def utm_to_world_pose(pose: Pose) -> Pose:
         """Converts UTM coordinates to world coordinates
@@ -80,7 +80,7 @@ class World:
         utm_e = pose.x + World.WORLD_EAST_ZERO
         utm_n = pose.y + World.WORLD_NORTH_ZERO
         return Pose(utm_e, utm_n, pose.theta)
-    
+
     @staticmethod
     def world_to_utm_numpy(coords):
         """Converts world coordinates to utm coordinates
@@ -98,7 +98,7 @@ class World:
         utm_offset = np.stack((utm_offset_e, utm_offset_n), axis=1)
 
         return coords + utm_offset
-    
+
     @staticmethod
     def utm_to_world_numpy(coords):
         """Converts utm coordinates to world coordinates
@@ -136,7 +136,7 @@ class World:
         lon = utm_coords[1]
 
         return lat, lon
-    
+
     @staticmethod
     def utm_to_gps(x, y):
         """Converts utm coordinates to GPS coordinates

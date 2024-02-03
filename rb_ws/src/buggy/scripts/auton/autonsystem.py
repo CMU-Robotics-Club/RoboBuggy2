@@ -1,14 +1,16 @@
 #!/usr/bin/env python3
 
+import argparse
+import cProfile
+from threading import Lock
+
 import rospy
-import sys
 
 # ROS Message Imports
 from std_msgs.msg import Float32, Float64, Bool
 from nav_msgs.msg import Odometry
 
 import numpy as np
-from threading import Lock
 
 from trajectory import Trajectory
 from world import World
@@ -20,9 +22,6 @@ from model_predictive_controller import ModelPredictiveController
 # from model_predictive_interpolation import ModelPredictiveController
 from path_planner import PathPlanner
 from pose import Pose
-
-import argparse
-import cProfile
 
 class AutonSystem:
     """
@@ -45,13 +44,13 @@ class AutonSystem:
     ticks = 0
 
     def __init__(self,
-            global_trajectory, 
+            global_trajectory,
             local_controller,
-            brake_controller, 
-            self_name, 
+            brake_controller,
+            self_name,
             other_name,
             profile) -> None:
-        
+
 
         self.global_trajectory = global_trajectory
 
@@ -70,7 +69,7 @@ class AutonSystem:
         self.ticks = 0
         self.self_odom_msg = None
         self.other_odom_msg = None
-        
+
         rospy.Subscriber(self_name + "/nav/odom", Odometry, self.update_self_odom)
         if self.has_other_buggy:
             rospy.Subscriber(other_name + "/nav/odom", Odometry, self.update_other_odom)
@@ -112,17 +111,17 @@ class AutonSystem:
     def update_other_odom(self, msg):
         with self.lock:
             self.other_odom_msg = msg
-    
+
     def update_other_steering_angle(self, msg):
         with self.lock:
             self.other_steering = msg.data
 
     def tick_caller(self):
         while ((not rospy.is_shutdown()) and
-            (self.self_odom_msg == None or 
+            (self.self_odom_msg == None or
             (self.has_other_buggy and self.other_odom_msg == None))): # with no message, we wait
             rospy.sleep(0.001)
-        
+
         # wait for covariance matrix to be better
         while ((not rospy.is_shutdown()) and
                (self.self_odom_msg.pose.covariance[0] ** 2 + self.self_odom_msg.pose.covariance[7] ** 2 > 1**2)):
@@ -141,7 +140,7 @@ class AutonSystem:
             # run the planner every 10 ticks
             # thr main cycle runs at 100hz, the planner runs at 10hz, but looks 1 second ahead
 
-            if not self.other_odom_msg is None and self.ticks % 10 == 0:         
+            if not self.other_odom_msg is None and self.ticks % 10 == 0:
 
                 # for debugging, publish distance to other buggy
                 with self.lock:
@@ -156,12 +155,12 @@ class AutonSystem:
                     cProfile.runctx('self.planner_tick()', globals(), locals(), sort="cumtime")
                 else:
                     self.planner_tick()
-            
+
             self.local_controller_tick()
             self.ticks += 1
-            self.rosrate.sleep() 
+            self.rosrate.sleep()
 
-        
+
     def get_world_pose_and_speed(self, msg):
         current_rospose = msg.pose.pose
         # Check if the pose covariance is a sane value. Publish a warning if insane
@@ -177,7 +176,7 @@ class AutonSystem:
         # Get data from message
         pose_gps = Pose.rospose_to_pose(current_rospose)
         return World.gps_to_world_pose(pose_gps), current_speed
-    
+
     def local_controller_tick(self):
         with self.lock:
             self_pose, self_speed = self.get_world_pose_and_speed(self.self_odom_msg)
@@ -198,40 +197,40 @@ class AutonSystem:
 if __name__ == "__main__":
     rospy.init_node("auton_system")
     parser = argparse.ArgumentParser()
-    parser.add_argument("--controller", 
+    parser.add_argument("--controller",
         type=str,
         help="set controller type",
         required=True)
-    
+
     parser.add_argument(
-        "--dist", 
+        "--dist",
         type=float,
         help="start buggy at meters distance along the path",
         required=True)
-    
+
     parser.add_argument(
-        "--traj", 
-        type=str, 
-        help="path to the trajectory file, relative to /rb_ws/src/buggy/paths/", 
+        "--traj",
+        type=str,
+        help="path to the trajectory file, relative to /rb_ws/src/buggy/paths/",
         required=True)
-    
+
     parser.add_argument(
         "--self_name",
         type=str,
-        help="name of ego-buggy", 
+        help="name of ego-buggy",
         required=True)
-    
+
     parser.add_argument(
-        "--other_name", 
+        "--other_name",
         type=str,
-        help="name of other buggy, if left unspecified, the autonsystem assumes it is the only buggy on the course",         
+        help="name of other buggy, if left unspecified, the autonsystem assumes it is the only buggy on the course",
         required=False)
-    
+
     parser.add_argument(
         "--profile",
         action='store_true',
         help="turn on profiling for the path planner")
-    
+
     args, _ = parser.parse_known_args()
     ctrl = args.controller
     start_dist = args.dist
@@ -253,22 +252,22 @@ if __name__ == "__main__":
     local_ctrller = None
     if (ctrl == "stanley"):
         local_ctrller = StanleyController(
-            self_name, 
+            self_name,
             start_index=start_index)
-        
+
     elif (ctrl == "pure_pursuit"):
         local_ctrller = PurePursuitController(
-            self_name, 
+            self_name,
             start_index=start_index)
-        
+
     elif (ctrl == "mpc"):
         local_ctrller = ModelPredictiveController(
-            self_name, 
+            self_name,
             start_index=start_index)
 
     if (local_ctrller == None):
         raise Exception("Invalid Controller Argument")
-    
+
     auton_system = AutonSystem(
         trajectory,
         local_ctrller,

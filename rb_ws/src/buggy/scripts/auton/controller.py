@@ -1,9 +1,7 @@
 from abc import ABC, abstractmethod
 
-import numpy as np
 from trajectory import Trajectory
 from pose import Pose
-import rospy
 from sensor_msgs.msg import NavSatFix
 from world import World
 
@@ -59,7 +57,7 @@ class Controller(ABC):
             float (desired steering angle)
         """
         raise NotImplementedError
-    
+
     def plot_trajectory(
         self, current_pose: Pose, trajectory: Trajectory, current_speed: float
     ):
