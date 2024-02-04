@@ -138,10 +138,12 @@ class AutonSystem:
         while (not rospy.is_shutdown()):
             # start the actual control loop
             # run the planner every 10 ticks
-            # thr main cycle runs at 100hz, the planner runs at 10hz, but looks 1 second ahead
+            # the main cycle runs at 100hz, the planner runs at 10hz.
+            # See LOOKAHEAD_TIME in path_planner.py for the horizon of the
+            # planner. Make sure it is significantly (at least 2x) longer
+            # than 1 period of the planner when you change the planner frequency.
 
-            if not self.other_odom_msg is None and self.ticks % 10 == 0:
-
+            if not self.other_odom_msg is None and self.ticks == 0:
                 # for debugging, publish distance to other buggy
                 with self.lock:
                     self_pose, _ = self.get_world_pose_and_speed(self.self_odom_msg)
@@ -157,7 +159,12 @@ class AutonSystem:
                     self.planner_tick()
 
             self.local_controller_tick()
+
             self.ticks += 1
+
+            if self.ticks >= 10:
+                self.ticks = 0
+
             self.rosrate.sleep()
 
 
