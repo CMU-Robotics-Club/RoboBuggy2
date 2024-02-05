@@ -1,15 +1,14 @@
 #!/usr/bin/env python3
 
 import sys
+from threading import Lock
+
+import numpy as np
+import rospy
 
 # ROS Message Imports
 from std_msgs.msg import Float32, Float64, Bool
 from nav_msgs.msg import Odometry
-
-import numpy as np
-from threading import Lock
-import rospy
-
 
 from trajectory import Trajectory
 from world import World
@@ -50,7 +49,6 @@ class AutonSystem:
             rospy.Subscriber(buggy_name + "/nav/odom", Odometry, self.update_msg)
 
         rospy.Subscriber(buggy_name + "nav/odom", Odometry, self.update_msg)
-        
         self.covariance_warning_publisher = rospy.Publisher(
             buggy_name + "/debug/is_high_covariance", Bool, queue_size=1
         )
@@ -82,7 +80,7 @@ class AutonSystem:
     def update_msg(self, msg):
         with self.lock:
             self.msg = msg
-        
+
     def tick_caller(self):
         while ((not rospy.is_shutdown()) and (self.msg == None)): # with no message, we wait
             rospy.sleep(0.001)

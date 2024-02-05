@@ -1,13 +1,11 @@
 #! /usr/bin/env python3
-import rospy
 import sys
-from controller_2d import Controller
 import threading
+from controller_2d import Controller
 import tkinter as tk
+import rospy
 
 class VelocityUI:
-       
-
     def __init__(self, init_vel: float, buggy_name: str):
         self.buggy_vel = 0 # So the buggy doesn't start moving without user input
         self.controller = Controller(buggy_name)
@@ -34,7 +32,7 @@ class VelocityUI:
         '''Update velocity of buggy'''
         self.buggy_vel = self.scale.get()/10 # so we can set velocity with 0.1 precision
         self.controller.set_velocity(self.buggy_vel)
-          
+
 if __name__ == "__main__":
     rospy.init_node("velocity_ui")
     init_vel = float(sys.argv[1])

@@ -1,12 +1,12 @@
 #! /usr/bin/env python3
+import sys
+import threading
 from geometry_msgs.msg import Pose, Twist, PoseWithCovariance, TwistWithCovariance
 from std_msgs.msg import Float64
 from sensor_msgs.msg import NavSatFix
 from nav_msgs.msg import Odometry
-import threading
 import numpy as np
 import utm
-import sys
 import rospy
 
 
@@ -35,10 +35,10 @@ class Simulator:
         self.steering_subscriber = rospy.Subscriber(
             buggy_name + "/input/steering", Float64, self.update_steering_angle
         )
-        # To read from velocity 
+        # To read from velocity
         self.velocity_subscriber = rospy.Subscriber(
             buggy_name + "/velocity", Float64, self.update_velocity
-        ) 
+        )
         # to plot on Foxglove (no noise)
         self.navsatfix_publisher = rospy.Publisher(
             buggy_name + "/state/pose_navsat", NavSatFix, queue_size=1
@@ -66,7 +66,7 @@ class Simulator:
         # utm_coords = utm.from_latlon(Simulator.START_LAT, Simulator.START_LONG)
         # self.e_utm = utm_coords[0]
         # self.n_utm = utm_coords[1]
-        self.e_utm, self.n_utm, self.heading = self.starting_poses[starting_pose]        
+        self.e_utm, self.n_utm, self.heading = self.starting_poses[starting_pose]
         self.velocity = velocity # m/s
 
         self.steering_angle = 0  # degrees
@@ -92,7 +92,7 @@ class Simulator:
             source (string): whether incoming data is manual or simulated
         """
         with self.lock:
-            self.velocity = data.data  
+            self.velocity = data.data
     def get_steering_arc(self):
         # Adapted from simulator.py (Joseph Li)
         # calculate the radius of the steering arc
@@ -126,7 +126,7 @@ class Simulator:
 
     def step(self):
         """Complete the step at a certain Hz here. Do physics"""
-        with self.lock: 
+        with self.lock:
             heading = self.heading
             e_utm = self.e_utm
             n_utm = self.n_utm
