@@ -1,20 +1,15 @@
 #! /usr/bin/env python3
-import numpy as np
 import rospy
 import sys
 from controller_2d import Controller
-from std_msgs.msg import Float64
 import threading
-import math
 import tkinter as tk
-import keyboard
 
 class VelocityUI:
        
 
     def __init__(self, init_vel: float, buggy_name: str):
         self.buggy_vel = 0 # So the buggy doesn't start moving without user input
-
         self.controller = Controller(buggy_name)
         self.lock = threading.Lock()
 
@@ -30,9 +25,6 @@ class VelocityUI:
         self.root.bind("<Up>", lambda i: self.scale.set(self.scale.get() + 2))
         self.root.bind("<Down>", lambda d: self.scale.set(self.scale.get() - 2))
 
-
-       
-
     def step(self):
         """sets velocity of buggy to the current scale value 
             called once every tick
@@ -43,11 +35,8 @@ class VelocityUI:
         self.buggy_vel = self.scale.get()/10 # so we can set velocity with 0.1 precision
         self.controller.set_velocity(self.buggy_vel)
           
-
-
 if __name__ == "__main__":
     rospy.init_node("velocity_ui")
-
     init_vel = float(sys.argv[1])
     buggy_name = sys.argv[2]
     vel = VelocityUI(init_vel, buggy_name)
