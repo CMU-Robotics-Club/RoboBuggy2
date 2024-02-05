@@ -1,8 +1,8 @@
 #! /usr/bin/env python3
 import sys
 import threading
-from controller_2d import Controller
 import tkinter as tk
+from controller_2d import Controller
 import rospy
 
 class VelocityUI:

@@ -117,7 +117,7 @@ class Simulator:
             dstate (np.Array): time derivative of state from dynamics
         """
         l = Simulator.WHEELBASE
-        x, y, theta, delta = state
+        theta, delta = state
 
         return np.array([v * np.cos(theta),
                          v * np.sin(theta),
