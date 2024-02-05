@@ -53,7 +53,8 @@ class AutonSystem:
             rospy.Subscriber(buggy_name + "/nav/odom", Odometry, self.update_msg)
 
 
-        rospy.Subscriber("nav/odom", Odometry, self.update_msg)
+        rospy.Subscriber(buggy_name + "nav/odom", Odometry, self.update_msg)
+        
         self.covariance_warning_publisher = rospy.Publisher(
             buggy_name + "/debug/is_high_covariance", Bool, queue_size=1
         )

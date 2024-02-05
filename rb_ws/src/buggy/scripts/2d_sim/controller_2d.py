@@ -51,6 +51,5 @@ if __name__ == "__main__":
     rate = rospy.Rate(5)
     i = 0
     while not rospy.is_shutdown():
-        controller.set_velocity(15)
         rate.sleep()
 

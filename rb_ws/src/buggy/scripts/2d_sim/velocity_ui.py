@@ -1,13 +1,9 @@
 #! /usr/bin/env python3
-import numpy as np
 import rospy
 import sys
 from controller_2d import Controller
-from std_msgs.msg import Float64
 import threading
-import math
 import tkinter as tk
-import keyboard
 
 class VelocityUI:
        
@@ -34,10 +30,13 @@ class VelocityUI:
        
 
     def step(self):
+        """sets velocity of buggy to the current scale value 
+            called once every tick
+        """
         self.root.update_idletasks()
         self.root.update()
         '''Update velocity of buggy'''
-        self.buggy_vel = self.scale.get()/10
+        self.buggy_vel = self.scale.get()/10 # so we can set velocity with 0.1 precision
         self.controller.set_velocity(self.buggy_vel)
           
 
