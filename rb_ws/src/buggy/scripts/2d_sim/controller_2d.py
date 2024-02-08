@@ -1,8 +1,8 @@
 #! /usr/bin/env python3
+import sys
+import threading
 import rospy
 from std_msgs.msg import Float64
-import threading
-import numpy as np
 
 class Controller:
     def __init__(self, buggy_name):
@@ -14,7 +14,6 @@ class Controller:
         self.lock = threading.Lock()
         self.set_steering(0)
         self.set_velocity(0)
-    
     def set_steering(self, angle: float):
         """Set the steering angle and publish to simulator engine
 
@@ -26,9 +25,7 @@ class Controller:
 
         with self.lock:
             self.steering_angle = angle
-        
         self.steering_publisher.publish(msg)
-    
     def set_velocity(self, vel: float):
         """Set the velocity and publish to simulator engine
 
@@ -40,7 +37,6 @@ class Controller:
 
         with self.lock:
             self.velocity = vel
-        
         self.velocity_publisher.publish(msg)
 
 if __name__ == "__main__":

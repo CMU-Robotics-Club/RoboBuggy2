@@ -1,14 +1,13 @@
 #! /usr/bin/env python3
-import rospy
+import sys
+import threading
 from geometry_msgs.msg import Pose, Twist, PoseWithCovariance, TwistWithCovariance
 from std_msgs.msg import Float64
 from sensor_msgs.msg import NavSatFix
 from nav_msgs.msg import Odometry
-import threading
 import numpy as np
 import utm
-import time
-import sys
+import rospy
 
 
 class Simulator:
@@ -20,7 +19,7 @@ class Simulator:
     # Start positions for Outdoor track
     START_LAT = 40.443024364623916
     START_LONG = -79.9409643423245
-    NOISE = True  # Noisy outputs for nav/odom?
+    NOISE = True # Noisy outputs for nav/odom?
 
     def __init__(self, starting_pose, velocity, buggy_name):
         """
@@ -36,10 +35,10 @@ class Simulator:
         self.steering_subscriber = rospy.Subscriber(
             buggy_name + "/input/steering", Float64, self.update_steering_angle
         )
+        # To read from velocity
         self.velocity_subscriber = rospy.Subscriber(
             buggy_name + "/velocity", Float64, self.update_velocity
         )
-
         # to plot on Foxglove (no noise)
         self.navsatfix_publisher = rospy.Publisher(
             buggy_name + "/state/pose_navsat", NavSatFix, queue_size=1
@@ -49,7 +48,6 @@ class Simulator:
         self.navsatfix_noisy_publisher = rospy.Publisher(
             buggy_name + "/state/pose_navsat_noisy", NavSatFix, queue_size=1
         )
-
         # (UTM east, UTM north, HEADING(degs))
         self.starting_poses = {
             "Hill1_SC": (Simulator.UTM_EAST_ZERO + 60, Simulator.UTM_NORTH_ZERO + 150, -110),
@@ -68,8 +66,7 @@ class Simulator:
         # utm_coords = utm.from_latlon(Simulator.START_LAT, Simulator.START_LONG)
         # self.e_utm = utm_coords[0]
         # self.n_utm = utm_coords[1]
-
-        self.e_utm, self.n_utm, self.heading = self.starting_poses[starting_pose]        
+        self.e_utm, self.n_utm, self.heading = self.starting_poses[starting_pose]
         self.velocity = velocity # m/s
 
         self.steering_angle = 0  # degrees
@@ -92,10 +89,10 @@ class Simulator:
 
         Args:
             data (Float64): velocity in m/s
+            source (string): whether incoming data is manual or simulated
         """
         with self.lock:
             self.velocity = data.data
-
     def get_steering_arc(self):
         # Adapted from simulator.py (Joseph Li)
         # calculate the radius of the steering arc
@@ -109,7 +106,6 @@ class Simulator:
             return np.inf
 
         return Simulator.WHEELBASE / np.tan(np.deg2rad(steering_angle))
-
     def dynamics(self, state, v):
         """ Calculates continuous time bicycle dynamics as a function of state and velocity
 
@@ -121,7 +117,7 @@ class Simulator:
             dstate (np.Array): time derivative of state from dynamics
         """
         l = Simulator.WHEELBASE
-        x, y, theta, delta = state
+        _, _, theta, delta = state
 
         return np.array([v * np.cos(theta),
                          v * np.sin(theta),
@@ -136,7 +132,6 @@ class Simulator:
             n_utm = self.n_utm
             velocity = self.velocity
             steering_angle = self.steering_angle
-
         # Calculate new position
         if steering_angle == 0.0:
             # Straight
@@ -146,9 +141,7 @@ class Simulator:
         else:
             # steering radius
             radius = self.get_steering_arc()
-
             distance = velocity / self.rate
-
             delta_heading = distance / radius
             heading_new = heading + np.rad2deg(delta_heading) / 2
             e_utm_new = e_utm + (velocity / self.rate) * np.cos(np.deg2rad(heading_new))
@@ -159,12 +152,10 @@ class Simulator:
             self.e_utm = e_utm_new
             self.n_utm = n_utm_new
             self.heading = heading_new
-
     def publish(self):
         """Publishes the pose the arrow in visualizer should be at"""
         p = Pose()
         time_stamp = rospy.Time.now()
-
         with self.lock:
             p.position.x = self.e_utm
             p.position.y = self.n_utm
@@ -300,3 +291,4 @@ if __name__ == "__main__":
     buggy_name = sys.argv[3]
     sim = Simulator(starting_pose, velocity, buggy_name)
     sim.loop()
+
