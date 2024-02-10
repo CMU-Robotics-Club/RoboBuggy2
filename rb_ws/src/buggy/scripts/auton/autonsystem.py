@@ -74,7 +74,7 @@ class AutonSystem:
         if self.has_other_buggy:
             rospy.Subscriber(other_name + "/nav/odom", Odometry, self.update_other_odom)
             self.other_steer_subscriber = rospy.Subscriber(
-                other_name + "/input/steering", Float64, self.update_other_steering_angle
+                other_name + "/buggy/input/steering", Float64, self.update_other_steering_angle
             )
 
 
@@ -82,10 +82,10 @@ class AutonSystem:
             self_name + "/debug/is_high_covariance", Bool, queue_size=1
         )
         self.steer_publisher = rospy.Publisher(
-            self_name + "/input/steering", Float64, queue_size=1
+            self_name + "/buggy/input/steering", Float64, queue_size=1
         )
         self.brake_publisher = rospy.Publisher(
-            self_name + "/input/brake", Float64, queue_size=1
+            self_name + "/buggy/input/brake", Float64, queue_size=1
         )
         self.brake_debug_publisher = rospy.Publisher(
             self_name + "/auton/debug/brake", Float64, queue_size=1
@@ -126,7 +126,7 @@ class AutonSystem:
         while ((not rospy.is_shutdown()) and
                (self.self_odom_msg.pose.covariance[0] ** 2 + self.self_odom_msg.pose.covariance[7] ** 2 > 1**2)):
             # Covariance larger than one meter. We definitely can't trust the pose
-            rospy.sleep(0.001)
+            rospy.sleep(0.01)
             print("Waiting for Covariance to be better: ",  rospy.get_rostime())
         print("done checking covariance")
 
@@ -159,6 +159,7 @@ class AutonSystem:
                     self.planner_tick()
 
             self.local_controller_tick()
+
 
             self.ticks += 1
 

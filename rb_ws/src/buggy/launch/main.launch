@@ -10,7 +10,7 @@
     </include>
 
     <remap from="/SC/nav/odom" to="/nav/odom"/>
-    <remap from="/input/steering" to="/SC/input/steering"/>
+    <remap from="/buggy/input/steering" to="/SC/buggy/input/steering"/>
 
     <node name="serial_node" pkg="rosserial_python" type="serial_node.py">
         <param name="port" type="string" value="/dev/ttyUSB0"/>
@@ -40,5 +40,6 @@
         <node name="auton_system" pkg="buggy" type="autonsystem.py" output="screen" args="$(arg autonsystem_args)"/>
     </group>
 
+    <node name="steering_echo" pkg="buggy" type="dummy_node.py" output="screen" />
 
 </launch>
