@@ -57,6 +57,7 @@ class Simulator:
         self.starting_poses = {
             "Hill1_NAND": (Simulator.UTM_EAST_ZERO + 0, Simulator.UTM_NORTH_ZERO + 0, -110),
             "Hill1_SC": (Simulator.UTM_EAST_ZERO + 20, Simulator.UTM_NORTH_ZERO + 30, -110),
+            "GHOST_NAND": (589647, 4477143, -150)
         }
 
         # Start position for End of Hill 2
