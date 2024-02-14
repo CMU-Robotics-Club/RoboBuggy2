@@ -76,7 +76,7 @@ class AutonSystem:
                 other_name + "/input/steering", Float64, self.update_other_steering_angle
             )
 
-        rospy.Subscriber(buggy_name + "nav/odom", Odometry, self.update_msg)
+        rospy.Subscriber(self_name + "nav/odom", Odometry, self.update_self_odom)
         self.covariance_warning_publisher = rospy.Publisher(
             self_name + "/debug/is_high_covariance", Bool, queue_size=1
         )
