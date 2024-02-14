@@ -39,7 +39,6 @@ class AutonSystem:
     local_controller: Controller = None
     brake_controller: BrakeController = None
     lock = None
-
     steer_publisher = None
     ticks = 0
 
@@ -77,7 +76,7 @@ class AutonSystem:
                 other_name + "/buggy/input/steering", Float64, self.update_other_steering_angle
             )
 
-
+        rospy.Subscriber(self_name + "nav/odom", Odometry, self.update_self_odom)
         self.covariance_warning_publisher = rospy.Publisher(
             self_name + "/debug/is_high_covariance", Bool, queue_size=1
         )
@@ -121,7 +120,6 @@ class AutonSystem:
             (self.self_odom_msg == None or
             (self.has_other_buggy and self.other_odom_msg == None))): # with no message, we wait
             rospy.sleep(0.001)
-
         # wait for covariance matrix to be better
         while ((not rospy.is_shutdown()) and
                (self.self_odom_msg.pose.covariance[0] ** 2 + self.self_odom_msg.pose.covariance[7] ** 2 > 1**2)):
@@ -159,7 +157,6 @@ class AutonSystem:
                     self.planner_tick()
 
             self.local_controller_tick()
-
 
             self.ticks += 1
 
@@ -275,7 +272,6 @@ if __name__ == "__main__":
 
     if (local_ctrller == None):
         raise Exception("Invalid Controller Argument")
-
     auton_system = AutonSystem(
         trajectory,
         local_ctrller,
