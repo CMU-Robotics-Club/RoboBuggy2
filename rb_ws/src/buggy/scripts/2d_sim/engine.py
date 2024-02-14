@@ -1,13 +1,15 @@
 #! /usr/bin/env python3
+
 import sys
 import threading
+
+import rospy
 from geometry_msgs.msg import Pose, Twist, PoseWithCovariance, TwistWithCovariance
 from std_msgs.msg import Float64
 from sensor_msgs.msg import NavSatFix
 from nav_msgs.msg import Odometry
 import numpy as np
 import utm
-import rospy
 
 
 class Simulator:
@@ -44,14 +46,16 @@ class Simulator:
             buggy_name + "/state/pose_navsat", NavSatFix, queue_size=1
         )
 
-        # to plot on Foxglove (with noise)
-        self.navsatfix_noisy_publisher = rospy.Publisher(
-            buggy_name + "/state/pose_navsat_noisy", NavSatFix, queue_size=1
-        )
+        if Simulator.NOISE:
+            # to plot on Foxglove (with noise)
+            self.navsatfix_noisy_publisher = rospy.Publisher(
+                buggy_name + "/state/pose_navsat_noisy", NavSatFix, queue_size=1
+            )
+
         # (UTM east, UTM north, HEADING(degs))
         self.starting_poses = {
-            "Hill1_SC": (Simulator.UTM_EAST_ZERO + 60, Simulator.UTM_NORTH_ZERO + 150, -110),
-            "Hill1_NAND": (Simulator.UTM_EAST_ZERO + 55, Simulator.UTM_NORTH_ZERO + 165, -125),
+            "Hill1_NAND": (Simulator.UTM_EAST_ZERO + 0, Simulator.UTM_NORTH_ZERO + 0, -110),
+            "Hill1_SC": (Simulator.UTM_EAST_ZERO + 20, Simulator.UTM_NORTH_ZERO + 30, -110),
         }
 
         # Start position for End of Hill 2
@@ -70,8 +74,8 @@ class Simulator:
         self.velocity = velocity # m/s
 
         self.steering_angle = 0  # degrees
-        self.rate = 100  # Hz
-        self.pub_skip = 10  # publish every pub_skip ticks
+        self.rate = 200  # Hz
+        self.pub_skip = 1  # publish every pub_skip ticks
 
         self.lock = threading.Lock()
 
