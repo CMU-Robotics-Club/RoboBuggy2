@@ -39,7 +39,4 @@
         <arg name="autonsystem_args" default="--controller stanley --dist 0.0 --traj $(arg path) --self_name SC" />
         <node name="auton_system" pkg="buggy" type="autonsystem.py" output="screen" args="$(arg autonsystem_args)"/>
     </group>
-
-    <node name="steering_echo" pkg="buggy" type="dummy_node.py" output="screen" />
-
 </launch>
