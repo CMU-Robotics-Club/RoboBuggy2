@@ -526,8 +526,8 @@ class ModelPredictiveController(Controller):
             format="csc",
         )
 
-
-        D = sparse.vstack([self.C + C1, self.X, self.U, C2])
+        D = sparse.vstack([self.C + C1, self.X, self.U])
+        # D = sparse.vstack([self.C + C1, self.X, self.U, C2])
 
         if self.TIME:
             create_mat_time_D = 1000.0 * (time.time() - t)
@@ -542,7 +542,7 @@ class ModelPredictiveController(Controller):
                 np.zeros(self.N_STATES * (self.MPC_HORIZON - 1)),
                 np.tile(self.state_lb, self.MPC_HORIZON) + reference_trajectory.ravel(),
                 np.tile(self.control_lb, self.MPC_HORIZON) + reference_control.ravel(),
-                np.tile(n.T @ p, self.MPC_HORIZON),
+                # np.tile(n.T @ p, self.MPC_HORIZON),
             )
         )
         ub = np.hstack(
@@ -552,7 +552,7 @@ class ModelPredictiveController(Controller):
                 np.zeros(self.N_STATES * (self.MPC_HORIZON - 1)),
                 np.tile(self.state_ub, self.MPC_HORIZON) + reference_trajectory.ravel(),
                 np.tile(self.control_ub, self.MPC_HORIZON) + reference_control.ravel(),
-                np.tile(np.inf, self.MPC_HORIZON),
+                # np.tile(np.inf, self.MPC_HORIZON),
             )
         )
 
