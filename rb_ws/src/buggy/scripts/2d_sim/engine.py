@@ -2,7 +2,6 @@
 
 import sys
 import threading
-
 import rospy
 from geometry_msgs.msg import Pose, Twist, PoseWithCovariance, TwistWithCovariance
 from std_msgs.msg import Float64
@@ -136,21 +135,19 @@ class Simulator:
             n_utm = self.n_utm
             velocity = self.velocity
             steering_angle = self.steering_angle
-        # Calculate new position
-        if steering_angle == 0.0:
-            # Straight
-            e_utm_new = e_utm + (velocity / self.rate) * np.cos(np.deg2rad(heading))
-            n_utm_new = n_utm + (velocity / self.rate) * np.sin(np.deg2rad(heading))
-            heading_new = heading
-        else:
-            # steering radius
-            radius = self.get_steering_arc()
-            distance = velocity / self.rate
-            delta_heading = distance / radius
-            heading_new = heading + np.rad2deg(delta_heading) / 2
-            e_utm_new = e_utm + (velocity / self.rate) * np.cos(np.deg2rad(heading_new))
-            n_utm_new = n_utm + (velocity / self.rate) * np.sin(np.deg2rad(heading_new))
-            heading_new = heading_new + np.rad2deg(delta_heading) / 2
+
+        # RK4 to calculate next position
+        h = 1/self.rate
+        state = np.array([e_utm, n_utm, np.deg2rad(heading), np.deg2rad(steering_angle)])
+        k1 = self.dynamics(state, velocity)
+        k2 = self.dynamics(state + h/2 * k1, velocity)
+        k3 = self.dynamics(state + h/2 * k2, velocity)
+        k4 = self.dynamics(state + h/2 * k3, velocity)
+
+        final_state = state + h/6 * (k1 + 2 * k2 + 2 * k3 + k4)
+
+        e_utm_new, n_utm_new, heading_new, _ = final_state
+        heading_new = np.rad2deg(heading_new)
 
         with self.lock:
             self.e_utm = e_utm_new
