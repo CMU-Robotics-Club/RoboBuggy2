@@ -1,40 +1,48 @@
-<!-- roslaunch buggy main.launch simulation:=true -->
-<!-- roslaunch buggy main.launch simulation:=false -->
-<!-- <arg name="name" value="INS" /> -->
-
 <launch>
-    <arg name="sc_controller"       default="stanley" />
-    <arg name="sc_start_dist"       default="0.0" />
-    <arg name="sc_path"             default="buggycourse_safe_1.json" />
     <arg name="sc_starting_pose"    default="Hill1_SC" />
     <arg name="sc_velocity"         default="15.0" />
-    
+
     <arg name="nand_controller"     default="stanley" />
-    <arg name="nand_start_dist"     default="30.0" />
     <arg name="nand_path"           default="buggycourse_safe_1.json" />
+
     <arg name="nand_starting_pose"  default="Hill1_NAND" />
-    <arg name="nand_velocity"       default="12.0" />
-    
+    <arg name="nand_velocity"       default="10.0" />
+    <arg name="manual_vel"          default="true" />
+    <arg name="auto_vel"            default="false" />
+
+    <group if="$(arg auto_vel)">
+        <!-- Run the auto velocity updater -->
+        <node name="nand_vel_updater" pkg="buggy" type="velocity_updater.py"
+            output="screen" args="$(arg nand_velocity) NAND"/>
+        <node name="sc_vel_updater" pkg="buggy" type="velocity_updater.py"
+            output="screen" args="$(arg sc_velocity) SC"/>
+    </group>
+
+    <group if="$(arg manual_vel)">
+        <!-- Run the manual velocity updater -->
+        <node name="sc_velocity_ui" pkg="buggy" type="velocity_ui.py"
+            output="screen" args="$(arg sc_velocity) SC"/>
+        <node name="nand_velocity_ui" pkg="buggy" type="velocity_ui.py"
+            output="screen" args="$(arg nand_velocity) NAND"/>
+    </group>
+
     <node name="foxglove" pkg="foxglove_bridge" type="foxglove_bridge" />
+
+
+    <node name="nand_sim_2d_engine" pkg="buggy" type="engine.py" output="screen"
+        args="$(arg nand_starting_pose) $(arg nand_velocity) NAND"/>
+
+    <!-- NAND is not aware of SC -->
+    <arg name="nand_autonsystem_args" default="--controller stanley --dist 0.0 --traj buggycourse_safe_1.json --self_name NAND" />
+    <node name="nand_auton_system" pkg="buggy" type="autonsystem.py" output="screen"
+        args="$(arg nand_autonsystem_args)"/>
 
     <node name="sc_sim_2d_engine" pkg="buggy" type="engine.py" output="screen"
         args="$(arg sc_starting_pose) $(arg sc_velocity) SC"/>
-    <node name="sc_vel_updater" pkg="buggy" type="velocity_updater.py"
-        output="screen" args="$(arg sc_velocity) SC"/>
-    <node name="sc_velocity_ui" pkg="buggy" type="velocity_ui.py"
-        output="screen" args="$(arg sc_velocity) SC"/>
 
-    <!-- autonsystem args: controller start_dist path buggy_name is_sim -->
-    <node name="sc_auton_system" pkg="buggy" type="autonsystem.py" output="screen" 
-        args="$(arg sc_controller) $(arg sc_start_dist) $(arg sc_path) SC True"/>
+    <arg name="sc_autonsystem_args" default="--controller stanley --dist 0.0 --traj buggycourse_safe_1.json --self_name SC --other_name NAND" />
+    <node name="sc_auton_system" pkg="buggy" type="autonsystem.py" output="screen"
+        args="$(arg sc_autonsystem_args)"/>
 
-    <node name="nand_sim_2d_engine" pkg="buggy" type="engine.py" output="screen" 
-        args="$(arg nand_starting_pose) $(arg nand_velocity) Nand"/>
-    <node name="nand_vel_updater" pkg="buggy" type="velocity_updater.py"
-        output="screen" args="$(arg nand_velocity) Nand"/>
-    <node name="nand_velocity_ui" pkg="buggy" type="velocity_ui.py"
-        output="screen" args="$(arg nand_velocity) Nand"/>
 
-    <node name="nand_auton_system" pkg="buggy" type="autonsystem.py" output="screen" 
-        args="$(arg nand_controller) $(arg nand_start_dist) $(arg nand_path) Nand True"/>
 </launch>

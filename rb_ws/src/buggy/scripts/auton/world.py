@@ -50,6 +50,75 @@ class World:
         return x, y
 
     @staticmethod
+    def utm_to_world_pose(pose: Pose) -> Pose:
+        """Converts UTM coordinates to world coordinates
+
+        Args:
+            pose (Pose): pose with utm coordinates
+
+        Returns:
+            Pose: pose with world coordinates
+        """
+
+        utm_e = pose.x
+        utm_n = pose.y
+        x = utm_e - World.WORLD_EAST_ZERO
+        y = utm_n - World.WORLD_NORTH_ZERO
+        return Pose(x, y, pose.theta)
+
+    @staticmethod
+    def world_to_utm_pose(pose: Pose) -> Pose:
+        """Converts world coordinates to utm coordinates
+
+        Args:
+            pose (Pose): pose with world coordinates
+
+        Returns:
+            Pose: pose with world coordinates
+        """
+
+        utm_e = pose.x + World.WORLD_EAST_ZERO
+        utm_n = pose.y + World.WORLD_NORTH_ZERO
+        return Pose(utm_e, utm_n, pose.theta)
+
+    @staticmethod
+    def world_to_utm_numpy(coords):
+        """Converts world coordinates to utm coordinates
+
+        Args:
+            coords (numpy.ndarray [size: (N,2)]): array of x, y pairs
+
+        Returns:
+            numpy.ndarray [size: (N,2)]: array of utm_e, utm_n pairs
+        """
+
+        N = np.shape(coords)[0]
+        utm_offset_e = np.ones((N, )) * World.WORLD_EAST_ZERO
+        utm_offset_n = np.ones((N, )) * World.WORLD_NORTH_ZERO
+        utm_offset = np.stack((utm_offset_e, utm_offset_n), axis=1)
+
+        return coords + utm_offset
+
+    @staticmethod
+    def utm_to_world_numpy(coords):
+        """Converts utm coordinates to world coordinates
+
+        Args:
+            coords (numpy.ndarray [size: (N,2)]): array of utm_e, utm_n pairs
+
+        Returns:
+            numpy.ndarray [size: (N,2)]: array of x, y pairs
+        """
+
+        N = np.shape(coords)[0]
+        utm_offset_e = np.ones((N, )) * World.WORLD_EAST_ZERO
+        utm_offset_n = np.ones((N, )) * World.WORLD_NORTH_ZERO
+        utm_offset = np.stack((utm_offset_e, utm_offset_n), axis=1)
+
+        return coords - utm_offset
+
+
+    @staticmethod
     def world_to_gps(x, y):
         """Converts world coordinates to GPS coordinates
 
@@ -62,6 +131,25 @@ class World:
         """
         utm_coords = utm.to_latlon(
             x + World.WORLD_EAST_ZERO, y + World.WORLD_NORTH_ZERO, 17, "T"
+        )
+        lat = utm_coords[0]
+        lon = utm_coords[1]
+
+        return lat, lon
+
+    @staticmethod
+    def utm_to_gps(x, y):
+        """Converts utm coordinates to GPS coordinates
+
+        Args:
+            x (float): x in meters, in utm frame
+            y (float): y in meters, in utm frame
+
+        Returns:
+            tuple: (lat, lon)
+        """
+        utm_coords = utm.to_latlon(
+            x, y, 17, "T"
         )
         lat = utm_coords[0]
         lon = utm_coords[1]
