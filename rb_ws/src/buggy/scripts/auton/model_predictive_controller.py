@@ -378,8 +378,8 @@ class ModelPredictiveController(Controller):
         traj_index = trajectory.get_closest_index_on_path(
             current_pose.x,
             current_pose.y,
-            start_index=self.current_traj_index,
-            end_index=self.current_traj_index + 20,
+            start_index=self.current_traj_index -20,
+            end_index=self.current_traj_index + 50,
             subsample_resolution=1000,
         )
         self.current_traj_index = max(traj_index, self.current_traj_index)
@@ -388,6 +388,9 @@ class ModelPredictiveController(Controller):
 
         if self.DEBUG:
             print("Current traj index: ", self.current_traj_index)
+
+        if self.current_traj_index >= trajectory.get_num_points() - 1:
+            raise Exception("[MPC]: Ran out of path to follow!")
 
         # Get reference trajectory from the current traj index for the next [MPC_HORIZON] seconds
         knot_point_distances = np.linspace(
@@ -607,7 +610,6 @@ class ModelPredictiveController(Controller):
             return reference_trajectory
 
         state_trajectory += reference_trajectory
-        # steer_rate_trajectory = solution_trajectory[:, :self.N_CONTROLS]
 
         if self.TIME:
             solve_time = 1000 * (time.time() - t)

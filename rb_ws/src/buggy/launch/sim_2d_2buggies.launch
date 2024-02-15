@@ -11,7 +11,7 @@
     <arg name="nand_starting_pose"  default="Hill1_NAND" />
     <arg name="nand_velocity"       default="10.0" />
 
-    <arg name="manual_vel"          default="true" />
+    <arg name="manual_vel"          default="false" />
     <arg name="auto_vel"            default="false" />
 
     <group if="$(arg auto_vel)">

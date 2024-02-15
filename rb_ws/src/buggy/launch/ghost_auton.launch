@@ -10,7 +10,7 @@
     </include>
 
     <!-- run a sim with name = NAND at velocity ~= 0 -->
-    <arg name="starting_pose"    default="GHOST_NAND" />
+    <arg name="starting_pose"    default="UC_TO_PURNELL" />
     <arg name="velocity"         default="0.0001" />
     <arg name="buggy_name"       default="NAND" />
 

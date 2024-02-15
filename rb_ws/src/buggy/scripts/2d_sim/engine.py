@@ -35,7 +35,7 @@ class Simulator:
         self.pose_publisher = rospy.Publisher(buggy_name + "/nav/odom", Odometry, queue_size=1)
 
         self.steering_subscriber = rospy.Subscriber(
-            buggy_name + "/input/steering", Float64, self.update_steering_angle
+            buggy_name + "/buggy/input/steering", Float64, self.update_steering_angle
         )
         # To read from velocity
         self.velocity_subscriber = rospy.Subscriber(
@@ -56,7 +56,9 @@ class Simulator:
         self.starting_poses = {
             "Hill1_NAND": (Simulator.UTM_EAST_ZERO + 0, Simulator.UTM_NORTH_ZERO + 0, -110),
             "Hill1_SC": (Simulator.UTM_EAST_ZERO + 20, Simulator.UTM_NORTH_ZERO + 30, -110),
-            "GHOST_NAND": (589647, 4477143, -150)
+            "WESTINGHOUSE": (589647, 4477143, -150),
+            "UC_TO_PURNELL": (589635, 4477468, 160),
+            "UC": (589681, 4477457, 160)
         }
 
         # Start position for End of Hill 2
@@ -206,9 +208,7 @@ class Simulator:
 
         # Odometry for using with autonomous code
         odom = Odometry()
-        odom_noisy = Odometry()
         odom.header.stamp = time_stamp
-        odom_noisy.header.stamp = time_stamp
 
         odom_pose = Pose()
         odom_pose.position.x = long_noisy  # may not be noisy depending on Simulator.NOISE flag
@@ -266,6 +266,7 @@ class Simulator:
             0,
             0.01,
         ]
+
 
         self.pose_publisher.publish(odom)
 
