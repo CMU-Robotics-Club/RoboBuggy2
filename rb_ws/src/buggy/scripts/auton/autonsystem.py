@@ -1,14 +1,14 @@
 #!/usr/bin/env python3
 
-import rospy
 import sys
+from threading import Lock
+
+import numpy as np
+import rospy
 
 # ROS Message Imports
 from std_msgs.msg import Float32, Float64, Bool
 from nav_msgs.msg import Odometry
-
-import numpy as np
-from threading import Lock
 
 from trajectory import Trajectory
 from world import World
@@ -35,24 +35,20 @@ class AutonSystem:
     controller: Controller = None
     brake_controller: BrakeController = None
     lock = None
-
     steer_publisher = None
-    
     ticks = 0
 
     def __init__(self, trajectory, controller, brake_controller, buggy_name, is_sim) -> None:
         self.trajectory = trajectory
         self.controller = controller
         self.brake_controller = brake_controller
-
         self.lock = Lock()
         self.ticks = 0
         self.msg = None
-        
         if (is_sim):
             rospy.Subscriber(buggy_name + "/nav/odom", Odometry, self.update_msg)
 
-
+        rospy.Subscriber(buggy_name + "nav/odom", Odometry, self.update_msg)
         self.covariance_warning_publisher = rospy.Publisher(
             buggy_name + "/debug/is_high_covariance", Bool, queue_size=1
         )
@@ -84,11 +80,10 @@ class AutonSystem:
     def update_msg(self, msg):
         with self.lock:
             self.msg = msg
-        
+
     def tick_caller(self):
         while ((not rospy.is_shutdown()) and (self.msg == None)): # with no message, we wait
             rospy.sleep(0.001)
-        
         # wait for covariance matrix to be better
         while ((not rospy.is_shutdown()) and
                (self.msg.pose.covariance[0] ** 2 + self.msg.pose.covariance[7] ** 2 > 1**2)):
@@ -175,7 +170,6 @@ if __name__ == "__main__":
         ctrller = ModelPredictiveController(buggy_name, start_index)
     if (ctrller == None):
         raise Exception("Invalid Controller Argument")
-    
     auton_system = AutonSystem(
         trajectory,
         ctrller,
