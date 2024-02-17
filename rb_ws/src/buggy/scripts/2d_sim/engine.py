@@ -9,6 +9,8 @@ from sensor_msgs.msg import NavSatFix
 from nav_msgs.msg import Odometry
 import numpy as np
 import utm
+from buggy import Trajectory
+from buggy.scripts.auton.world import World
 
 
 class Simulator:
@@ -22,7 +24,7 @@ class Simulator:
     START_LONG = -79.9409643423245
     NOISE = True # Noisy outputs for nav/odom?
 
-    def __init__(self, starting_pose, velocity, buggy_name):
+    def __init__(self, starting_dist, velocity, buggy_name):
         """
         Args:
             heading (float): degrees start heading of buggy
@@ -52,10 +54,10 @@ class Simulator:
             )
 
         # (UTM east, UTM north, HEADING(degs))
-        self.starting_poses = {
-            "Hill1_NAND": (Simulator.UTM_EAST_ZERO + 0, Simulator.UTM_NORTH_ZERO + 0, -110),
-            "Hill1_SC": (Simulator.UTM_EAST_ZERO + 20, Simulator.UTM_NORTH_ZERO + 30, -110),
-        }
+        # self.starting_poses = {
+        #     "Hill1_NAND": (Simulator.UTM_EAST_ZERO + 0, Simulator.UTM_NORTH_ZERO + 0, -110),
+        #     "Hill1_SC": (Simulator.UTM_EAST_ZERO + 20, Simulator.UTM_NORTH_ZERO + 30, -110),
+        # }
 
         # Start position for End of Hill 2
         # self.e_utm = Simulator.UTM_EAST_ZERO - 3
@@ -69,7 +71,15 @@ class Simulator:
         # utm_coords = utm.from_latlon(Simulator.START_LAT, Simulator.START_LONG)
         # self.e_utm = utm_coords[0]
         # self.n_utm = utm_coords[1]
-        self.e_utm, self.n_utm, self.heading = self.starting_poses[starting_pose]
+
+        trajectory = Trajectory("/rb_ws/src/buggy/paths/buggycourse_safe_1.json")
+        init_x, init_y = trajectory.get_position_by_distance(starting_dist)
+        init_heading = np.rad2deg(trajectory.get_heading_by_distance(starting_dist))
+        init_pose = World.world_to_utm_pose(Pose(init_x, init_y, init_heading))
+
+        self.e_utm = init_pose.x
+        self.n_utm = init_pose.y
+        self.heading = init_pose.theta
         self.velocity = velocity # m/s
 
         self.steering_angle = 0  # degrees
@@ -287,9 +297,11 @@ if __name__ == "__main__":
     rospy.init_node("sim_2d_engine")
     print("sim 2d eng args:")
     print(sys.argv)
-    starting_pose = sys.argv[1]
+
+    starting_dist = float(sys.argv[1])
     velocity = float(sys.argv[2])
     buggy_name = sys.argv[3]
-    sim = Simulator(starting_pose, velocity, buggy_name)
+
+    sim = Simulator(starting_dist, velocity, buggy_name)
     sim.loop()
 
