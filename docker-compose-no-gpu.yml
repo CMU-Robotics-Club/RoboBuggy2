@@ -1,6 +1,6 @@
 services:
   main:
-    build: .
+    build: ./docker_auton
     volumes:
       - ./rb_ws:/rb_ws
       - "${RLSENSE_PORT:-/dev/null}:/dev/bus/usb"
@@ -14,6 +14,7 @@ services:
     tty: true        # docker run -t
     environment:
       - DISPLAY=host.docker.internal:0
+    hostname: main
     ports:
        - "0.0.0.0:8765:8765"      # foxglove bridge
        - "0.0.0.0:8760:8760"      # Asset server for loading stuff into foxglove
