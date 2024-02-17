@@ -2,12 +2,14 @@
 
 no_gpu=false
 force_gpu=false
+run_automated_testing_docker=false
 
 usage() {
   echo "Usage: $0 [options]"
   echo "Options:"
   echo " --no-gpu        Disable CUDA support. Required to run on systems without Nvidia Container Toolkit."
   echo " --force-gpu     Force a GPU build even if Nvidia Container Toolkit is not detected"
+  echo " --run-testing   Run the testing docker container"
 }
 
 while [ $# -gt 0 ]; do
@@ -21,6 +23,9 @@ while [ $# -gt 0 ]; do
       ;;
     --force-gpu)
       force_gpu=true
+      ;;
+    --run-testing)
+      run_automated_testing_docker=true
       ;;
     *)
       echo "Invalid option: $1" >&2
@@ -50,16 +55,36 @@ fi
 # Actual logic here #
 #####################
 
-if $no_gpu
+if $no_gpu && ! $run_automated_testing_docker
 then
   dockerfile="docker-compose-no-gpu.yml"
-else
+fi
+
+if ! $no_gpu && ! $run_automated_testing_docker
+then
   dockerfile="docker-compose-gpu.yml"
 fi
 
+if $no_gpu && $run_automated_testing_docker
+then
+  dockerfile="docker-compose-no-gpu-automated-testing.yml"
+fi
+
+if ! $no_gpu && $run_automated_testing_docker
+then
+  dockerfile="docker-compose-gpu-automated-testing.yml"
+fi
+
 echo "Killing old development containers..."
-docker compose -f docker-compose-no-gpu.yml down # kill old containers
-docker compose -f docker-compose-gpu.yml down # kill old containers
+docker compose -f docker-compose-gpu-automated-testing.yml down # kill old containers, this is most complete
+
+# copy python-requirements + cuda-requirements into appropriate folders for docker compose
+cp python-requirements.txt docker_auton
+mv docker_auton/python-requirements.txt docker_auton/python-requirements_TEMP_DO_NOT_EDIT.txt
+cp python-requirements.txt docker_tester
+mv docker_tester/python-requirements.txt docker_tester/python-requirements_TEMP_DO_NOT_EDIT.txt
+cp cuda-requirements.txt docker_auton
+mv docker_auton/cuda-requirements.txt docker_auton/cuda-requirements_TEMP_DO_NOT_EDIT.txt
 
 echo "Building containers..."
 docker compose -f $dockerfile build
