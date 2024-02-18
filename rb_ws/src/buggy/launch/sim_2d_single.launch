@@ -1,6 +1,6 @@
 <launch>
-    <arg name="autonsystem_args" default="--controller stanley --dist $(arg start_dist) --traj buggycourse_safe_1.json --self_name SC" />
     <arg name="start_dist"       default="0.0" />
+    <arg name="autonsystem_args" default="--controller stanley --dist $(arg start_dist) --traj buggycourse_safe_1.json --self_name SC" />
     <arg name="velocity"         default="15.0" />
     <arg name="buggy_name"       default="SC" />
 
