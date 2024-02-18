@@ -3,6 +3,7 @@
 no_gpu=false
 force_gpu=false
 run_automated_testing_docker=false
+docker_compose=$(which docker-compose 2>/dev/null || echo docker compose)
 
 usage() {
   echo "Usage: $0 [options]"
@@ -76,9 +77,9 @@ then
 fi
 
 echo "Killing old development containers..."
-docker compose -f docker-compose-gpu-automated-testing.yml down # kill old containers, this is most complete
+$docker_compose -f docker-compose-gpu-automated-testing.yml down # kill old containers, this is most complete
 
-# copy python-requirements + cuda-requirements into appropriate folders for docker compose
+# copy python-requirements + cuda-requirements into appropriate folders for docker-compose
 cp python-requirements.txt docker_auton
 mv docker_auton/python-requirements.txt docker_auton/python-requirements_TEMP_DO_NOT_EDIT.txt
 cp python-requirements.txt docker_tester
@@ -87,10 +88,10 @@ cp cuda-requirements.txt docker_auton
 mv docker_auton/cuda-requirements.txt docker_auton/cuda-requirements_TEMP_DO_NOT_EDIT.txt
 
 echo "Building containers..."
-docker compose -f $dockerfile build
+$docker_compose -f $dockerfile build
 
 echo "Starting containers..."
-docker compose -f $dockerfile --env-file .env.dev up -d
+$docker_compose -f $dockerfile --env-file .env.dev up -d
 
 sleep 0.5
 
