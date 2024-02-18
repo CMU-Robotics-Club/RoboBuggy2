@@ -2,6 +2,7 @@
 
 import sys
 import threading
+import os
 import rospy
 from geometry_msgs.msg import Pose, Twist, PoseWithCovariance, TwistWithCovariance
 from std_msgs.msg import Float64
@@ -9,8 +10,9 @@ from sensor_msgs.msg import NavSatFix
 from nav_msgs.msg import Odometry
 import numpy as np
 import utm
-from buggy import Trajectory
-from buggy.scripts.auton.world import World
+sys.path.append("/rb_ws/src/buggy/scripts/auton")
+from trajectory import Trajectory
+from world import World
 
 
 class Simulator:
@@ -74,12 +76,12 @@ class Simulator:
 
         trajectory = Trajectory("/rb_ws/src/buggy/paths/buggycourse_safe_1.json")
         init_x, init_y = trajectory.get_position_by_distance(starting_dist)
-        init_heading = np.rad2deg(trajectory.get_heading_by_distance(starting_dist))
-        init_pose = World.world_to_utm_pose(Pose(init_x, init_y, init_heading))
+        init_heading = np.rad2deg(trajectory.get_heading_by_distance(starting_dist)[0])
+        init_pose = World.world_to_utm_numpy(np.array([init_x, init_y]).reshape((1,2)))
 
-        self.e_utm = init_pose.x
-        self.n_utm = init_pose.y
-        self.heading = init_pose.theta
+        self.e_utm = init_pose[0,0]
+        self.n_utm = init_pose[0,1]
+        self.heading = init_heading
         self.velocity = velocity # m/s
 
         self.steering_angle = 0  # degrees
