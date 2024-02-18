@@ -9,8 +9,7 @@ from sensor_msgs.msg import NavSatFix
 from nav_msgs.msg import Odometry
 import numpy as np
 import utm
-from buggy import Trajectory
-from buggy.scripts.auton.world import World
+from trajectory import Trajectory
 
 
 class Simulator:
@@ -74,12 +73,11 @@ class Simulator:
 
         trajectory = Trajectory("/rb_ws/src/buggy/paths/buggycourse_safe_1.json")
         init_x, init_y = trajectory.get_position_by_distance(starting_dist)
-        init_heading = np.rad2deg(trajectory.get_heading_by_distance(starting_dist))
-        init_pose = World.world_to_utm_pose(Pose(init_x, init_y, init_heading))
+        init_heading = np.rad2deg(trajectory.get_heading_by_distance(starting_dist))[0]
 
-        self.e_utm = init_pose.x
-        self.n_utm = init_pose.y
-        self.heading = init_pose.theta
+        self.e_utm = init_x + Simulator.UTM_EAST_ZERO
+        self.n_utm = init_y + Simulator.UTM_NORTH_ZERO
+        self.heading = init_heading
         self.velocity = velocity # m/s
 
         self.steering_angle = 0  # degrees
@@ -106,6 +104,7 @@ class Simulator:
         """
         with self.lock:
             self.velocity = data.data
+
     def get_steering_arc(self):
         # Adapted from simulator.py (Joseph Li)
         # calculate the radius of the steering arc
@@ -119,6 +118,7 @@ class Simulator:
             return np.inf
 
         return Simulator.WHEELBASE / np.tan(np.deg2rad(steering_angle))
+
     def dynamics(self, state, v):
         """ Calculates continuous time bicycle dynamics as a function of state and velocity
 
