@@ -2,7 +2,7 @@ services:
   main:
     build: ./docker_auton
     volumes:
-      - ./rb_ws:/rb_ws
+      - ./rb_ws:/rb_ws:z
       - "${RLSENSE_PORT:-/dev/null}:/dev/bus/usb"
       - /tmp/.X11-unix:/tmp/.X11-unix
     devices:
