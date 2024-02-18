@@ -108,6 +108,7 @@ class Simulator:
         """
         with self.lock:
             self.velocity = data.data
+
     def get_steering_arc(self):
         # Adapted from simulator.py (Joseph Li)
         # calculate the radius of the steering arc
@@ -121,6 +122,7 @@ class Simulator:
             return np.inf
 
         return Simulator.WHEELBASE / np.tan(np.deg2rad(steering_angle))
+
     def dynamics(self, state, v):
         """ Calculates continuous time bicycle dynamics as a function of state and velocity
 
