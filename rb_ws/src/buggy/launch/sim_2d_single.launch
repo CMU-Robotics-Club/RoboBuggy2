@@ -1,6 +1,6 @@
 <launch>
-    <arg name="start_dist"       default="0.0" />
-    <arg name="autonsystem_args" default="--controller stanley --dist $(arg start_dist) --traj buggycourse_safe_1.json --self_name SC" />
+    <arg name="start_pos"        default="Hill1_SC" />
+    <arg name="autonsystem_args" default="--controller stanley --dist 0.0 --traj buggycourse_safe_1.json --self_name SC" />
     <arg name="velocity"         default="15.0" />
     <arg name="buggy_name"       default="SC" />
 
@@ -22,7 +22,7 @@
     </group>
 
     <node name="sim_2d_engine" pkg="buggy" type="engine.py" output="screen"
-        args="$(arg start_dist) $(arg velocity) $(arg buggy_name)"/>
+        args="$(arg start_pos) $(arg velocity) $(arg buggy_name)"/>
 
     <node name="auton_system" pkg="buggy" type="autonsystem.py" output="screen"
         args="$(arg autonsystem_args)"/>

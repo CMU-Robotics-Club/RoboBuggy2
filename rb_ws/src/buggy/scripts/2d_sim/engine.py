@@ -25,7 +25,7 @@ class Simulator:
     START_LONG = -79.9409643423245
     NOISE = True # Noisy outputs for nav/odom?
 
-    def __init__(self, starting_dist, velocity, buggy_name):
+    def __init__(self, start_pos: str, velocity: float, buggy_name: str):
         """
         Args:
             heading (float): degrees start heading of buggy
@@ -55,10 +55,10 @@ class Simulator:
             )
 
         # (UTM east, UTM north, HEADING(degs))
-        # self.starting_poses = {
-        #     "Hill1_NAND": (Simulator.UTM_EAST_ZERO + 0, Simulator.UTM_NORTH_ZERO + 0, -110),
-        #     "Hill1_SC": (Simulator.UTM_EAST_ZERO + 20, Simulator.UTM_NORTH_ZERO + 30, -110),
-        # }
+        self.starting_poses = {
+            "Hill1_NAND": (Simulator.UTM_EAST_ZERO + 0, Simulator.UTM_NORTH_ZERO + 0, -110),
+            "Hill1_SC": (Simulator.UTM_EAST_ZERO + 20, Simulator.UTM_NORTH_ZERO + 30, -110),
+        }
 
         # Start position for End of Hill 2
         # self.e_utm = Simulator.UTM_EAST_ZERO - 3
@@ -73,14 +73,24 @@ class Simulator:
         # self.e_utm = utm_coords[0]
         # self.n_utm = utm_coords[1]
 
-        trajectory = Trajectory("/rb_ws/src/buggy/paths/buggycourse_safe_1.json")
-        init_x, init_y = trajectory.get_position_by_distance(starting_dist)
-        init_heading = np.rad2deg(trajectory.get_heading_by_distance(starting_dist)[0])
-        init_pose = World.world_to_utm_numpy(np.array([init_x, init_y]).reshape((1,2)))
+        if start_pos in self.starting_poses:
+            init_pose = self.starting_poses[start_pos]
+        else:
+            # start_pos as float representing distance down track to start from
+            try:
+                start_pos = float(start_pos)
+                trajectory = Trajectory("/rb_ws/src/buggy/paths/buggycourse_safe_1.json")
 
-        self.e_utm = init_pose[0,0]
-        self.n_utm = init_pose[0,1]
-        self.heading = init_heading
+                init_world_coords = trajectory.get_position_by_distance(start_pos)
+                init_heading = np.rad2deg(trajectory.get_heading_by_distance(start_pos)[0])
+                init_x, init_y = tuple(World.world_to_utm_numpy(init_world_coords)[0])
+
+                init_pose = init_x, init_y, init_heading
+            # start_pos as (e_utm, n_utm, heading) coordinates
+            except ValueError:
+                pass
+
+        self.e_utm, self.n_utm, self.heading = init_pose
         self.velocity = velocity # m/s
 
         self.steering_angle = 0  # degrees
@@ -301,10 +311,10 @@ if __name__ == "__main__":
     print("sim 2d eng args:")
     print(sys.argv)
 
-    starting_dist = float(sys.argv[1])
+    start_pos = sys.argv[1]
     velocity = float(sys.argv[2])
     buggy_name = sys.argv[3]
 
-    sim = Simulator(starting_dist, velocity, buggy_name)
+    sim = Simulator(start_pos, velocity, buggy_name)
     sim.loop()
 
