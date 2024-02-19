@@ -2,7 +2,6 @@
 
 import sys
 import threading
-import os
 import rospy
 from geometry_msgs.msg import Pose, Twist, PoseWithCovariance, TwistWithCovariance
 from std_msgs.msg import Float64
