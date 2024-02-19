@@ -63,7 +63,7 @@ A complete re-write of the old RoboBuggy.
 ---
 ## Open Docker 
 - Use `cd` to change the working directory to be `RoboBuggy2`
-- Then do `./setup_dev.sh` in the main directory (RoboBuggy2) to launch the docker container.
+- Then do `./setup_dev.sh` in the main directory (RoboBuggy2) to launch the docker container. Utilize the `--no-gpu`, `--force-gpu`, and `--run-testing` flags as necessary.
 - Then you can go in the docker container using the `docker exec -it robobuggy2-main-1 bash`.
 - When you are done, type Ctrl+C and use `$exit` to exit.
 
@@ -119,7 +119,7 @@ SSH to the computer on ShortCircuit and go to folder
 `$ ssh nuc@192.168.1.217`
 Then `$ cd RoboBuggy2`
 -	Setup the docker
-`$ ./setup_prod.sh`
+`$ ./setup_prod.sh` (Utilize the `--no-gpu`, `--force-gpu`, and `--run-testing` flags as necessary.)
 -	Go to docker container
 `$ docker_exec`
 -	Open foxglove and do local connection to “ws://192.168.1.217/8765”

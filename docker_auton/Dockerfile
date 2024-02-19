@@ -19,11 +19,11 @@ RUN apt-get install -y -qq \
   ros-noetic-realsense2-description
 
 # Run this now to cache it separately from other requirements
-COPY cuda-requirements.txt cuda-requirements.txt
-RUN pip3 install -r cuda-requirements.txt
+COPY cuda-requirements_TEMP_DO_NOT_EDIT.txt cuda-requirements.txt
+# RUN pip3 install -r cuda-requirements.txt
 
 
-COPY python-requirements.txt python-requirements.txt
+COPY python-requirements_TEMP_DO_NOT_EDIT.txt python-requirements.txt
 RUN pip3 install -r python-requirements.txt
 
 RUN echo 'source "/opt/ros/$ROS_DISTRO/setup.bash" --' >> ~/.bashrc
