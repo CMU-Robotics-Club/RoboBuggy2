@@ -1,5 +1,6 @@
 #! /usr/bin/env python3
 
+import re
 import sys
 import threading
 import rospy
@@ -73,10 +74,11 @@ class Simulator:
         # self.e_utm = utm_coords[0]
         # self.n_utm = utm_coords[1]
 
+        # Use start_pos as key in starting_poses dictionary
         if start_pos in self.starting_poses:
             init_pose = self.starting_poses[start_pos]
         else:
-            # start_pos as float representing distance down track to start from
+            # Use start_pos as float representing distance down track to start from
             try:
                 start_pos = float(start_pos)
                 trajectory = Trajectory("/rb_ws/src/buggy/paths/buggycourse_safe_1.json")
@@ -85,10 +87,20 @@ class Simulator:
                 init_heading = np.rad2deg(trajectory.get_heading_by_distance(start_pos)[0])
                 init_x, init_y = tuple(World.world_to_utm_numpy(init_world_coords)[0])
 
-                init_pose = init_x, init_y, init_heading
-            # start_pos as (e_utm, n_utm, heading) coordinates
+            # Use start_pos as (e_utm, n_utm, heading) coordinates
             except ValueError:
-                pass
+                matches = re.match(
+                    r"^\(?(?P<utm_e>-?[\d\.]+), *(?P<utm_n>-?[\d\.]+), *(?P<heading>-?[\d\.]+)\)?$",
+                    start_pos
+                )
+                if matches == None: raise ValueError("invalid start_pos for " + buggy_name)
+                matches = matches.groupdict()
+
+                init_x = float(matches["utm_e"])
+                init_y = float(matches["utm_n"])
+                init_heading = float(matches["heading"])
+
+            init_pose = init_x, init_y, init_heading
 
         self.e_utm, self.n_utm, self.heading = init_pose
         self.velocity = velocity # m/s
