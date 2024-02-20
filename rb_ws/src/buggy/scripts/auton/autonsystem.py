@@ -7,7 +7,7 @@ from threading import Lock
 import rospy
 
 # ROS Message Imports
-from std_msgs.msg import Float32, Float64, Bool
+from std_msgs.msg import Float32, Float64, Bool, Int8
 from nav_msgs.msg import Odometry
 
 import numpy as np
@@ -63,6 +63,7 @@ class AutonSystem:
 
         self.path_planner = PathPlanner(global_trajectory)
         self.other_steering = 0
+        self.rtk_status = 0
 
         self.lock = Lock()
         self.ticks = 0
@@ -75,10 +76,10 @@ class AutonSystem:
             self.other_steer_subscriber = rospy.Subscriber(
                 other_name + "/input/steering", Float64, self.update_other_steering_angle
             )
+        rospy.Subscriber(self_name + "/gnss1/fix_info_republished_int", Int8, self.update_rtk_status)
 
-        rospy.Subscriber(self_name + "nav/odom", Odometry, self.update_self_odom)
-        self.covariance_warning_publisher = rospy.Publisher(
-            self_name + "/debug/is_high_covariance", Bool, queue_size=1
+        self.init_check_publisher = rospy.Publisher(
+            self.name + "/debug/init_check", Bool, queue_size=1
         )
         self.steer_publisher = rospy.Publisher(
             self_name + "/input/steering", Float64, queue_size=1
@@ -115,18 +116,33 @@ class AutonSystem:
         with self.lock:
             self.other_steering = msg.data
 
+    def update_rtk_status(self, msg):
+        with self.lock:
+            self.rtk_status = msg.data
+
+    def init_check(self):
+        # checks that messages are being receieved
+        # (from both buggies if relevant),
+        # RTK status is fixed
+        # covariance is less than 1 meter
+        if (self.self_odom_msg == None) or (self.has_other_buggy and self.other_odom_msg == None) or (self.rtk_status <= 5) or (self.self_odom_msg.pose.covariance[0] ** 2 + self.self_odom_msg.pose.covariance[7] ** 2 > 100):
+            return False
+
+        # waits until rtk is fixed and covariance is normal to check heading
+        if (abs(self.cur_traj.get_heading_by_distance(start_dist)) > np.pi/2):
+            print("WARNING: INCORRECT HEADING! restart stack")
+            return False
+
+        return True
+
     def tick_caller(self):
-        while ((not rospy.is_shutdown()) and
-            (self.self_odom_msg == None or
-            (self.has_other_buggy and self.other_odom_msg == None))): # with no message, we wait
+
+        while ((not rospy.is_shutdown()) and not self.init_check()):
+            self.init_check_publisher.publish(False)
             rospy.sleep(0.001)
-        # wait for covariance matrix to be better
-        while ((not rospy.is_shutdown()) and
-               (self.self_odom_msg.pose.covariance[0] ** 2 + self.self_odom_msg.pose.covariance[7] ** 2 > 1**2)):
-            # Covariance larger than one meter. We definitely can't trust the pose
-            rospy.sleep(0.001)
-            print("Waiting for Covariance to be better: ",  rospy.get_rostime())
-        print("done checking covariance")
+        print("done checking initialization status")
+        self.init_check_publisher.publish(True)
+
 
         # initialize global trajectory index
 
