@@ -89,6 +89,7 @@ class Simulator:
 
             # Use start_pos as (e_utm, n_utm, heading) coordinates
             except ValueError:
+                # Extract the three coordinates from start_pos
                 matches = re.match(
                     r"^\(?(?P<utm_e>-?[\d\.]+), *(?P<utm_n>-?[\d\.]+), *(?P<heading>-?[\d\.]+)\)?$",
                     start_pos
