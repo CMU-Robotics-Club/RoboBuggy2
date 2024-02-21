@@ -129,8 +129,21 @@ class AutonSystem:
             return False
 
         # waits until rtk is fixed and covariance is acceptable to check heading
-        current_heading = self.cur_traj.get_heading_by_index(self.cur_traj.get_closest_index_on_path)
-        closest_heading = trajectory.get_heading_by_index(trajectory.get_closest_index_on_path)
+        with self.lock:
+                    self_pose, _ = self.get_world_pose_and_speed(self.self_odom_msg)
+                    current_heading = self_pose.theta
+
+        closest_heading = self.cur_traj.get_heading_by_index(trajectory.get_closest_index_on_path)
+
+        # TENTATIVE:
+        # headings are originally between -pi and pi
+        # if they are negative, convert them to be between 0 and pi
+        if current_heading < 0:
+            current_heading = 2*np.pi + current_heading
+
+        if closest_heading < 0:
+            closest_heading = 2*np.pi + closest_heading
+
 
         if (abs(current_heading - closest_heading) >= np.pi/2):
             print("WARNING: INCORRECT HEADING! restart stack")
