@@ -79,7 +79,7 @@ class AutonSystem:
         rospy.Subscriber(self_name + "/gnss1/fix_info_republished_int", Int8, self.update_rtk_status)
 
         self.init_check_publisher = rospy.Publisher(
-            self.name + "/debug/init_check", Bool, queue_size=1
+            self.name + "/debug/init_safety_check", Bool, queue_size=1
         )
         self.steer_publisher = rospy.Publisher(
             self_name + "/input/steering", Float64, queue_size=1
@@ -125,11 +125,14 @@ class AutonSystem:
         # (from both buggies if relevant),
         # RTK status is fixed
         # covariance is less than 1 meter
-        if (self.self_odom_msg == None) or (self.has_other_buggy and self.other_odom_msg == None) or (self.rtk_status <= 5) or (self.self_odom_msg.pose.covariance[0] ** 2 + self.self_odom_msg.pose.covariance[7] ** 2 > 100):
+        if (self.self_odom_msg == None) or (self.has_other_buggy and self.other_odom_msg == None) or (self.rtk_status <= 5) or (self.self_odom_msg.pose.covariance[0] ** 2 + self.self_odom_msg.pose.covariance[7] ** 2 > 1**2):
             return False
 
-        # waits until rtk is fixed and covariance is normal to check heading
-        if (abs(self.cur_traj.get_heading_by_distance(start_dist)) > np.pi/2):
+        # waits until rtk is fixed and covariance is acceptable to check heading
+        current_heading = self.cur_traj.get_heading_by_index(self.cur_traj.get_closest_index_on_path)
+        closest_heading = trajectory.get_heading_by_index(trajectory.get_closest_index_on_path)
+
+        if (abs(current_heading - closest_heading) >= np.pi/2):
             print("WARNING: INCORRECT HEADING! restart stack")
             return False
 
