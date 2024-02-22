@@ -130,8 +130,8 @@ class AutonSystem:
 
         # waits until rtk is fixed and covariance is acceptable to check heading
         with self.lock:
-                    self_pose, _ = self.get_world_pose_and_speed(self.self_odom_msg)
-                    current_heading = self_pose.theta
+            self_pose, _ = self.get_world_pose_and_speed(self.self_odom_msg)
+            current_heading = self_pose.theta
 
         closest_heading = self.cur_traj.get_heading_by_index(trajectory.get_closest_index_on_path)
 
