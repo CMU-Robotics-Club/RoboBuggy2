@@ -79,7 +79,7 @@ class AutonSystem:
         rospy.Subscriber(self_name + "/gnss1/fix_info_republished_int", Int8, self.update_rtk_status)
 
         self.init_check_publisher = rospy.Publisher(
-            self.name + "/debug/init_safety_check", Bool, queue_size=1
+            self_name + "/debug/init_safety_check", Bool, queue_size=1
         )
         self.steer_publisher = rospy.Publisher(
             self_name + "/input/steering", Float64, queue_size=1
@@ -129,11 +129,11 @@ class AutonSystem:
             return False
 
         # waits until rtk is fixed and covariance is acceptable to check heading
+
         with self.lock:
             self_pose, _ = self.get_world_pose_and_speed(self.self_odom_msg)
             current_heading = self_pose.theta
-
-        closest_heading = self.cur_traj.get_heading_by_index(trajectory.get_closest_index_on_path)
+            closest_heading = self.cur_traj.get_heading_by_index(trajectory.get_closest_index_on_path(self_pose.x, self_pose.y))
 
         # TENTATIVE:
         # headings are originally between -pi and pi
@@ -143,7 +143,6 @@ class AutonSystem:
 
         if closest_heading < 0:
             closest_heading = 2*np.pi + closest_heading
-
 
         if (abs(current_heading - closest_heading) >= np.pi/2):
             print("WARNING: INCORRECT HEADING! restart stack")
@@ -201,11 +200,6 @@ class AutonSystem:
     def get_world_pose_and_speed(self, msg):
         current_rospose = msg.pose.pose
         # Check if the pose covariance is a sane value. Publish a warning if insane
-        if msg.pose.covariance[0] ** 2 + msg.pose.covariance[7] ** 2 > 1**2:
-            # Covariance larger than one meter. We definitely can't trust the pose
-            self.covariance_warning_publisher.publish(Bool(True))
-        else:
-            self.covariance_warning_publisher.publish(Bool(False))
         current_speed = np.sqrt(
             msg.twist.twist.linear.x**2 + msg.twist.twist.linear.y**2
         )
