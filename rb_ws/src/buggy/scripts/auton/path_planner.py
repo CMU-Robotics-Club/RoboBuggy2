@@ -9,6 +9,7 @@ from occupancy_grid.grid_manager import OccupancyGrid
 from path_projection import Projector
 from trajectory import Trajectory
 from world import World
+from typing import Tuple
 class PathPlanner():
     LOOKAHEAD_TIME = 2.0 #s
     RESOLUTION = 30 #samples/s
@@ -48,7 +49,9 @@ class PathPlanner():
     def compute_traj(
         self,
         other_pose: Pose, #Currently NAND's location -- To be Changed
-        other_speed: float) -> Trajectory:
+        other_speed: float, 
+        curr_index: float,
+        curr_pose: Pose) -> Tuple[Trajectory, float]:
         """
         draw trajectory, such that the section of the
         trajectory near NAND is replaced by a new segment:
@@ -141,6 +144,20 @@ class PathPlanner():
         reference_navsat.longitude = ref_gps[1]
         self.debug_splice_pt_publisher.publish(reference_navsat)
 
+        new_traj = Trajectory(json_filepath=None, positions=new_path)
+        #Modifying index
+        new_index = curr_index
+        new_traj_end_index = len(passing_targets) + new_segment_start_idx
+        if curr_index > new_segment_end_idx:
+            new_index = curr_index + (len(passing_targets)) - (new_segment_end_idx - new_segment_start_idx) #Is this right way to calculate length
+        elif curr_index > new_segment_start_idx:
+            new_index = new_traj.get_closest_index_on_path(
+                curr_pose.x, #X Position
+                curr_pose.y, #Y Position
+                start_index=new_segment_start_idx,
+                end_index=new_traj_end_index
+            )
+        else: new_index = curr_index
 
         # generate new path
-        return Trajectory(json_filepath=None, positions=new_path)
+        return new_traj, new_index
