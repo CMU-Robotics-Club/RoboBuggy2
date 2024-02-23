@@ -142,7 +142,7 @@ class AutonSystem:
             # than 1 period of the planner when you change the planner frequency.
 
             if not self.other_odom_msg is None and self.ticks == 0:
-                # for debugging, publish distance to other buggy
+                # publish distance to other buggy (not for debugging purposes)
                 with self.lock:
                     self_pose, _ = self.get_world_pose_and_speed(self.self_odom_msg)
                     other_pose, _ = self.get_world_pose_and_speed(self.other_odom_msg)
@@ -154,7 +154,7 @@ class AutonSystem:
                 if self.profile:
                     cProfile.runctx('self.planner_tick()', globals(), locals(), sort="cumtime")
                 else:
-                    self.planner_tick()
+                    self.planner_tick(self_pose)
 
             self.local_controller_tick()
 
@@ -192,13 +192,13 @@ class AutonSystem:
         steering_angle_deg = np.rad2deg(steering_angle)
         self.steer_publisher.publish(Float64(steering_angle_deg))
 
-    def planner_tick(self):
+    def planner_tick(self, curr_pose):
         with self.lock:
             other_pose, other_speed = self.get_world_pose_and_speed(self.other_odom_msg)
         # update local trajectory via path planner
-        self.cur_traj = self.path_planner.compute_traj(
+        self.cur_traj, self.local_controller.current_traj_index = self.path_planner.compute_traj(
                                             other_pose,
-                                            other_speed)
+                                            other_speed, self.local_controller.current_traj_index, curr_pose)
 if __name__ == "__main__":
     rospy.init_node("auton_system")
     parser = argparse.ArgumentParser()
