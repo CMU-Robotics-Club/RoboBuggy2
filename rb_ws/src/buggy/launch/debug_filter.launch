@@ -1,7 +1,7 @@
 <!-- roslaunch buggy main.launch -->
 
 <launch>
-    <arg name="controller"      default="mpc" />
+    <arg name="controller"      default="stanley" />
     <arg name="start_dist"      default="0.0" />
     <arg name="path"      default="buggycourse_safe_1.json" />
 
@@ -22,7 +22,7 @@
     </node>
     <node name="foxglove" pkg="foxglove_bridge" type="foxglove_bridge" />
     <node name="telematics" pkg="buggy" type="telematics.py" />
-    <node name="publish_rtk_err" pkg="buggy" type="publish_rtk_err.py" />
+    <node name="publish_rtk_err" pkg="buggy" type="publish_rtk_err.py" output="screen"/>
 
 
     <!-- ENABLE AUTON -->

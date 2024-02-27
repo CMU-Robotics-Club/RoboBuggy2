@@ -120,11 +120,13 @@ class AutonSystem:
             (self.has_other_buggy and self.other_odom_msg == None))): # with no message, we wait
             rospy.sleep(0.001)
         # wait for covariance matrix to be better
+
+
+        print("Waiting for Covariance to be better")
         while ((not rospy.is_shutdown()) and
                (self.self_odom_msg.pose.covariance[0] ** 2 + self.self_odom_msg.pose.covariance[7] ** 2 > 1**2)):
             # Covariance larger than one meter. We definitely can't trust the pose
             rospy.sleep(0.01)
-            print("Waiting for Covariance to be better: ",  rospy.get_rostime())
         print("done checking covariance")
 
         # initialize global trajectory index
@@ -148,6 +150,7 @@ class AutonSystem:
                     distance = (self_pose.x - other_pose.x) ** 2 + (self_pose.y - other_pose.y) ** 2
                     distance = np.sqrt(distance)
                     self.distance_publisher.publish(Float64(distance))
+                    self.heading_publisher.publish(Float32(np.rad2deg(self_pose.theta)))
 
                 # profiling
                 if self.profile:
