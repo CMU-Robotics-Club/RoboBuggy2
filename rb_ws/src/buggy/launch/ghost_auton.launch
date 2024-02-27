@@ -32,6 +32,6 @@
     <node name="telematics" pkg="buggy" type="telematics.py" />
 
     <!-- Run the simulation with NAND -->
-    <arg name="autonsystem_args" default="--controller stanley --dist 0.0 --traj $(arg path) --self_name SC --other_name NAND" />
+    <arg name="autonsystem_args" default="--controller $(arg controller) --dist 0.0 --traj $(arg path) --self_name SC --other_name NAND" />
     <node name="auton_system" pkg="buggy" type="autonsystem.py" output="screen" args="$(arg autonsystem_args)"/>
 </launch>
