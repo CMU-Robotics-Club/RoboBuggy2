@@ -58,7 +58,7 @@ class StanleyController(Controller):
         front_x = x + StanleyController.WHEELBASE * np.cos(heading)
         front_y = y + StanleyController.WHEELBASE * np.sin(heading)
 
-        super.updateTrajectoryIndexes(current_pose, trajectory)
+        super.updateTrajectoryIndexes(Pose(front_x, front_y, heading), trajectory)
 
         # Calculate heading error
 
