@@ -4,6 +4,7 @@ from trajectory import Trajectory
 from pose import Pose
 from sensor_msgs.msg import NavSatFix
 from world import World
+from typing import Tuple
 
 
 class Controller(ABC):
@@ -22,7 +23,7 @@ class Controller(ABC):
     WHEELBASE = SC_WHEELBASE
     current_traj_index = 0
 
-    def __init__(self, start_index, buggy_name) -> None:
+    def __init__(self, start_index, buggy_name, global_trajectory : Trajectory) -> None:
         self.buggy_name = buggy_name
         # self.trajectory_forward_1 = rospy.Publisher(
         #     buggy_name + "/auton/debug/forward1_navsat", NavSatFix, queue_size=1
@@ -40,6 +41,8 @@ class Controller(ABC):
         # self.forward_publishers = [self.trajectory_forward_1, self.trajectory_forward_2, self.trajectory_forward_3]
         # self.backward_publishers = [self.trajectory_backward_1]
         self.current_traj_index = start_index
+        self.current_glob_index = 0
+        self.global_trajectory = global_trajectory
 
     @abstractmethod
     def compute_control(
@@ -91,7 +94,24 @@ class Controller(ABC):
             navsat.longitude = backward_gps[1]
             self.backward_publishers[i-1].publish(navsat)
 
+    def updateTrajectoryIndexes(self, current_pose : Pose, local_trajectory : Trajectory): #How do I return void type in type casting
+        traj_index = local_trajectory.get_closest_index_on_path(
+            current_pose.x,
+            current_pose.y,
+            start_index=self.current_traj_index,
+            end_index=self.current_traj_index + 20,
+            subsample_resolution=1000,
+        )
+        self.current_traj_index = max(traj_index, self.current_traj_index)
 
+        glob_index = self.global_trajectory.get_closest_index_on_path(
+            current_pose.x,
+            current_pose.y,
+            start_index=self.current_glob_index,
+            start_index=self.current_glob_index + 2,
+            subsample_resolution=1000,
+        )
+        self.current_glob_index = max(glob_index, self.current_glob_index)
 
 
 

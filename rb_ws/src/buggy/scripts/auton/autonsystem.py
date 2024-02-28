@@ -198,7 +198,7 @@ class AutonSystem:
         # update local trajectory via path planner
         self.cur_traj, self.local_controller.current_traj_index = self.path_planner.compute_traj(
                                             other_pose,
-                                            other_speed, self.local_controller.current_traj_index, curr_pose)
+                                            other_speed, self.local_controller.current_glob_index, curr_pose)
 if __name__ == "__main__":
     rospy.init_node("auton_system")
     parser = argparse.ArgumentParser()

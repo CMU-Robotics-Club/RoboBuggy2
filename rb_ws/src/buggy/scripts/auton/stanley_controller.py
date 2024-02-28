@@ -23,8 +23,8 @@ class StanleyController(Controller):
     CROSS_TRACK_GAIN = 1
     HEADING_GAIN = 0.3
 
-    def __init__(self, buggy_name, start_index=0) -> None:
-        super(StanleyController, self).__init__(start_index, buggy_name)
+    def __init__(self, buggy_name, global_traj : Trajectory, start_index=0) -> None:
+        super(StanleyController, self).__init__(start_index, buggy_name, global_traj)
         self.debug_reference_pos_publisher = rospy.Publisher(
             buggy_name + "/auton/debug/reference_navsat", NavSatFix, queue_size=1
         )
@@ -58,13 +58,7 @@ class StanleyController(Controller):
         front_x = x + StanleyController.WHEELBASE * np.cos(heading)
         front_y = y + StanleyController.WHEELBASE * np.sin(heading)
 
-        traj_index = trajectory.get_closest_index_on_path(
-            front_x,
-            front_y,
-            start_index=self.current_traj_index - 20,
-            end_index=self.current_traj_index + 50,
-        )
-        self.current_traj_index = max(traj_index, self.current_traj_index)
+        super.updateTrajectoryIndexes(current_pose, trajectory)
 
         # Calculate heading error
 
