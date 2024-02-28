@@ -83,9 +83,9 @@ class ModelPredictiveController(Controller):
     state_cost_diag = np.diag(state_cost)
     control_cost_diag = np.diag(control_cost)
 
-    def __init__(self, buggy_name, start_index=0, ref_trajectory=None, ROS=False) -> None:
+    def __init__(self, buggy_name, global_traj : Trajectory, start_index=0, ref_trajectory=None, ROS=False) -> None:
         # instantiate parent
-        super(ModelPredictiveController, self).__init__(start_index, buggy_name)
+        super(ModelPredictiveController, self).__init__(start_index, buggy_name, global_traj)
 
         # Internal variables
         self.current_traj_index = 0  # Where in the trajectory we are currently
@@ -348,7 +348,7 @@ class ModelPredictiveController(Controller):
 
     first_iteration = True
 
-    def compute_trajectory(self, current_pose: Pose, trajectory: Trajectory, current_speed: float):
+    def compute_trajectory(self, current_pose: Pose, trajectory: Trajectory, current_speed: float, ):
         """
         Computes the desired control output given the current state and reference trajectory
 
@@ -375,14 +375,12 @@ class ModelPredictiveController(Controller):
             t = time.time()
         self.current_speed = current_speed
 
-        traj_index = trajectory.get_closest_index_on_path(
-            current_pose.x,
-            current_pose.y,
-            start_index=self.current_traj_index,
-            end_index=self.current_traj_index + 20,
-            subsample_resolution=1000,
-        )
-        self.current_traj_index = max(traj_index, self.current_traj_index)
+
+        #Finding index on local path
+        #Do the same on global trajectory
+        super.updateTrajectoryIndexes(current_pose, trajectory)
+
+
         traj_distance = trajectory.get_distance_from_index(self.current_traj_index)
         traj_distance += self.LOOKAHEAD_TIME * self.current_speed
 
