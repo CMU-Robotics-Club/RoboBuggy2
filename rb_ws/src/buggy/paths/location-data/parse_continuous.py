@@ -69,11 +69,9 @@ if __name__ == "__main__":
     file = open(cleanFile, "r")
     waypoints = file.readlines()
     for line in waypoints:
-        timestamps_data.append(parse_line(line) )    
-    
-    file.close()   
+        timestamps_data.append(parse_line(line))
+    file.close()
     export_as_json(timestamps_data, cleanFile)
-    
 
 
 

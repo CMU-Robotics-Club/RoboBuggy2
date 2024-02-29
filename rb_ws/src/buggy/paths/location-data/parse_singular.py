@@ -54,9 +54,7 @@ def parse_data(file_data : [[str]], pixel_coord, loc_name) -> dict:
                 continue
 
             lat = convertDegreeMinute(float(line[2])) #Latitutde
-            north_south = line[3] # north or south latitude
             lon = -1 * convertDegreeMinute(float(line[4])) #Longitude (negative bc always west)
-            east_west = line[5] #East or West Longitude
             quality = line[6]
             num_sats = line[7]
 
@@ -81,7 +79,6 @@ def consolidate(locations_data : [[dict]], loc_data : [dict]) -> None:
 def export_as_json(locations_data : [[dict]]) -> None:
     # print(loc_data)
     json_file = json.dumps(locations_data)
-    f = open("landmarks.json", "r")
 
     #TODO: generate a json name using loc_name parameter/ whatever name would be convenient
     with open("landmarks.json", "w") as outfile:
