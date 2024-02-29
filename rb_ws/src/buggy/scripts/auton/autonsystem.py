@@ -125,10 +125,10 @@ class AutonSystem:
         # (from both buggies if relevant),
         # RTK status is fixed
         # covariance is less than 1 meter
-        if (self.self_odom_msg == None) or (self.has_other_buggy and self.other_odom_msg == None) or (self.rtk_status <= 5) or (self.self_odom_msg.pose.covariance[0] ** 2 + self.self_odom_msg.pose.covariance[7] ** 2 > 1**2):
+        if (self.self_odom_msg == None) or (self.has_other_buggy and self.other_odom_msg == None) or (self.self_odom_msg.pose.covariance[0] ** 2 + self.self_odom_msg.pose.covariance[7] ** 2 > 1**2):
             return False
 
-        # waits until rtk is fixed and covariance is acceptable to check heading
+        # waits until covariance is acceptable to check heading
 
         with self.lock:
             self_pose, _ = self.get_world_pose_and_speed(self.self_odom_msg)
