@@ -50,7 +50,7 @@ class PathPlanner():
         self,
         other_pose: Pose, #Currently NAND's location -- To be Changed
         other_speed: float, 
-        curr_index: float,
+        curr_index: float, #Current index on GLOBAL TRAJECTORY
         curr_pose: Pose) -> Tuple[Trajectory, float]:
         """
         draw trajectory, such that the section of the
@@ -155,7 +155,7 @@ class PathPlanner():
                 curr_pose.x, #X Position
                 curr_pose.y, #Y Position
                 start_index=new_segment_start_idx,
-                end_index=new_traj_end_index
+                end_index= (len(passing_targets))- (new_segment_end_idx - new_segment_start_idx) + new_segment_start_idx
             )
         else: new_index = curr_index
 

@@ -94,7 +94,7 @@ class Controller(ABC):
             navsat.longitude = backward_gps[1]
             self.backward_publishers[i-1].publish(navsat)
 
-    def updateTrajectoryIndexes(self, current_pose : Pose, local_trajectory : Trajectory): #How do I return void type in type casting
+    def updateTrajectoryIndexes(self, current_pose : Pose, local_trajectory : Trajectory) -> None: 
         traj_index = local_trajectory.get_closest_index_on_path(
             current_pose.x,
             current_pose.y,
@@ -108,7 +108,7 @@ class Controller(ABC):
             current_pose.x,
             current_pose.y,
             start_index=self.current_glob_index,
-            start_index=self.current_glob_index + 2,
+            start_index=self.current_glob_index + 2, #FIXME: Should not use arbitrary indexes of search environment
             subsample_resolution=1000,
         )
         self.current_glob_index = max(glob_index, self.current_glob_index)
