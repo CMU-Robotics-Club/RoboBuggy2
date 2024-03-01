@@ -378,7 +378,7 @@ class ModelPredictiveController(Controller):
 
         #Finding index on local path
         #Do the same on global trajectory
-        super.updateTrajectoryIndexes(current_pose, trajectory)
+        self.updateTrajectoryIndexes(current_pose, trajectory)
 
 
         traj_distance = trajectory.get_distance_from_index(self.current_traj_index)

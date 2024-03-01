@@ -108,10 +108,23 @@ class Controller(ABC):
             current_pose.x,
             current_pose.y,
             start_index=self.current_glob_index,
-            start_index=self.current_glob_index + 2, #FIXME: Should not use arbitrary indexes of search environment
+            end_index=self.current_glob_index + 5, #FIXME: Should not use arbitrary indexes of search environment
             subsample_resolution=1000,
         )
+
+        debug_index = new_index = local_trajectory.get_closest_index_on_path(
+                current_pose.x, #X Position
+                current_pose.y, #Y Position
+                start_index=0
+        )
+        if (self.current_traj_index < debug_index): print(self.current_traj_index, debug_index)
+
         self.current_glob_index = max(glob_index, self.current_glob_index)
+
+    def setCurrIndex(self, newCurrIndex):
+        self.current_traj_index = newCurrIndex
+
+    
 
 
 

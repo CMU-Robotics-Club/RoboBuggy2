@@ -196,9 +196,10 @@ class AutonSystem:
         with self.lock:
             other_pose, other_speed = self.get_world_pose_and_speed(self.other_odom_msg)
         # update local trajectory via path planner
-        self.cur_traj, self.local_controller.current_traj_index = self.path_planner.compute_traj(
+        self.cur_traj, spliceIndex = self.path_planner.compute_traj(
                                             other_pose,
                                             other_speed, self.local_controller.current_glob_index, curr_pose)
+        self.local_controller.setCurrIndex(spliceIndex)
 if __name__ == "__main__":
     rospy.init_node("auton_system")
     parser = argparse.ArgumentParser()
@@ -251,6 +252,7 @@ if __name__ == "__main__":
     trajectory = Trajectory(json_filepath="/rb_ws/src/buggy/paths/" + traj)
 
     # calculate starting index
+    #FIXME: Don't ratchet from the start index, ratchet from using get closest index on path
     start_index = trajectory.get_index_from_distance(start_dist)
 
     # Add Controllers Here
@@ -258,16 +260,19 @@ if __name__ == "__main__":
     if (ctrl == "stanley"):
         local_ctrller = StanleyController(
             self_name,
+            global_traj=trajectory,
             start_index=start_index)
 
     elif (ctrl == "pure_pursuit"):
         local_ctrller = PurePursuitController(
             self_name,
+            global_traj=trajectory,
             start_index=start_index)
 
     elif (ctrl == "mpc"):
         local_ctrller = ModelPredictiveController(
             self_name,
+            global_traj=trajectory,
             start_index=start_index)
 
     if (local_ctrller == None):

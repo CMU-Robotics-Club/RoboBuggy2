@@ -145,6 +145,10 @@ class PathPlanner():
         self.debug_splice_pt_publisher.publish(reference_navsat)
 
         new_traj = Trajectory(json_filepath=None, positions=new_path)
+
+        #TODO: RESAMPLE NEW TRAJECTORY at sliced indexes start one behind and go one ahead
+        #Assumption: smallish resample that does not mess up indexing so much that search range in controller can't compensate
+
         #Modifying index
         new_index = curr_index
         new_traj_end_index = len(passing_targets) + new_segment_start_idx
