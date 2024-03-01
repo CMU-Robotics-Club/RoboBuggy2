@@ -141,22 +141,25 @@ class AutonSystem:
             # planner. Make sure it is significantly (at least 2x) longer
             # than 1 period of the planner when you change the planner frequency.
 
-            if not self.other_odom_msg is None and self.ticks == 0:
-                # for debugging, publish distance to other buggy
-                with self.lock:
-                    self_pose, _ = self.get_world_pose_and_speed(self.self_odom_msg)
-                    other_pose, _ = self.get_world_pose_and_speed(self.other_odom_msg)
-                    distance = (self_pose.x - other_pose.x) ** 2 + (self_pose.y - other_pose.y) ** 2
-                    distance = np.sqrt(distance)
-                    self.distance_publisher.publish(Float64(distance))
+            # if not self.other_odom_msg is None and self.ticks == 0:
+            #     # for debugging, publish distance to other buggy
+            #     with self.lock:
+            #         self_pose, _ = self.get_world_pose_and_speed(self.self_odom_msg)
+            #         other_pose, _ = self.get_world_pose_and_speed(self.other_odom_msg)
+            #         distance = (self_pose.x - other_pose.x) ** 2 + (self_pose.y - other_pose.y) ** 2
+            #         distance = np.sqrt(distance)
+            #         self.distance_publisher.publish(Float64(distance))
 
-                # profiling
-                if self.profile:
-                    cProfile.runctx('self.planner_tick()', globals(), locals(), sort="cumtime")
-                else:
-                    self.planner_tick()
+            #     # profiling
+            #     if self.profile:
+            #         cProfile.runctx('self.planner_tick()', globals(), locals(), sort="cumtime")
+            #     else:
+            #         self.planner_tick()
 
-            self.local_controller_tick()
+            if self.has_other_buggy:
+                self.mpc_tick()
+            else:
+                self.local_controller_tick()
 
             self.ticks += 1
 
@@ -182,23 +185,36 @@ class AutonSystem:
         pose_gps = Pose.rospose_to_pose(current_rospose)
         return World.gps_to_world_pose(pose_gps), current_speed
 
+    def mpc_tick(self):
+        with self.lock:
+            if self.other_odom_msg is None:
+                return
+
+            self_pose, self_speed = self.get_world_pose_and_speed(self.self_odom_msg)
+            other_pose, other_speed = self.get_world_pose_and_speed(self.other_odom_msg)
+
+        # Compute control output
+        steering_angle = self.local_controller.compute_control(
+            self_pose, other_pose, self.cur_traj, self_speed)
+        steering_angle_deg = np.rad2deg(steering_angle)
+        self.steer_publisher.publish(Float64(steering_angle_deg))
+
     def local_controller_tick(self):
         with self.lock:
             self_pose, self_speed = self.get_world_pose_and_speed(self.self_odom_msg)
-
         # Compute control output
         steering_angle = self.local_controller.compute_control(
             self_pose, self.cur_traj, self_speed)
         steering_angle_deg = np.rad2deg(steering_angle)
         self.steer_publisher.publish(Float64(steering_angle_deg))
 
-    def planner_tick(self):
-        with self.lock:
-            other_pose, other_speed = self.get_world_pose_and_speed(self.other_odom_msg)
-        # update local trajectory via path planner
-        self.cur_traj = self.path_planner.compute_traj(
-                                            other_pose,
-                                            other_speed)
+    # def planner_tick(self):
+    #     with self.lock:
+    #         other_pose, other_speed = self.get_world_pose_and_speed(self.other_odom_msg)
+    #     # update local trajectory via path planner
+    #     self.cur_traj = self.path_planner.compute_traj(
+    #                                         other_pose,
+    #                                         other_speed)
 if __name__ == "__main__":
     rospy.init_node("auton_system")
     parser = argparse.ArgumentParser()

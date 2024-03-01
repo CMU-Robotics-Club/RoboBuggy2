@@ -29,7 +29,7 @@ class ModelPredictiveController(Controller):
     Convex Model Predictive Controller (MPC)
     """
 
-    DEBUG = True
+    DEBUG = False
     PLOT = False
     TIME = False
     ROS = True
@@ -42,6 +42,7 @@ class ModelPredictiveController(Controller):
     LOOKAHEAD_TIME = 0.1  # seconds
     N_STATES = 4
     N_CONTROLS = 1
+    PASSING_MARGIN = 4
 
     # MPC Cost Weights
     state_cost = np.array([0.0001, 250, 5, 25])  # x, y, theta, steer
@@ -100,6 +101,16 @@ class ModelPredictiveController(Controller):
         self.debug_error_publisher = rospy.Publisher(
             buggy_name + "/auton/debug/error", ROSPose, queue_size=1
         )
+
+        self.debug_separation_publisher = rospy.Publisher(
+            buggy_name + "/auton/debug/obstacle_separation", Float64, queue_size=1
+        )
+
+        self.debug_obstacle_active_publisher = rospy.Publisher(
+            buggy_name + "/auton/debug/obstacle_active", Float64, queue_size=1
+        )
+
+
 
         self.solver = osqp.OSQP()
 
@@ -348,12 +359,13 @@ class ModelPredictiveController(Controller):
 
     first_iteration = True
 
-    def compute_trajectory(self, current_pose: Pose, trajectory: Trajectory, current_speed: float):
+    def compute_trajectory(self, current_pose: Pose, other_pose: Pose, trajectory: Trajectory, current_speed: float):
         """
         Computes the desired control output given the current state and reference trajectory
 
         Args:
             current_pose (Pose): current pose (x, y, theta) (UTM coordinates)
+            other_pose (Pose): pose of NAND (x, y, theta) (UTM coordinates)
             trajectory (Trajectory): reference trajectory
             current_speed (float): current speed of the buggy
 
@@ -407,11 +419,15 @@ class ModelPredictiveController(Controller):
         if self.TIME:
             t = time.time()
 
-        # Rotate reference trajectory to the frame of the current pose
+        # transform reference trajectory to the frame of the current pose
         inverted_pose = current_pose.invert()
+        transform = inverted_pose.to_mat()
         reference_trajectory = self.transform_trajectory(
-            reference_trajectory, inverted_pose.to_mat()
+            reference_trajectory, transform
         )
+
+        # transform NAND's pose to the frame of the current pose
+        other_pose_local = current_pose.convert_pose_from_global_to_local_frame(other_pose)
 
         if self.TIME:
             ref_transform_time = 1000.0 * (time.time() - t)
@@ -442,25 +458,6 @@ class ModelPredictiveController(Controller):
         if self.TIME:
             t = time.time()
 
-        # H = sparse.block_diag(
-        #     (
-        #         self.control_cost_diag,
-        #         *[
-        #             m
-        #             for k in range(0, self.MPC_HORIZON - 1)
-        #             for m in [
-        #                 np.diag(self.rotate_state_cost(reference_trajectory[k, 2])),
-        #                 self.control_cost_diag,
-        #             ]
-        #         ],
-        #         np.diag(
-        #             self.rotate_final_state_cost(
-        #                 reference_trajectory[self.MPC_HORIZON - 1, 2]
-        #             )
-        #         ),
-        #     ),
-        #     format="csc",
-        # )
         H = sparse.diags(
             np.concatenate(
                 [
@@ -511,8 +508,12 @@ class ModelPredictiveController(Controller):
         # c = [n 0 0], where n is the normal vector of the halfplane in x-y space
         # p is the position of NAND in x-y space
 
-        n = np.array([100, 100])
-        p = np.array([0, 1])
+        n = trajectory.get_unit_normal_by_index(knot_point_indices[0].ravel())[0]
+        p = np.array([other_pose_local.x, other_pose_local.y]) # (x,y) of other buggy
+
+        # as a margin of error, shift p to the left along the ref-traj
+        p += (self.PASSING_MARGIN + n/np.linalg.norm(n))
+
         c = np.concatenate((n, np.zeros((2, )))).reshape(1, self.N_STATES)
 
         C2 = sparse.kron(
@@ -542,19 +543,39 @@ class ModelPredictiveController(Controller):
                 np.zeros(self.N_STATES * (self.MPC_HORIZON - 1)),
                 np.tile(self.state_lb, self.MPC_HORIZON) + reference_trajectory.ravel(),
                 np.tile(self.control_lb, self.MPC_HORIZON) + reference_control.ravel(),
-                np.tile(n.T @ p, self.MPC_HORIZON),
+                np.tile(-np.inf, self.MPC_HORIZON),
             )
         )
-        ub = np.hstack(
-            (
-                -self.state_jacobian(reference_trajectory[0, :])
-                @ (self.state(0, 0, 0, 0) - reference_trajectory[0, :]),
-                np.zeros(self.N_STATES * (self.MPC_HORIZON - 1)),
-                np.tile(self.state_ub, self.MPC_HORIZON) + reference_trajectory.ravel(),
-                np.tile(self.control_ub, self.MPC_HORIZON) + reference_control.ravel(),
-                np.tile(np.inf, self.MPC_HORIZON),
+
+        # only activate NAND constraint if we are near NAND
+        if other_pose_local.x ** 2 + other_pose_local.y ** 2 < 2 ** 2:
+            ub = np.hstack(
+                (
+                    -self.state_jacobian(reference_trajectory[0, :])
+                    @ (self.state(0, 0, 0, 0) - reference_trajectory[0, :]),
+                    np.zeros(self.N_STATES * (self.MPC_HORIZON - 1)),
+                    np.tile(self.state_ub, self.MPC_HORIZON) + reference_trajectory.ravel(),
+                    np.tile(self.control_ub, self.MPC_HORIZON) + reference_control.ravel(),
+                    np.tile(n.T@p, self.MPC_HORIZON),
+                )
             )
-        )
+
+            self.debug_obstacle_active_publisher.publish(Float64(1.0))
+        else:
+            ub = np.hstack(
+                (
+                    -self.state_jacobian(reference_trajectory[0, :])
+                    @ (self.state(0, 0, 0, 0) - reference_trajectory[0, :]),
+                    np.zeros(self.N_STATES * (self.MPC_HORIZON - 1)),
+                    np.tile(self.state_ub, self.MPC_HORIZON) + reference_trajectory.ravel(),
+                    np.tile(self.control_ub, self.MPC_HORIZON) + reference_control.ravel(),
+                    np.tile(np.inf, self.MPC_HORIZON),
+                )
+            )
+
+
+            self.debug_obstacle_active_publisher.publish(Float64(0.0))
+
 
         if self.TIME:
             create_mat_time_bounds = 1000.0 * (time.time() - t)
@@ -602,8 +623,8 @@ class ModelPredictiveController(Controller):
         solution_trajectory = np.reshape(results.x, (self.MPC_HORIZON, self.N_STATES + self.N_CONTROLS))
         state_trajectory = solution_trajectory[:, self.N_CONTROLS:(self.N_CONTROLS + self.N_STATES)]
 
-        print("status", results.info.status, results.info.status_val)
         if not (results.info.status == "solved" or results.info.status == "solved inaccurate"):
+            print("solution failed", results.info.status)
             return reference_trajectory
 
         state_trajectory += reference_trajectory
@@ -689,6 +710,14 @@ class ModelPredictiveController(Controller):
             reference_navsat.latitude = ref_gps[0]
             reference_navsat.longitude = ref_gps[1]
             self.debug_reference_pos_publisher.publish(reference_navsat)
+
+
+            x_dist = current_pose.x - other_pose.x
+            y_dist = current_pose.y - other_pose.y
+
+            self.debug_separation_publisher.publish(
+                Float64(np.linalg.norm(np.array([x_dist, y_dist]))))
+
         except rospy.ROSException:
             pass
             # print("ROS Publishing Error")
@@ -710,14 +739,15 @@ class ModelPredictiveController(Controller):
         return state_trajectory
         # return steer_angle
 
-    def compute_control(self, current_pose: Pose, trajectory: Trajectory, current_speed: float):
-        state_trajectory = self.compute_trajectory(current_pose, trajectory, current_speed)
+    def compute_control(self, current_pose: Pose, other_pose:Pose, trajectory: Trajectory, current_speed: float):
+        state_trajectory = self.compute_trajectory(current_pose, other_pose, trajectory, current_speed)
         steer_angle = state_trajectory[0, self.N_STATES - 1]
 
         return steer_angle
 
 
 if __name__ == "__main__":
+
     mpc_controller = ModelPredictiveController(
         ref_trajectory=Trajectory("/rb_ws/src/buggy/paths/quartermiletrack.json"),
         ROS=True)
