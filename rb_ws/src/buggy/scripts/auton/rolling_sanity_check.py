@@ -1,32 +1,83 @@
-from autonsystem import AutonSystem
 import numpy as np
+from nav_msgs.msg import Odometry
+from std_msgs.msg import Float32, Float64, Bool, Int8
 
-def sanity_check():
-    # checks that messages are being receieved
-        # (from both buggies if relevant),
-        # RTK status is fixed
-        # covariance is less than 1 meter
-        if (state.self_odom_msg == None) or (state.has_other_buggy and state.other_odom_msg == None) or (state.self_odom_msg.pose.covariance[0] ** 2 + state.self_odom_msg.pose.covariance[7] ** 2 > 1**2):
-            return False
+import rospy
 
-        # waits until covariance is acceptable to check heading
+from brake_controller import BrakeController
+from auton.controller import Controller
+from trajectory import Trajectory
 
+class SanityCheck:
+    #TODO: copied from autonsystem, delete uneeded args
+    global_trajectory: Trajectory = None
+    local_controller: Controller = None
+    brake_controller: BrakeController = None
+    lock = None
+    steer_publisher = None
+    ticks = 0
+
+    def __init__(self,
+            global_trajectory,
+            local_controller,
+            brake_controller,
+            self_name,
+            other_name,
+            profile) -> None:
+
+
+        self.global_trajectory = global_trajectory
+        self.has_other_buggy = not other_name is None
+
+        self.cur_traj = global_trajectory
+        self.local_controller = local_controller
+        self.brake_controller = brake_controller
+        self.rtk_status = 0
+
+        self.covariance = 0
+        self.location = None
+        self.filter_location = None
+
+
+        #TODO: do we need lock
+        self.lock = Lock()
+        self.self_odom_msg = None
+        self.other_odom_msg = None
+
+        rospy.Subscriber(self_name + "/nav/odom", Odometry, self.update_self_odom)
+
+        if self.has_other_buggy:
+            rospy.Subscriber(other_name + "/nav/odom", Odometry, self.update_other_odom)
+
+        rospy.Subscriber(self_name + "/gnss1/fix_info_republished_int", Int8, self.update_rtk1_status)
+
+        rospy.Subscriber(self_name + "/gnss2/fix_info_republished_int", Int8, self.update_rtk2_status)
+
+
+    def update_self_odom(self, msg):
         with self.lock:
-            self_pose, _ = state.get_world_pose_and_speed(state.self_odom_msg)
-            current_heading = self_pose.theta
-            closest_heading = state.cur_traj.get_heading_by_index(trajectory.get_closest_index_on_path(self_pose.x, self_pose.y))
+            self.self_odom_msg = msg
 
-        # TENTATIVE:
-        # headings are originally between -pi and pi
-        # if they are negative, convert them to be between 0 and pi
-        if current_heading < 0:
-            current_heading = 2*np.pi + current_heading
+    def update_other_odom(self, msg):
+        with self.lock:
+            self.other_odom_msg = msg
 
-        if closest_heading < 0:
-            closest_heading = 2*np.pi + closest_heading
 
-        if (abs(current_heading - closest_heading) >= np.pi/2):
-            print("WARNING: INCORRECT HEADING! restart stack")
-            return False
+    def calc_covariance(self):
+        self.covariance = self.self_odom_msg.pose.covariance[0] ** 2 + self.self_odom_msg.pose.covariance[7] ** 2
 
-        return True
+    def sanity_check(self):
+        if (abs(self.filter_location - self.location) > 0):
+            print("filter and gps seperate")
+
+        if (self.covariance > 1**2):
+            print("covariance bad")
+
+        # TO CHECK:
+        #     filter-GPS separation
+        #     Covariance
+
+        #     IMU overrange warning
+        #     Converts status flags to strings and publish
+        #     Consult https://s3.amazonaws.com/files.microstrain.com/GQ7+User+Manual/Home.htm
+        # also add node to launchfiles
