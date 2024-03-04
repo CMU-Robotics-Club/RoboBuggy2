@@ -101,7 +101,10 @@ class AutonSystem:
         self.rosrate = rospy.Rate(self.auton_rate)
 
         self.profile = profile
-        self.tick_caller()
+        if self.profile:
+            cProfile.runctx('self.tick_caller()', globals(), locals(), sort="cumtime")
+        else:
+            self.tick_caller()
 
     def update_self_odom(self, msg):
         with self.lock:
@@ -151,10 +154,7 @@ class AutonSystem:
                     self.distance_publisher.publish(Float64(distance))
 
                 # profiling
-                if self.profile:
-                    cProfile.runctx('self.planner_tick()', globals(), locals(), sort="cumtime")
-                else:
-                    self.planner_tick()
+                self.planner_tick()
 
             self.local_controller_tick()
 
