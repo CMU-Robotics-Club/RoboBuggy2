@@ -2,6 +2,7 @@ import json
 import uuid
 import matplotlib.pyplot as plt
 import numpy as np
+from scipy.spatial import KDTree
 
 from scipy.interpolate import Akima1DInterpolator, CubicSpline
 
@@ -92,6 +93,7 @@ class Trajectory:
         s = np.cumsum(np.hstack([[0], ds[:-1]]))
         self.distances = s
         self.dt = dt
+        self.tree = KDTree(self.positions, copy_data = True)
 
     def get_num_points(self):
         """Gets the number of points along the trajectory
@@ -346,6 +348,23 @@ class Trajectory:
             + start_index
         )
 
+    def get_closest_index_by_tree(self, x, y, subsample_resolution=10000):
+        query = self.tree.query(x=(x, y), k=2)[1]
+        start_index = min(query)
+        end_index = max(query)
+
+        # Now interpolate at a higher resolution to get a more accurate result
+        r_interp = self.interpolation(
+            np.linspace(start_index, end_index, subsample_resolution + 1)         )
+        x_interp, y_interp = r_interp[:, 0], r_interp[:, 1] #x_interp, y_interp are numpy column vectors
+
+        distances = (x_interp - x) ** 2 + (y_interp - y) ** 2 #Again distances are relative
+
+        # Return the rational index of the closest point
+        return (
+            np.argmin(distances) / subsample_resolution * (end_index - start_index)
+            + start_index
+        )
 
 if __name__ == "__main__":
     # Example usage

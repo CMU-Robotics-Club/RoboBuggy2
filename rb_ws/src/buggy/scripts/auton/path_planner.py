@@ -140,7 +140,6 @@ class PathPlanner():
         reference_navsat.latitude = ref_gps[0]
         reference_navsat.longitude = ref_gps[1]
         self.debug_splice_pt_publisher.publish(reference_navsat)
-
-
+        traj = Trajectory(json_filepath=None, positions=new_path)
         # generate new path
-        return Trajectory(json_filepath=None, positions=new_path)
+        return traj

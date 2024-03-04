@@ -58,14 +58,8 @@ class StanleyController(Controller):
         front_x = x + StanleyController.WHEELBASE * np.cos(heading)
         front_y = y + StanleyController.WHEELBASE * np.sin(heading)
 
-        traj_index = trajectory.get_closest_index_on_path(
-            front_x,
-            front_y,
-            start_index=self.current_traj_index - 20,
-            end_index=self.current_traj_index + 50,
-        )
-        self.current_traj_index = max(traj_index, self.current_traj_index)
-
+        proposed_index = trajectory.get_closest_index_by_tree(front_x, front_y)
+        self.current_traj_index = max(self.current_traj_index, proposed_index)
         # Calculate heading error
 
         lookahead_dist = np.clip(
