@@ -1,7 +1,5 @@
 #!/usr/bin/env python3
 
-from abc import ABC, abstractmethod
-
 import rospy
 from std_msgs.msg import Float64
 
@@ -28,8 +26,8 @@ class DebugController():
             if (add):
                 steer_cmd += 18 / 100
             else:
-                steer_cmd -= 18 / 100 
-            
+                steer_cmd -= 18 / 100
+
             self.steer_publisher.publish(Float64(steer_cmd))
 
             tick_count += 1
@@ -38,7 +36,7 @@ class DebugController():
 
             if (steer_cmd >= 18):
                 add = False
-            
+
             if (steer_cmd <= -18):
                 add = True
             rate.sleep()

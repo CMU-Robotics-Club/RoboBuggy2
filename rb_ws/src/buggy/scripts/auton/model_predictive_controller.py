@@ -515,19 +515,19 @@ class ModelPredictiveController(Controller):
         # p is the position of NAND in x-y space
 
         n = np.array([100, 100])
-        p = np.array([0, 1])
+        # p = np.array([0, 1])
         c = np.concatenate((n, np.zeros((2, )))).reshape(1, self.N_STATES)
 
-        C2 = sparse.kron(
-            np.eye(self.MPC_HORIZON),
-            np.hstack(
-                (
-                    np.zeros((1, self.N_CONTROLS)),
-                    c
-                )
-            ),
-            format="csc",
-        )
+        # C2 = sparse.kron(
+        #     np.eye(self.MPC_HORIZON),
+        #     np.hstack(
+        #         (
+        #             np.zeros((1, self.N_CONTROLS)),
+        #             c
+        #         )
+        #     ),
+        #     format="csc",
+        # )
 
         D = sparse.vstack([self.C + C1, self.X, self.U])
         # D = sparse.vstack([self.C + C1, self.X, self.U, C2])

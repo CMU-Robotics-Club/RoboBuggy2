@@ -1,16 +1,10 @@
 #!/usr/bin/env python3
 
-
-from abc import ABC, abstractmethod
-
 from threading import Lock
-import sys
-
 import numpy as np
 
 import rospy
 from nav_msgs.msg import Odometry
-from sensor_msgs.msg import NavSatFix
 from geometry_msgs.msg import PoseStamped
 from std_msgs.msg import Float64
 from pose import Pose
