@@ -514,9 +514,9 @@ class ModelPredictiveController(Controller):
         # c = [n 0 0], where n is the normal vector of the halfplane in x-y space
         # p is the position of NAND in x-y space
 
-        n = np.array([100, 100])
+        # n = np.array([100, 100])
         # p = np.array([0, 1])
-        c = np.concatenate((n, np.zeros((2, )))).reshape(1, self.N_STATES)
+        # c = np.concatenate((n, np.zeros((2, )))).reshape(1, self.N_STATES)
 
         # C2 = sparse.kron(
         #     np.eye(self.MPC_HORIZON),
