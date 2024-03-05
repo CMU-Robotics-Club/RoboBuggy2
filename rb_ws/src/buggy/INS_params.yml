@@ -17,8 +17,8 @@
 port        : "/dev/ttyACM0"
 aux_port    : "/dev/null"
 baudrate    : 115200
-debug       : False
-diagnostics : False
+debug       : True
+diagnostics : True
 
 # If set to true, this will configure the requested baudrate on the device.
 # Note that this will be set on both USB and serial, but will only actually affect the baudrate of a serial connection.
