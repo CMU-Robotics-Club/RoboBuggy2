@@ -1,8 +1,8 @@
 #! /usr/bin/env python3
 
+import re
 import sys
 import threading
-
 import rospy
 from geometry_msgs.msg import Pose, Twist, PoseWithCovariance, TwistWithCovariance
 from std_msgs.msg import Float64
@@ -10,6 +10,9 @@ from sensor_msgs.msg import NavSatFix
 from nav_msgs.msg import Odometry
 import numpy as np
 import utm
+sys.path.append("/rb_ws/src/buggy/scripts/auton")
+from trajectory import Trajectory
+from world import World
 
 
 class Simulator:
@@ -23,7 +26,7 @@ class Simulator:
     START_LONG = -79.9409643423245
     NOISE = True # Noisy outputs for nav/odom?
 
-    def __init__(self, starting_pose, velocity, buggy_name):
+    def __init__(self, start_pos: str, velocity: float, buggy_name: str):
         """
         Args:
             heading (float): degrees start heading of buggy
@@ -73,7 +76,37 @@ class Simulator:
         # utm_coords = utm.from_latlon(Simulator.START_LAT, Simulator.START_LONG)
         # self.e_utm = utm_coords[0]
         # self.n_utm = utm_coords[1]
-        self.e_utm, self.n_utm, self.heading = self.starting_poses[starting_pose]
+
+        # Use start_pos as key in starting_poses dictionary
+        if start_pos in self.starting_poses:
+            init_pose = self.starting_poses[start_pos]
+        else:
+            # Use start_pos as float representing distance down track to start from
+            try:
+                start_pos = float(start_pos)
+                trajectory = Trajectory("/rb_ws/src/buggy/paths/buggycourse_safe_1.json")
+
+                init_world_coords = trajectory.get_position_by_distance(start_pos)
+                init_heading = np.rad2deg(trajectory.get_heading_by_distance(start_pos)[0])
+                init_x, init_y = tuple(World.world_to_utm_numpy(init_world_coords)[0])
+
+            # Use start_pos as (e_utm, n_utm, heading) coordinates
+            except ValueError:
+                # Extract the three coordinates from start_pos
+                matches = re.match(
+                    r"^\(?(?P<utm_e>-?[\d\.]+), *(?P<utm_n>-?[\d\.]+), *(?P<heading>-?[\d\.]+)\)?$",
+                    start_pos
+                )
+                if matches == None: raise ValueError("invalid start_pos for " + buggy_name)
+                matches = matches.groupdict()
+
+                init_x = float(matches["utm_e"])
+                init_y = float(matches["utm_n"])
+                init_heading = float(matches["heading"])
+
+            init_pose = init_x, init_y, init_heading
+
+        self.e_utm, self.n_utm, self.heading = init_pose
         self.velocity = velocity # m/s
 
         self.steering_angle = 0  # degrees
@@ -100,6 +133,7 @@ class Simulator:
         """
         with self.lock:
             self.velocity = data.data
+
     def get_steering_arc(self):
         # Adapted from simulator.py (Joseph Li)
         # calculate the radius of the steering arc
@@ -113,6 +147,7 @@ class Simulator:
             return np.inf
 
         return Simulator.WHEELBASE / np.tan(np.deg2rad(steering_angle))
+
     def dynamics(self, state, v):
         """ Calculates continuous time bicycle dynamics as a function of state and velocity
 
@@ -139,21 +174,19 @@ class Simulator:
             n_utm = self.n_utm
             velocity = self.velocity
             steering_angle = self.steering_angle
-        # Calculate new position
-        if steering_angle == 0.0:
-            # Straight
-            e_utm_new = e_utm + (velocity / self.rate) * np.cos(np.deg2rad(heading))
-            n_utm_new = n_utm + (velocity / self.rate) * np.sin(np.deg2rad(heading))
-            heading_new = heading
-        else:
-            # steering radius
-            radius = self.get_steering_arc()
-            distance = velocity / self.rate
-            delta_heading = distance / radius
-            heading_new = heading + np.rad2deg(delta_heading) / 2
-            e_utm_new = e_utm + (velocity / self.rate) * np.cos(np.deg2rad(heading_new))
-            n_utm_new = n_utm + (velocity / self.rate) * np.sin(np.deg2rad(heading_new))
-            heading_new = heading_new + np.rad2deg(delta_heading) / 2
+
+        # RK4 to calculate next position
+        h = 1/self.rate
+        state = np.array([e_utm, n_utm, np.deg2rad(heading), np.deg2rad(steering_angle)])
+        k1 = self.dynamics(state, velocity)
+        k2 = self.dynamics(state + h/2 * k1, velocity)
+        k3 = self.dynamics(state + h/2 * k2, velocity)
+        k4 = self.dynamics(state + h/2 * k3, velocity)
+
+        final_state = state + h/6 * (k1 + 2 * k2 + 2 * k3 + k4)
+
+        e_utm_new, n_utm_new, heading_new, _ = final_state
+        heading_new = np.rad2deg(heading_new)
 
         with self.lock:
             self.e_utm = e_utm_new
@@ -292,9 +325,11 @@ if __name__ == "__main__":
     rospy.init_node("sim_2d_engine")
     print("sim 2d eng args:")
     print(sys.argv)
-    starting_pose = sys.argv[1]
+
+    start_pos = sys.argv[1]
     velocity = float(sys.argv[2])
     buggy_name = sys.argv[3]
-    sim = Simulator(starting_pose, velocity, buggy_name)
+
+    sim = Simulator(start_pos, velocity, buggy_name)
     sim.loop()
 

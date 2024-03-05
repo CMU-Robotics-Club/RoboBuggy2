@@ -31,7 +31,7 @@ A complete re-write of the old RoboBuggy.
 ### ROS
 - Navigate to `/rb_ws`. This is the catkin workspace where we will be doing all our ROS stuff.
 - To build the ROS workspace and source it, run:
-        
+
         catkin_make
         source /rb_ws/devel/setup.bash  # sets variables so that our package is visible to ROS commands
 - To learn ROS on your own, follow the guide on https://wiki.ros.org/ROS/Tutorials. Start from the first and install Ros using a Virtual Machine.
@@ -55,31 +55,30 @@ A complete re-write of the old RoboBuggy.
 ### ROS
 - Navigate to `/rb_ws`. This is the catkin workspace where we will be doing all our ROS stuff.
 - To build the ROS workspace and source it, run:
-        
+
         catkin_make
         source /rb_ws/devel/setup.bash  # sets variables so that our package is visible to ROS commands
 - To learn ROS on your own, follow the guide on https://wiki.ros.org/ROS/Tutorials. Start from the first and install Ros using a Virtual Machine.
 
 ---
-## Open Docker 
+## Open Docker
 - Use `cd` to change the working directory to be `RoboBuggy2`
-- Then do `./setup_dev.sh` in the main directory (RoboBuggy2) to launch the docker container.
+- Then do `./setup_dev.sh` in the main directory (RoboBuggy2) to launch the docker container. Utilize the `--no-gpu`, `--force-gpu`, and `--run-testing` flags as necessary.
 - Then you can go in the docker container using the `docker exec -it robobuggy2-main-1 bash`.
 - When you are done, type Ctrl+C and use `$exit` to exit.
 
 ## 2D Simulation
 - Boot up the docker container
-- Run `roslaunch buggy sim_2d_single.launch` to simulate 1 buggy 
+- Run `roslaunch buggy sim_2d_single.launch` to simulate 1 buggy
 - See `rb_ws/src/buggy/launch/sim_2d_single.launch` to view all available launch options
- 
 - Run `roslaunch buggy sim_2d_2buggies.launch` to simulate 2 buggies
-- <img width="612" alt="Screenshot 2023-11-13 at 3 18 30 PM" src="https://github.com/CMU-Robotics-Club/RoboBuggy2/assets/45720415/b204aa05-8792-414e-a868-6fbc0d11ab9d">
+
+<img width="612" alt="Screenshot 2023-11-13 at 3 18 30 PM" src="https://github.com/CMU-Robotics-Club/RoboBuggy2/assets/45720415/b204aa05-8792-414e-a868-6fbc0d11ab9d">
 
 - See `rb_ws/src/buggy/launch/sim_2d_2buggies.launch` to view all available launch options
-- To prevent topic name collision, a topic named `t` associated with buggy named `x` have format `x\t`. The 
-- names are `SC` and `Nand` in the 2 buggy simulator. In the one buggy simulator, the name can be defined as a launch arg.
-- See [**Foxglove Visualization**](#foxglove-visualization) for visualizing the simulation. Beware that since topic names
-- are user-defined, you will need to adjust the topic names in each panel.
+    - The buggy starting positions can be changed using the `sc_start_pos` and `nand_start_pos` arguments (can pass as a key to a dictionary of preset start positions in engine.py, a single float for starting distance along planned trajectory, or 3 comma-separated floats (utm east, utm north, and heading))
+- To prevent topic name collision, a topic named `t` associated with buggy named `x` have format `x/t`. The names are `SC` and `Nand` in the 2 buggy simulator. In the one buggy simulator, the name can be defined as a launch arg.
+- See [**Foxglove Visualization**](#foxglove-visualization) for visualizing the simulation. Beware that since topic names are user-defined, you will need to adjust the topic names in each panel.
 
 ### Simulator notes
 Feedback:
@@ -90,7 +89,7 @@ Commands:
 - Steering angle: `/buggy/steering` in degrees (std_msgs/Float64)
 - Velocity: `/buggy/velocity` in m/s (std_msgs/Float64)
 
-  
+
 ## Foxglove Visualization
 - Foxglove is used to visualize both the simulator and the actual buggy's movements.
 - First, you need to import the layout definition into Foxglove. On the top bar, click Layout, then "Import from file".
@@ -114,12 +113,12 @@ Instructions:
 ### Connecting to and Launching the RoboBuggy
 When launching the buggy:
 - Connect to the Wi-Fi named ShortCircuit.
--	In the command line window: 
+-	In the command line window:
 SSH to the computer on ShortCircuit and go to folder
 `$ ssh nuc@192.168.1.217`
 Then `$ cd RoboBuggy2`
 -	Setup the docker
-`$ ./setup_prod.sh`
+`$ ./setup_prod.sh` (Utilize the `--no-gpu`, `--force-gpu`, and `--run-testing` flags as necessary.)
 -	Go to docker container
 `$ docker_exec`
 -	Open foxglove and do local connection to “ws://192.168.1.217/8765”
