@@ -46,9 +46,9 @@ class RTKErrPublisher():
 
         if not (self.odom_msg is None) and not (self.gnss2_msg is None):
             odom_pose = World.gps_to_world_pose(Pose.rospose_to_pose(self.odom_msg.pose.pose))
-            gnss1_pose = World.gps_to_world_pose(Pose.rospose_to_pose(self.gnss2_msg.pose))
+            gnss2_pose = World.gps_to_world_pose(Pose.rospose_to_pose(self.gnss2_msg.pose))
 
-            distance = (odom_pose.x - gnss1_pose.x) ** 2 + (odom_pose.y - gnss1_pose.y) ** 2
+            distance = (odom_pose.x - gnss2_pose.x) ** 2 + (odom_pose.y - gnss2_pose.y) ** 2
             distance = np.sqrt(distance)
 
             self.distance_publisher.publish(Float64(distance))
