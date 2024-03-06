@@ -378,8 +378,8 @@ class ModelPredictiveController(Controller):
         traj_index = trajectory.get_closest_index_on_path(
             current_pose.x,
             current_pose.y,
-            start_index=self.current_traj_index,
-            end_index=self.current_traj_index + 20,
+            start_index=self.current_traj_index -20,
+            end_index=self.current_traj_index + 50,
             subsample_resolution=1000,
         )
         self.current_traj_index = max(traj_index, self.current_traj_index)
@@ -388,6 +388,9 @@ class ModelPredictiveController(Controller):
 
         if self.DEBUG:
             print("Current traj index: ", self.current_traj_index)
+
+        if self.current_traj_index >= trajectory.get_num_points() - 1:
+            raise Exception("[MPC]: Ran out of path to follow!")
 
         # Get reference trajectory from the current traj index for the next [MPC_HORIZON] seconds
         knot_point_distances = np.linspace(
@@ -511,23 +514,23 @@ class ModelPredictiveController(Controller):
         # c = [n 0 0], where n is the normal vector of the halfplane in x-y space
         # p is the position of NAND in x-y space
 
-        n = np.array([100, 100])
-        p = np.array([0, 1])
-        c = np.concatenate((n, np.zeros((2, )))).reshape(1, self.N_STATES)
+        # n = np.array([100, 100])
+        # p = np.array([0, 1])
+        # c = np.concatenate((n, np.zeros((2, )))).reshape(1, self.N_STATES)
 
-        C2 = sparse.kron(
-            np.eye(self.MPC_HORIZON),
-            np.hstack(
-                (
-                    np.zeros((1, self.N_CONTROLS)),
-                    c
-                )
-            ),
-            format="csc",
-        )
+        # C2 = sparse.kron(
+        #     np.eye(self.MPC_HORIZON),
+        #     np.hstack(
+        #         (
+        #             np.zeros((1, self.N_CONTROLS)),
+        #             c
+        #         )
+        #     ),
+        #     format="csc",
+        # )
 
-
-        D = sparse.vstack([self.C + C1, self.X, self.U, C2])
+        D = sparse.vstack([self.C + C1, self.X, self.U])
+        # D = sparse.vstack([self.C + C1, self.X, self.U, C2])
 
         if self.TIME:
             create_mat_time_D = 1000.0 * (time.time() - t)
@@ -542,7 +545,7 @@ class ModelPredictiveController(Controller):
                 np.zeros(self.N_STATES * (self.MPC_HORIZON - 1)),
                 np.tile(self.state_lb, self.MPC_HORIZON) + reference_trajectory.ravel(),
                 np.tile(self.control_lb, self.MPC_HORIZON) + reference_control.ravel(),
-                np.tile(n.T @ p, self.MPC_HORIZON),
+                # np.tile(n.T @ p, self.MPC_HORIZON),
             )
         )
         ub = np.hstack(
@@ -552,7 +555,7 @@ class ModelPredictiveController(Controller):
                 np.zeros(self.N_STATES * (self.MPC_HORIZON - 1)),
                 np.tile(self.state_ub, self.MPC_HORIZON) + reference_trajectory.ravel(),
                 np.tile(self.control_ub, self.MPC_HORIZON) + reference_control.ravel(),
-                np.tile(np.inf, self.MPC_HORIZON),
+                # np.tile(np.inf, self.MPC_HORIZON),
             )
         )
 
@@ -607,7 +610,6 @@ class ModelPredictiveController(Controller):
             return reference_trajectory
 
         state_trajectory += reference_trajectory
-        # steer_rate_trajectory = solution_trajectory[:, :self.N_CONTROLS]
 
         if self.TIME:
             solve_time = 1000 * (time.time() - t)

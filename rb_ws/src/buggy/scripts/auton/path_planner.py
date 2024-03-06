@@ -11,18 +11,21 @@ from trajectory import Trajectory
 from world import World
 class PathPlanner():
     LOOKAHEAD_TIME = 2.0 #s
-    RESOLUTION = 30 #samples/s
-    PASSING_OFFSET = 2 #m
-    # in meters, the number of meters behind NAND before we start morphing the trajectory
+    RESOLUTION = 10 #samples/s
+
+    # move the curb towards the center of the course by CURB_MARGIN meters
+    # for a margin of safety
+    CURB_MARGIN = 1 #m
+    # the number of meters behind NAND before we start morphing the trajectory
     REAR_MARGIN = 10 #m
 
     # in meters, the number of meters in front of NAND,
     # before the morphed trajectory rejoins the nominal trajectory
-    # WARNING: set this value to be greater than 15m/s * lookahead time (10 m/s is the upper limit
+    # WARNING: set this value to be greater than 15m/s * lookahead time (15 m/s is the upper limit
     # of NAND speed) Failure to do so can result violent u-turns in the new trajectory.
     FRONT_MARGIN = 35 #m
 
-    def __init__(self, nominal_traj:Trajectory) -> None:
+    def __init__(self, nominal_traj:Trajectory, left_curb:Trajectory) -> None:
         self.occupancy_grid = OccupancyGrid()
 
         # TODO: update with NAND wheelbase
@@ -40,7 +43,9 @@ class PathPlanner():
         self.debug_grid_cost_publisher = rospy.Publisher(
             "/auton/debug/grid_cost", Float64, queue_size=0
         )
+
         self.nominal_traj = nominal_traj
+        self.left_curb = left_curb
 
         # TODO: estimate this value based on the curvature of NAND's recent positions
         self.other_steering_angle = 0
@@ -82,7 +87,16 @@ class PathPlanner():
         other_idx:float = self.nominal_traj.get_closest_index_on_path(
             other_pose.x,
             other_pose.y)
+
         #other is just NAND, for general purposes consider it other
+
+        left_curb_idx = self.left_curb.get_closest_index_on_path(
+            other_pose.x,
+            other_pose.y)
+
+        left_curb_end_idx = self.left_curb.get_index_from_distance(
+                self.nominal_traj.get_distance_from_index(left_curb_idx) + self.FRONT_MARGIN
+            )
 
         new_segment_start_idx:float = self.nominal_traj.get_index_from_distance(
                 self.nominal_traj.get_distance_from_index(other_idx) - self.REAR_MARGIN
@@ -101,19 +115,69 @@ class PathPlanner():
             self.LOOKAHEAD_TIME,
             self.RESOLUTION)
 
-        other_future_poses_idxs = np.empty((len(other_future_poses), ))
+        other_poses_idx_along_nominal = np.empty((len(other_future_poses), ))
+
+        # indexes of points along the left curb that are closest NAND's future poses
+        left_curb_idxes = np.empty((len(other_future_poses), ))
 
         # TODO: optimize this lookup -- how tho
         for i in range(len(other_future_poses)):
-            other_future_poses_idxs[i] = self.nominal_traj.get_closest_index_on_path(
+            other_poses_idx_along_nominal[i] = self.nominal_traj.get_closest_index_on_path(
                     other_future_poses[i][0],
                     other_future_poses[i][1],
                     start_index=other_idx)
 
-        future_pose_unit_normal:np.typing.NDArray = self.nominal_traj.get_unit_normal_by_index(
-            other_future_poses_idxs
+            left_curb_idxes[i] = self.left_curb.get_closest_index_on_path(
+                    other_future_poses[i][0],
+                    other_future_poses[i][1],
+                    start_index=left_curb_idx,
+                    end_index=left_curb_end_idx)
+
+        nominal_traj_unit_normal:np.typing.NDArray = self.nominal_traj.get_unit_normal_by_index(
+            other_poses_idx_along_nominal
         )
-        passing_targets = other_future_poses + self.PASSING_OFFSET * future_pose_unit_normal
+
+        nominal_traj_slice = self.nominal_traj.get_position_by_index(
+            other_poses_idx_along_nominal
+        )
+
+
+        left_curb_unit_normal = self.left_curb.get_unit_normal_by_index(left_curb_idxes)
+
+        # grab points on the left curb that run next to future trajectory of NAND
+        left_curb_slice = self.left_curb.get_position_by_index(left_curb_idxes)
+        # the left curb slice is shifted further "into" the course along the normal of the curb
+        # to provide a margin of safety
+        left_curb_slice = left_curb_slice - left_curb_unit_normal * self.CURB_MARGIN
+
+        # generate passing targets by taking the midpoint between NAND and the left curb trajectories
+        # the passing target's offset from the nominal is capped at the distance between nominal
+        # trajectory and the curb
+        passing_targets = (left_curb_slice + other_future_poses) / 2
+
+        # bound the passing targets by the left curb:
+        # for curb point C and passing target P, vector P->C dotted with the unit normal of the curb at C
+        # should be positive. (the unit normal is left-hand). This ensures the passing points are to the right
+        # of the curb
+        passing_targets_to_curb = left_curb_slice - passing_targets
+        # elementwise multiply, then sum along rows = rowise dot product
+        curb_mask = (np.sum(passing_targets_to_curb * left_curb_unit_normal, axis=1) > 0).reshape(-1, 1)
+
+        # to match dimension of passing offsets mask, repeat along row
+        # in row (x, y) of passing_targets, if (x, y) is to the left of the curb, the corresponding row
+        # in curb_mask = (false, false). Else, the row is (true, true)
+        curb_mask = np.repeat(curb_mask, 2, axis=1)
+
+        # use this mask to select the curb, if the original passing target is to the left of the curb.
+        passing_targets = np.where(curb_mask, passing_targets, left_curb_slice)
+
+        # bound the passing targets by the nominal trajectory. This means NAND shouldn't "pull"
+        # short circuit to the right of the nominal trajectory
+        passing_targets_to_nominal = nominal_traj_slice - passing_targets
+        nominal_mask = (np.sum(passing_targets_to_nominal * nominal_traj_unit_normal, axis=1) < 0).reshape(-1, 1)
+        nominal_mask = np.repeat(nominal_mask, 2, axis=1)
+        passing_targets = np.where(nominal_mask, passing_targets, nominal_traj_slice)
+
 
         pre_slice = self.nominal_traj.positions[:int(new_segment_start_idx), :]
         post_slice = self.nominal_traj.positions[int(new_segment_end_idx):, :]
@@ -130,16 +194,18 @@ class PathPlanner():
         # for debugging:
         # publish the first and last point of the part of the original trajectory
         # that got spliced out
-        reference_navsat = NavSatFix()
-        ref_gps = World.world_to_gps(*self.nominal_traj.get_position_by_index(int(new_segment_start_idx)))
-        reference_navsat.latitude = ref_gps[0]
-        reference_navsat.longitude = ref_gps[1]
-        self.debug_splice_pt_publisher.publish(reference_navsat)
+        # reference_navsat = NavSatFix()
+        # ref_gps = World.world_to_gps(*self.nominal_traj.get_position_by_index(int(new_segment_start_idx)))
+        # reference_navsat.latitude = ref_gps[0]
+        # reference_navsat.longitude = ref_gps[1]
+        # self.debug_splice_pt_publisher.publish(reference_navsat)
 
-        ref_gps = World.world_to_gps(*self.nominal_traj.get_position_by_index(int(new_segment_end_idx)))
-        reference_navsat.latitude = ref_gps[0]
-        reference_navsat.longitude = ref_gps[1]
-        self.debug_splice_pt_publisher.publish(reference_navsat)
+        # ref_gps = World.world_to_gps(*self.nominal_traj.get_position_by_index(int(new_segment_end_idx)))
+        # reference_navsat.latitude = ref_gps[0]
+        # reference_navsat.longitude = ref_gps[1]
+        # self.debug_splice_pt_publisher.publish(reference_navsat)
+
+
 
 
         # generate new path

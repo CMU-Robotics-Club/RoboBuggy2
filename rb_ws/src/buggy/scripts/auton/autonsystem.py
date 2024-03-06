@@ -61,7 +61,8 @@ class AutonSystem:
         self.local_controller = local_controller
         self.brake_controller = brake_controller
 
-        self.path_planner = PathPlanner(global_trajectory)
+        left_curb = Trajectory(json_filepath="/rb_ws/src/buggy/paths/outside_curb_smooth.json")
+        self.path_planner = PathPlanner(global_trajectory, left_curb)
         self.other_steering = 0
 
         self.lock = Lock()
@@ -160,7 +161,7 @@ class AutonSystem:
 
             self.ticks += 1
 
-            if self.ticks >= 10:
+            if self.ticks >= 20:
                 self.ticks = 0
 
             self.rosrate.sleep()

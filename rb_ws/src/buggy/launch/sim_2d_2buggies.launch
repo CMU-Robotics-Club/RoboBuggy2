@@ -4,6 +4,7 @@
 
     <arg name="nand_controller"     default="stanley" />
     <arg name="nand_path"           default="buggycourse_safe_1.json" />
+    <arg name="sc_path"           default="buggycourse_raceline.json" />
     <arg name="nand_start_pos"     default="Hill1_NAND" />
     <arg name="nand_velocity"       default="10.0" />
 
@@ -33,14 +34,14 @@
         args="$(arg nand_start_pos) $(arg nand_velocity) NAND"/>
 
     <!-- NAND is not aware of SC -->
-    <arg name="nand_autonsystem_args" default="--controller stanley --dist 0.0 --traj buggycourse_safe_1.json --self_name NAND" />
+    <arg name="nand_autonsystem_args" default="--controller stanley --dist 0.0 --traj $(arg nand_path) --self_name NAND" />
     <node name="nand_auton_system" pkg="buggy" type="autonsystem.py" output="screen"
         args="$(arg nand_autonsystem_args)"/>
 
     <node name="sc_sim_2d_engine" pkg="buggy" type="engine.py" output="screen"
         args="$(arg sc_start_pos) $(arg sc_velocity) SC"/>
 
-    <arg name="sc_autonsystem_args" default="--controller stanley --dist 0.0 --traj buggycourse_safe_1.json --self_name SC --other_name NAND" />
+    <arg name="sc_autonsystem_args" default="--controller mpc --dist 0.0 --traj $(arg sc_path) --self_name SC --other_name NAND --profile" />
     <node name="sc_auton_system" pkg="buggy" type="autonsystem.py" output="screen"
         args="$(arg sc_autonsystem_args)"/>
 
