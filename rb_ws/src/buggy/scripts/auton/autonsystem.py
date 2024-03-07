@@ -82,7 +82,7 @@ class AutonSystem:
             self_name + "/debug/is_high_covariance", Bool, queue_size=1
         )
         self.steer_publisher = rospy.Publisher(
-            self_name + "/input/steering", Float64, queue_size=1
+            self_name + "/buggy/input/steering", Float64, queue_size=1
         )
         self.brake_publisher = rospy.Publisher(
             self_name + "/input/brake", Float64, queue_size=1
@@ -157,11 +157,13 @@ class AutonSystem:
                 else:
                     self.planner_tick()
 
+                self.cur_traj.current_traj_index = 0
+
             self.local_controller_tick()
 
             self.ticks += 1
 
-            if self.ticks >= 20:
+            if self.ticks >= 10:
                 self.ticks = 0
 
             self.rosrate.sleep()
@@ -195,11 +197,13 @@ class AutonSystem:
 
     def planner_tick(self):
         with self.lock:
+            self_pose, _ = self.get_world_pose_and_speed(self.self_odom_msg)
             other_pose, other_speed = self.get_world_pose_and_speed(self.other_odom_msg)
+
         # update local trajectory via path planner
         self.cur_traj = self.path_planner.compute_traj(
-                                            other_pose,
-                                            other_speed)
+                                            self_pose,
+                                            other_pose)
 if __name__ == "__main__":
     rospy.init_node("auton_system")
     parser = argparse.ArgumentParser()
