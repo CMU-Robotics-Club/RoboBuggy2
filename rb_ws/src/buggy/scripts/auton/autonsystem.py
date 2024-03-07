@@ -1,7 +1,6 @@
 #!/usr/bin/env python3
 
 import argparse
-import cProfile
 from threading import Lock
 
 import threading
@@ -12,7 +11,6 @@ from std_msgs.msg import Float32, Float64, Bool, Int8
 from nav_msgs.msg import Odometry
 
 import numpy as np
-import time
 
 from trajectory import Trajectory
 from world import World
@@ -167,19 +165,19 @@ class AutonSystem:
         # initialize global trajectory index
 
         with self.lock:
-            e, _ = self.get_world_pose_and_speed(self.self_odom_msg)
+            _, _ = self.get_world_pose_and_speed(self.self_odom_msg)
 
-        p2 = threading.Thread(target=self.planner_process) 
-        p1 = threading.Thread(target=self.local_controller_process) 
-    
-        # starting processes 
+        p2 = threading.Thread(target=self.planner_process)
+        p1 = threading.Thread(target=self.local_controller_process)
+
+        # starting processes
         # See LOOKAHEAD_TIME in path_planner.py for the horizon of the
         # planner. Make sure it is significantly (at least 2x) longer
         # than 1 period of the planner when you change the planner frequency.
         p2.start() #Planner runs every 10 hz
         p1.start() #Main Cycles runs at 100hz
-        
-        p2.join() 
+
+        p2.join()
         p1.join()
 
     def get_world_pose_and_speed(self, msg):
@@ -192,7 +190,7 @@ class AutonSystem:
         # Get data from message
         pose_gps = Pose.rospose_to_pose(current_rospose)
         return World.gps_to_world_pose(pose_gps), current_speed
-    
+
     def local_controller_process(self):
         while (not rospy.is_shutdown()):
             self.local_controller_tick()
@@ -207,7 +205,7 @@ class AutonSystem:
             self_pose, self.cur_traj, self_speed)
         steering_angle_deg = np.rad2deg(steering_angle)
         self.steer_publisher.publish(Float64(steering_angle_deg))
-        
+
 
     def planner_process(self):
         while (not rospy.is_shutdown()):
@@ -221,7 +219,7 @@ class AutonSystem:
 
                 self.planner_tick()
                 self.rosrate_planner.sleep()
-        
+
 
     def planner_tick(self):
         with self.lock:
