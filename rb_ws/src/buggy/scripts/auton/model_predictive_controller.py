@@ -106,8 +106,8 @@ class ModelPredictiveController(Controller):
             buggy_name + "/auton/debug/obstacle_separation", Float64, queue_size=1
         )
 
-        self.debug_obstacle_active_publisher = rospy.Publisher(
-            buggy_name + "/auton/debug/obstacle_active", Float64, queue_size=1
+        self.debug_osqp_infeasible_publisher = rospy.Publisher(
+            buggy_name + "/auton/debug/osqp_infeasible", Bool, queue_size=1
         )
 
 
@@ -504,26 +504,28 @@ class ModelPredictiveController(Controller):
             )
         )
 
+
+        n = np.array([other_pose_local.x, other_pose_local.y]) # (x,y) of other buggy
+
         # halfplane constraint
-        # c = [n 0 0], where n is the normal vector of the halfplane in x-y space
-        # p is the position of NAND in x-y space
+        # c = [p 0 0], where p is the nominal xy position of SC
+        p = reference_trajectory[:, 0:2]
 
-        n = trajectory.get_unit_normal_by_index(knot_point_indices[0].ravel())[0]
-        p = np.array([other_pose_local.x, other_pose_local.y]) # (x,y) of other buggy
+        # TODO: optimize
+        c = []
+        for i in range(self.MPC_HORIZON):
+            c.append(np.concatenate((p[i, :], np.zeros((2, )))).reshape(1, self.N_STATES))
 
-        # as a margin of error, shift p to the left along the ref-traj
-        p += (self.PASSING_MARGIN + n/np.linalg.norm(n))
-
-        c = np.concatenate((n, np.zeros((2, )))).reshape(1, self.N_STATES)
-
-        C2 = sparse.kron(
-            np.eye(self.MPC_HORIZON),
-            np.hstack(
-                (
-                    np.zeros((1, self.N_CONTROLS)),
-                    c
+        C2 = sparse.block_diag(
+            [
+                np.hstack(
+                    (
+                        np.zeros((1, self.N_CONTROLS)),
+                        c[i]
+                    )
                 )
-            ),
+                for i in range(self.MPC_HORIZON)
+            ],
             format="csc",
         )
 
@@ -536,6 +538,7 @@ class ModelPredictiveController(Controller):
         if self.TIME:
             t = time.time()
 
+
         lb = np.hstack(
             (
                 -self.state_jacobian(reference_trajectory[0, :])
@@ -543,38 +546,36 @@ class ModelPredictiveController(Controller):
                 np.zeros(self.N_STATES * (self.MPC_HORIZON - 1)),
                 np.tile(self.state_lb, self.MPC_HORIZON) + reference_trajectory.ravel(),
                 np.tile(self.control_lb, self.MPC_HORIZON) + reference_control.ravel(),
-                np.tile(-np.inf, self.MPC_HORIZON),
+                2 * ((p - n) @ n).T,
             )
         )
 
         # only activate NAND constraint if we are near NAND
-        if other_pose_local.x ** 2 + other_pose_local.y ** 2 < 2 ** 2:
-            ub = np.hstack(
-                (
-                    -self.state_jacobian(reference_trajectory[0, :])
-                    @ (self.state(0, 0, 0, 0) - reference_trajectory[0, :]),
-                    np.zeros(self.N_STATES * (self.MPC_HORIZON - 1)),
-                    np.tile(self.state_ub, self.MPC_HORIZON) + reference_trajectory.ravel(),
-                    np.tile(self.control_ub, self.MPC_HORIZON) + reference_control.ravel(),
-                    np.tile(n.T@p, self.MPC_HORIZON),
-                )
+        # if other_pose_local.x ** 2 + other_pose_local.y ** 2 < 2 ** 2:
+        ub = np.hstack(
+            (
+                -self.state_jacobian(reference_trajectory[0, :])
+                @ (self.state(0, 0, 0, 0) - reference_trajectory[0, :]),
+                np.zeros(self.N_STATES * (self.MPC_HORIZON - 1)),
+                np.tile(self.state_ub, self.MPC_HORIZON) + reference_trajectory.ravel(),
+                np.tile(self.control_ub, self.MPC_HORIZON) + reference_control.ravel(),
+                np.tile(np.inf, self.MPC_HORIZON),
             )
+        )
 
-            self.debug_obstacle_active_publisher.publish(Float64(1.0))
-        else:
-            ub = np.hstack(
-                (
-                    -self.state_jacobian(reference_trajectory[0, :])
-                    @ (self.state(0, 0, 0, 0) - reference_trajectory[0, :]),
-                    np.zeros(self.N_STATES * (self.MPC_HORIZON - 1)),
-                    np.tile(self.state_ub, self.MPC_HORIZON) + reference_trajectory.ravel(),
-                    np.tile(self.control_ub, self.MPC_HORIZON) + reference_control.ravel(),
-                    np.tile(np.inf, self.MPC_HORIZON),
-                )
-            )
+        #     self.debug_obstacle_active_publisher.publish(Float64(1.0))
+        # else:
+        #     ub = np.hstack(
+        #         (
+        #             -self.state_jacobian(reference_trajectory[0, :])
+        #             @ (self.state(0, 0, 0, 0) - reference_trajectory[0, :]),
+        #             np.zeros(self.N_STATES * (self.MPC_HORIZON - 1)),
+        #             np.tile(self.state_ub, self.MPC_HORIZON) + reference_trajectory.ravel(),
+        #             np.tile(self.control_ub, self.MPC_HORIZON) + reference_control.ravel(),
+        #             np.tile(np.inf, self.MPC_HORIZON),
+        #         )
+        #     )
 
-
-            self.debug_obstacle_active_publisher.publish(Float64(0.0))
 
 
         if self.TIME:
@@ -625,7 +626,11 @@ class ModelPredictiveController(Controller):
 
         if not (results.info.status == "solved" or results.info.status == "solved inaccurate"):
             print("solution failed", results.info.status)
+            self.debug_osqp_infeasible_publisher.publish(True)
             return reference_trajectory
+
+
+        self.debug_osqp_infeasible_publisher.publish(False)
 
         state_trajectory += reference_trajectory
         # steer_rate_trajectory = solution_trajectory[:, :self.N_CONTROLS]
