@@ -167,8 +167,8 @@ class AutonSystem:
         with self.lock:
             _, _ = self.get_world_pose_and_speed(self.self_odom_msg)
 
-        p2 = threading.Thread(target=self.planner_process)
-        p1 = threading.Thread(target=self.local_controller_process)
+        p2 = threading.Thread(target=self.planner_thread)
+        p1 = threading.Thread(target=self.local_controller_thread)
 
         # starting processes
         # See LOOKAHEAD_TIME in path_planner.py for the horizon of the
@@ -191,7 +191,7 @@ class AutonSystem:
         pose_gps = Pose.rospose_to_pose(current_rospose)
         return World.gps_to_world_pose(pose_gps), current_speed
 
-    def local_controller_process(self):
+    def local_controller_thread(self):
         while (not rospy.is_shutdown()):
             self.local_controller_tick()
             self.rosrate_controller.sleep()
@@ -207,7 +207,7 @@ class AutonSystem:
         self.steer_publisher.publish(Float64(steering_angle_deg))
 
 
-    def planner_process(self):
+    def planner_thread(self):
         while (not rospy.is_shutdown()):
             if not self.other_odom_msg is None:
                 with self.lock:
