@@ -1,5 +1,8 @@
-import numpy as np
 import json
+import uuid
+import matplotlib.pyplot as plt
+import numpy as np
+
 from scipy.interpolate import Akima1DInterpolator, CubicSpline
 
 from world import World
@@ -20,37 +23,52 @@ class Trajectory:
     Use https://rdudhagra.github.io/eracer-portal/ to make trajectories and save the JSON file
     """
 
-    def __init__(self, json_filepath, interpolator="CubicSpline") -> None:
+    def __init__(self, json_filepath=None, positions = None, interpolator="CubicSpline") -> None:
+        """
+        Args:
+            json_filepath (String): file path to the path json file (begins at /rb_ws)
+            positions [[float, float]]: reference trajectory in world coordinates
+            current_speed (float): current speed of the buggy
+
+        Returns:
+            float (desired steering angle)
+        """
         self.distances = np.zeros((0, 1))  # (N/dt x 1) [d, d, ...]
         self.positions = np.zeros((0, 2))  # (N x 2) [(x,y), (x,y), ...]
         self.indices = None  # (N x 1) [0, 1, 2, ...]
         self.interpolation = None  # scipy.interpolate.PPoly
-    
-        pos = []
-        # Load the json file
-        with open(json_filepath, "r") as f:
-            data = json.load(f)
 
-        # Iterate through the waypoints and extract the positions
-        num_waypoints = len(data)
-        for i in range(0, num_waypoints):
+        # read positions from file
+        if positions is None:
+            positions = []
+            # Load the json file
+            with open(json_filepath, "r") as f:
+                data = json.load(f)
 
-            waypoint = data[i]
+            # Iterate through the waypoints and extract the positions
+            num_waypoints = len(data)
+            for i in range(0, num_waypoints):
 
-            lat = waypoint["lat"]
-            lon = waypoint["lon"]
+                waypoint = data[i]
 
-            # Convert to world coordinates
-            x, y = World.gps_to_world(lat, lon)
-            pos.append([x, y])
-        num_indices = len(pos)
+                lat = waypoint["lat"]
+                lon = waypoint["lon"]
+
+                # Convert to world coordinates
+                x, y = World.gps_to_world(lat, lon)
+                positions.append([x, y])
+
+            positions = np.array(positions)
+
+        num_indices = positions.shape[0]
 
         if interpolator == "Akima":
-            self.positions = np.array(pos)
+            self.positions = positions
             self.indices = np.arange(num_indices)
             self.interpolation = Akima1DInterpolator(self.indices, self.positions)
-        else:
-            temp_traj = Trajectory(json_filepath, interpolator="Akima")
+            self.interpolation.extrapolate = True
+        elif interpolator == "CubicSpline":
+            temp_traj = Trajectory(positions=positions, interpolator="Akima")
             tot_len = temp_traj.distances[-1]
             interp_dists = np.linspace(0, tot_len, num_indices)
 
@@ -62,15 +80,15 @@ class Trajectory:
             self.positions = np.array(self.positions)
 
             self.interpolation = CubicSpline(self.indices, self.positions)
-        self.interpolation.extrapolate = True
+            self.interpolation.extrapolate = True
 
         # Calculate the distances along the trajectory
-        dt = 0.01
-        ts = np.arange(len(self.positions) - 1, step=dt)
+        dt = 0.01 #dt is time step (in seconds (?))
+        ts = np.arange(len(self.positions) - 1, step=dt)  # times corresponding to each position (?)
         drdt = self.interpolation(
             ts, nu=1
-        )  # Calculate derivatives of polynomial wrt indices
-        ds = np.sqrt(drdt[:, 0] ** 2 + drdt[:, 1] ** 2) * dt
+        )  # Calculate derivatives of interpolated path wrt indices
+        ds = np.sqrt(drdt[:, 0] ** 2 + drdt[:, 1] ** 2) * dt # distances to each interpolated point
         s = np.cumsum(np.hstack([[0], ds[:-1]]))
         self.distances = s
         self.dt = dt
@@ -266,6 +284,22 @@ class Trajectory:
 
         return np.stack((x, y, theta, np.arctan(wheelbase * curvature)), axis=-1)
 
+    def get_unit_normal_by_index(self, index):
+        """Gets the index of the closest point on the trajectory to the given point
+
+        Args:
+            index: Nx1 numpy array: indexes along trajectory
+        Returns:
+            Nx2 numpy array: unit normal of the trajectory at index
+        """
+
+        derivative = self.interpolation(index, nu=1)
+        unit_derivative = derivative / np.linalg.norm(derivative, axis=1)[:, None]
+
+        # (x, y), rotated by 90 deg ccw = (-y, x)
+        unit_normal = np.vstack((-unit_derivative[:, 1], unit_derivative[:, 0])).T
+        return unit_normal
+
     def get_closest_index_on_path(
         self, x, y, start_index=0, end_index=None, subsample_resolution=10000
     ):
@@ -276,37 +310,37 @@ class Trajectory:
             y (float): y coordinate
             start_index (int, optional): index to start searching from. Defaults to 0.
             end_index (int, optional): index to end searching at. Defaults to None (disable).
-
+            subsample_resolution: resolution of the resulting interpolation
         Returns:
-            int: index along the trajectory
+            float: index along the trajectory
         """
         # If end_index is not specified, use the length of the trajectory
         if end_index is None:
-            end_index = len(self.positions)
+            end_index = len(self.positions) #sketch, 0-indexing where??
 
         # Floor/ceil the start/end indices
-        start_index = int(np.floor(start_index))
+        start_index = max(0, int(np.floor(start_index)))
         end_index = int(np.ceil(end_index))
 
         # Calculate the distance from the point to each point on the trajectory
         distances = (self.positions[start_index : end_index + 1, 0] - x) ** 2 + (
             self.positions[start_index : end_index + 1, 1] - y
-        ) ** 2
+        ) ** 2 #Don't need to squareroot as it is a relative distance
 
         min_ind = np.argmin(distances) + start_index
 
-        start_index = max(0, min_ind - 1)
-        end_index = min(len(self.positions), min_ind + 1)
+        start_index = max(0, min_ind - 1) #Protection in case min_ind is too low
+        end_index = min(len(self.positions), min_ind + 1)  #Prtoecting in case min_ind too high
+        #Theoretically start_index and end_index are just two apart
 
         # Now interpolate at a higher resolution to get a more accurate result
         r_interp = self.interpolation(
-            np.linspace(start_index, end_index, subsample_resolution + 1)
-        )
-        x_interp, y_interp = r_interp[:, 0], r_interp[:, 1]
+            np.linspace(start_index, end_index, subsample_resolution + 1)         )
+        x_interp, y_interp = r_interp[:, 0], r_interp[:, 1] #x_interp, y_interp are numpy column vectors
 
-        distances = (x_interp - x) ** 2 + (y_interp - y) ** 2
+        distances = (x_interp - x) ** 2 + (y_interp - y) ** 2 #Again distances are relative
 
-        # Return the index of the closest point
+        # Return the rational index of the closest point
         return (
             np.argmin(distances) / subsample_resolution * (end_index - start_index)
             + start_index
@@ -317,8 +351,6 @@ if __name__ == "__main__":
     # Example usage
     trajectory = Trajectory("/rb_ws/src/buggy/paths/quartermiletrack.json")
 
-    import json
-    import uuid
 
     interp_dat = []
     for k in np.linspace(0, trajectory.indices[-1], 500):
@@ -329,7 +361,6 @@ if __name__ == "__main__":
             {"lat": lat, "lon": lon, "key": str(uuid.uuid4()), "active": False}
         )
 
-    import matplotlib.pyplot as plt
 
     ts = np.linspace(0, trajectory.indices[-1], 500)
     kurv = [trajectory.get_curvature_by_index(t) for t in ts]
