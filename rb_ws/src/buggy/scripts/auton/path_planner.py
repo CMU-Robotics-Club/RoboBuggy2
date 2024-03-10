@@ -15,17 +15,18 @@ class PathPlanner():
     CURB_MARGIN = 1 #m
 
     # the offset is calculated as a mirrored sigmoid function of distance
-    OFFSET_SCALE_CROSS_TRACK = 3 #m
-    OFFSET_SHIFT_ALONG_TRACK = 3 #m
+    OFFSET_SCALE_CROSS_TRACK = 1.7#m
+    OFFSET_SCALE_ALONG_TRACK = 0.015
+    OFFSET_SHIFT_ALONG_TRACK = 4 #m
 
     # number of meters ahead of the buggy to generate local trajectory for
-    LOCAL_TRAJ_LEN = 20#m
+    LOCAL_TRAJ_LEN = 100#m
 
     # start generating local trajectory this many meters ahead of current position
     LOOKAHEAD = 2#m
 
     # number of points to sample along the nominal trajectory
-    RESOLUTION = 20
+    RESOLUTION = 40
 
     def __init__(self, nominal_traj:Trajectory, left_curb:Trajectory) -> None:
         self.occupancy_grid = OccupancyGrid()
@@ -52,8 +53,16 @@ class PathPlanner():
         # TODO: estimate this value based on the curvature of NAND's recent positions
         self.other_steering_angle = 0
 
-    def offset_func(self, dist) -> float:
-        return self.OFFSET_SCALE_CROSS_TRACK / (1 + np.exp(-(-0.2 * dist + self.OFFSET_SHIFT_ALONG_TRACK)))
+    def offset_func(self, dist):
+        return self.OFFSET_SCALE_CROSS_TRACK / \
+            (1 + np.exp(-(-self.OFFSET_SCALE_ALONG_TRACK * dist +
+            self.OFFSET_SHIFT_ALONG_TRACK)))
+
+    def activate_other_crosstrack_func(self, dist):
+        return 1 / \
+            (1 + np.exp(-(-self.OFFSET_SCALE_ALONG_TRACK * dist +
+            self.OFFSET_SHIFT_ALONG_TRACK)))
+
 
     def compute_traj(
         self,
@@ -121,7 +130,7 @@ class PathPlanner():
         nominal_to_other = np.array((other_pose.x, other_pose.y)) - \
             np.array(self.nominal_traj.get_position_by_index(other_idx))
 
-        # dot product with the unit normal to produce the left-positive signed distance
+        # dot product with the unit normal to produce left-positive signed distance
         other_normal = self.nominal_traj.get_unit_normal_by_index(np.array(other_idx.ravel()))
         other_cross_track_dist = np.sum(
             nominal_to_other * other_normal, axis=1)
@@ -131,10 +140,15 @@ class PathPlanner():
         # if the sample point is near, we add cross track distance to the offset,
         # such that the resulting offset is adjusted by position of NAND
 
-        passing_offsets = passing_offsets + np.minimum(1, passing_offsets) * other_cross_track_dist
+        passing_offsets = passing_offsets + \
+            self.activate_other_crosstrack_func(nominal_slice_to_other_dist) * other_cross_track_dist
 
         # clamp passing offset distances to distance to the curb
         passing_offsets = np.minimum(passing_offsets, nominal_slice_to_curb_dist)
+
+        # clamp negative passing offsets to zero, since we always pass on the left,
+        # the passing offsets should never pull SC to the right.
+        passing_offsets = np.maximum(0, passing_offsets)
 
         # shift the nominal slice by passing offsets
         nominal_normals = self.nominal_traj.get_unit_normal_by_index(
@@ -145,7 +159,7 @@ class PathPlanner():
         positions = nominal_slice + (passing_offsets[:, None] * nominal_normals)
 
         # prepend current pose
-        positions = np.vstack((np.array([self_pose.x, self_pose.y]), positions))
+        # positions = np.vstack((np.array([self_pose.x, self_pose.y]), positions))
 
         # publish passing targets for debugging
         for i in range(len(positions)):
@@ -155,4 +169,9 @@ class PathPlanner():
             reference_navsat.longitude = ref_gps[1]
             self.debug_passing_traj_publisher.publish(reference_navsat)
 
-        return Trajectory(json_filepath=None, positions=positions)
+        local_traj = Trajectory(json_filepath=None, positions=positions)
+
+        return local_traj, \
+                local_traj.get_closest_index_on_path(
+                self_pose.x,
+                self_pose.y)

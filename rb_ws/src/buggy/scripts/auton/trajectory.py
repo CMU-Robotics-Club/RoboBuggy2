@@ -301,7 +301,7 @@ class Trajectory:
         return unit_normal
 
     def get_closest_index_on_path(
-        self, x, y, start_index=0, end_index=None, subsample_resolution=500
+        self, x, y, start_index=0, end_index=None, subsample_resolution=1000
     ):
         """Gets the index of the closest point on the trajectory to the given point
 

@@ -85,7 +85,7 @@ class AutonSystem:
             self_name + "/buggy/input/steering", Float64, queue_size=1
         )
         self.brake_publisher = rospy.Publisher(
-            self_name + "/input/brake", Float64, queue_size=1
+            self_name + "/buggy/input/brake", Float64, queue_size=1
         )
         self.brake_debug_publisher = rospy.Publisher(
             self_name + "/auton/debug/brake", Float64, queue_size=1
@@ -157,12 +157,13 @@ class AutonSystem:
                 else:
                     self.planner_tick()
 
-                self.cur_traj.current_traj_index = 0
 
-            self.local_controller_tick()
+            if self.profile:
+                cProfile.runctx('self.local_controller_tick()', globals(), locals(), sort="cumtime")
+            else:
+                self.local_controller_tick()
 
             self.ticks += 1
-
             if self.ticks >= 10:
                 self.ticks = 0
 
@@ -201,9 +202,11 @@ class AutonSystem:
             other_pose, other_speed = self.get_world_pose_and_speed(self.other_odom_msg)
 
         # update local trajectory via path planner
-        self.cur_traj = self.path_planner.compute_traj(
+        self.cur_traj, cur_idx = self.path_planner.compute_traj(
                                             self_pose,
                                             other_pose)
+        self.local_controller.current_traj_index = cur_idx
+
 if __name__ == "__main__":
     rospy.init_node("auton_system")
     parser = argparse.ArgumentParser()

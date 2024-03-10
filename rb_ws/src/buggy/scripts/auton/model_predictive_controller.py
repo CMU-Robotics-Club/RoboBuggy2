@@ -35,7 +35,7 @@ class ModelPredictiveController(Controller):
     ROS = True
 
     # MPC Params
-    WHEELBASE = 1.3
+    WHEELBASE = 1.17
     MIN_SPEED = 1.0
     MPC_TIMESTEP = 0.02
     MPC_HORIZON = 125
@@ -49,8 +49,8 @@ class ModelPredictiveController(Controller):
     final_state_cost = 2 * np.array([0.0001, 250, 5, 25])  # x, y, theta, steer
 
     # State constraints (relative to the reference)
-    state_lb = np.array([-np.inf, -np.inf, -np.inf, -np.pi / 9])  # x, y, theta, steer
-    state_ub = np.array([np.inf, np.inf, np.inf, np.pi / 9])  # x, y, theta, steer
+    state_lb = np.array([-np.inf, -np.inf, -np.inf, np.deg2rad(-10)])  # x, y, theta, steer
+    state_ub = np.array([np.inf, np.inf, np.inf, np.deg2rad(10)])  # x, y, theta, steer
 
     # Control constraints
     control_lb = np.array([-np.pi * 2])  # d_steer
@@ -378,7 +378,7 @@ class ModelPredictiveController(Controller):
         traj_index = trajectory.get_closest_index_on_path(
             current_pose.x,
             current_pose.y,
-            start_index=self.current_traj_index -20,
+            start_index=self.current_traj_index,
             end_index=self.current_traj_index + 50,
             subsample_resolution=1000,
         )
@@ -605,7 +605,6 @@ class ModelPredictiveController(Controller):
         solution_trajectory = np.reshape(results.x, (self.MPC_HORIZON, self.N_STATES + self.N_CONTROLS))
         state_trajectory = solution_trajectory[:, self.N_CONTROLS:(self.N_CONTROLS + self.N_STATES)]
 
-        print("status", results.info.status, results.info.status_val)
         if not (results.info.status == "solved" or results.info.status == "solved inaccurate"):
             return reference_trajectory
 
@@ -673,8 +672,8 @@ class ModelPredictiveController(Controller):
 
         # Publish error for debugging
         try:
-            reference_position = trajectory.get_position_by_index(
-                self.current_traj_index
+            reference_position = trajectory.get_position_by_distance(
+                traj_distance
             )
             reference_error = current_pose.convert_point_from_global_to_local_frame(
                 reference_position

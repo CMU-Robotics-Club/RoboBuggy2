@@ -38,7 +38,7 @@ class Simulator:
         self.pose_publisher = rospy.Publisher(buggy_name + "/nav/odom", Odometry, queue_size=1)
 
         self.steering_subscriber = rospy.Subscriber(
-            buggy_name + "/input/steering", Float64, self.update_steering_angle
+            buggy_name + "/buggy/input/steering", Float64, self.update_steering_angle
         )
         # To read from velocity
         self.velocity_subscriber = rospy.Subscriber(
