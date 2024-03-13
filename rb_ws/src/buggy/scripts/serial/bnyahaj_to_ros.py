@@ -30,6 +30,8 @@ rospy.Subscriber(self_name + "/buggy/input/steering", Float64, send_steering)
 
 odom_publisher = rospy.Publisher(other_name + "/nav/odom", ros_odom, queue_size=1)
 
+rospy.init_node("bnyahaj_ros")
+
 print('Starting packet reading!')
 while True:
     packet = comms.read_packet()
