@@ -1,3 +1,5 @@
+#!/usr/bin/env python3
+
 from host_comm import *
 from threading import Lock
 
@@ -17,10 +19,11 @@ args, _ = parser.parse_known_args()
 self_name = args.self_name
 other_name = args.other_name
 
-comms = Comms('/dev/tty.usbserial-1140')
+comms = Comms("/dev/ttyUSB0")
 
 #Steering Angle Updater
 def send_steering(msg):
+    print("Steering angle: " + str(msg.data))
     comms.send_steering(msg.data)
 
 rospy.Subscriber(self_name + "/buggy/input/steering", Float64, send_steering)
