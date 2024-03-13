@@ -74,7 +74,7 @@ class AutonSystem:
         if self.has_other_buggy:
             rospy.Subscriber(other_name + "/nav/odom", Odometry, self.update_other_odom)
             self.other_steer_subscriber = rospy.Subscriber(
-                other_name + "/input/steering", Float64, self.update_other_steering_angle
+                other_name + "/buggy/input/steering", Float64, self.update_other_steering_angle
             )
         rospy.Subscriber(self_name + "/gnss1/fix_info_republished_int", Int8, self.update_rtk_status)
 
@@ -82,10 +82,10 @@ class AutonSystem:
             self_name + "/debug/init_safety_check", Bool, queue_size=1
         )
         self.steer_publisher = rospy.Publisher(
-            self_name + "/input/steering", Float64, queue_size=1
+            self_name + "/buggy/input/steering", Float64, queue_size=1
         )
         self.brake_publisher = rospy.Publisher(
-            self_name + "/input/brake", Float64, queue_size=1
+            self_name + "/buggy/input/brake", Float64, queue_size=1
         )
         self.brake_debug_publisher = rospy.Publisher(
             self_name + "/auton/debug/brake", Float64, queue_size=1
