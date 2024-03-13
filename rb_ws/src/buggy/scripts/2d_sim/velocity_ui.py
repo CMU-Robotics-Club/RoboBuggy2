@@ -13,7 +13,7 @@ class VelocityUI:
 
         self.root = tk.Tk()
 
-        self.root.title('Manual Velocity')
+        self.root.title(buggy_name + ' Manual Velocity: scale = 0.1m/s')
         self.root.geometry('600x100')
         self.root.configure(background = '#342d66')
 
@@ -24,7 +24,7 @@ class VelocityUI:
         self.root.bind("<Down>", lambda d: self.scale.set(self.scale.get() - 2))
 
     def step(self):
-        """sets velocity of buggy to the current scale value 
+        """sets velocity of buggy to the current scale value
             called once every tick
         """
         self.root.update_idletasks()
