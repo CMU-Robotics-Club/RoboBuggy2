@@ -15,18 +15,19 @@ class PathPlanner():
     CURB_MARGIN = 1 #m
 
     # the offset is calculated as a mirrored sigmoid function of distance
-    OFFSET_SCALE_CROSS_TRACK = 1.7#m
-    OFFSET_SCALE_ALONG_TRACK = 0.015
+    OFFSET_SCALE_CROSS_TRACK = 1.7 #m
+    OFFSET_SCALE_ALONG_TRACK = 0.2
+    ACTIVATE_OTHER_SCALE_ALONG_TRACK = 0.1
     OFFSET_SHIFT_ALONG_TRACK = 4 #m
 
     # number of meters ahead of the buggy to generate local trajectory for
-    LOCAL_TRAJ_LEN = 100#m
+    LOCAL_TRAJ_LEN = 50#m
 
     # start generating local trajectory this many meters ahead of current position
     LOOKAHEAD = 2#m
 
     # number of points to sample along the nominal trajectory
-    RESOLUTION = 40
+    RESOLUTION = 150
 
     def __init__(self, nominal_traj:Trajectory, left_curb:Trajectory) -> None:
         self.occupancy_grid = OccupancyGrid()
@@ -60,7 +61,7 @@ class PathPlanner():
 
     def activate_other_crosstrack_func(self, dist):
         return 1 / \
-            (1 + np.exp(-(-self.OFFSET_SCALE_ALONG_TRACK * dist +
+            (1 + np.exp(-(-self.ACTIVATE_OTHER_SCALE_ALONG_TRACK * dist +
             self.OFFSET_SHIFT_ALONG_TRACK)))
 
 
@@ -94,36 +95,38 @@ class PathPlanner():
 
         nominal_slice = np.empty((self.RESOLUTION, 2))
 
-        # grab slice of curb
-        curb_idx = self.left_curb.get_closest_index_on_path(self_pose.x, self_pose.y)
-        curb_dist_along = self.left_curb.get_distance_from_index(curb_idx)
-
-        curb_slice = np.empty((self.RESOLUTION, 2))
-
-        # get index of the other buggy along the trajetory and convert to distance
-        other_idx = self.nominal_traj.get_closest_index_on_path(other_pose.x, other_pose.y)
-        other_dist = self.nominal_traj.get_distance_from_index(other_idx)
-
-        for i in range(self.RESOLUTION):
-            nominal_slice[i, :] = np.array(self.nominal_traj.get_position_by_distance(
-                nominal_dist_along + i * self.LOCAL_TRAJ_LEN / self.RESOLUTION + self.LOOKAHEAD
-            ))
-
-            curb_slice[i, :] = np.array(self.left_curb.get_position_by_distance(
-                curb_dist_along + i * self.LOCAL_TRAJ_LEN / self.RESOLUTION + self.LOOKAHEAD
-            ))
-
         # compute the distance along nominal trajectory between samples and the obstacle
         nominal_slice_dists = np.linspace(
             nominal_dist_along + self.LOOKAHEAD,
             nominal_dist_along + self.LOOKAHEAD + self.LOCAL_TRAJ_LEN,
             self.RESOLUTION)
 
+        for i in range(self.RESOLUTION):
+            nominal_slice[i, :] = np.array(self.nominal_traj.get_position_by_distance(
+               nominal_slice_dists[i]
+            ))
 
+        # grab slice of curb correponding to slice of nominal trajectory.
+        curb_idx = self.left_curb.get_closest_index_on_path(self_pose.x, self_pose.y)
+        curb_dist_along = self.left_curb.get_distance_from_index(curb_idx)
+        curb_idx_end = self.left_curb.get_closest_index_on_path(nominal_slice[-1, 0], nominal_slice[-1, 1])
+        curb_dist_along_end = self.left_curb.get_distance_from_index(curb_idx_end)
+        curb_dists = np.linspace(curb_dist_along, curb_dist_along_end, self.RESOLUTION)
+
+        curb_slice = np.empty((self.RESOLUTION, 2))
+        for i in range(self.RESOLUTION):
+            curb_slice[i, :] = np.array(self.left_curb.get_position_by_distance(
+                curb_dists[i]
+            ))
+
+
+        # get index of the other buggy along the trajetory and convert to distance
+        other_idx = self.nominal_traj.get_closest_index_on_path(other_pose.x, other_pose.y)
+        other_dist = self.nominal_traj.get_distance_from_index(other_idx)
         nominal_slice_to_other_dist = np.abs(nominal_slice_dists - other_dist)
 
         # compute distances from the sample points to the curb
-        nominal_slice_to_curb_dist = np.linalg.norm(curb_slice - nominal_slice)
+        nominal_slice_to_curb_dist = np.linalg.norm(curb_slice - nominal_slice, axis=1)
         passing_offsets = self.offset_func(nominal_slice_to_other_dist)
 
         # compute signed cross-track distance between NAND and nominal
@@ -134,6 +137,8 @@ class PathPlanner():
         other_normal = self.nominal_traj.get_unit_normal_by_index(np.array(other_idx.ravel()))
         other_cross_track_dist = np.sum(
             nominal_to_other * other_normal, axis=1)
+
+        print("other buggy cross track", other_cross_track_dist)
 
         # here, use passing offsets to weight NAND's cross track signed distance:
         # if the sample point is far from SC, the cross track distance doesn't matter
@@ -146,6 +151,7 @@ class PathPlanner():
         # clamp passing offset distances to distance to the curb
         passing_offsets = np.minimum(passing_offsets, nominal_slice_to_curb_dist)
 
+
         # clamp negative passing offsets to zero, since we always pass on the left,
         # the passing offsets should never pull SC to the right.
         passing_offsets = np.maximum(0, passing_offsets)
@@ -154,8 +160,6 @@ class PathPlanner():
         nominal_normals = self.nominal_traj.get_unit_normal_by_index(
             self.nominal_traj.get_index_from_distance(nominal_slice_dists)
         )
-
-        print(nominal_slice.shape, passing_offsets.shape, nominal_normals.shape)
         positions = nominal_slice + (passing_offsets[:, None] * nominal_normals)
 
         # prepend current pose
