@@ -378,7 +378,7 @@ class ModelPredictiveController(Controller):
         traj_index = trajectory.get_closest_index_on_path(
             current_pose.x,
             current_pose.y,
-            start_index=self.current_traj_index,
+            start_index=self.current_traj_index -20,
             end_index=self.current_traj_index + 50,
             subsample_resolution=1000,
         )

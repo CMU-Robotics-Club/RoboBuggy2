@@ -6,7 +6,7 @@
 
     <node name="foxglove" pkg="foxglove_bridge" type="foxglove_bridge" />
 
-    <arg name="manual_vel"          default="true" />
+    <arg name="manual_vel"          default="false" />
     <arg name="auto_vel"            default="false" />
 
     <group if="$(arg auto_vel)">
