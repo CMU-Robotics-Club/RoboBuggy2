@@ -17,8 +17,8 @@
     <node name="sim_2d_engine" pkg="buggy" type="engine.py" output="screen"
         args="$(arg starting_pose) $(arg velocity) $(arg buggy_name)"/>
 
-    <remap from="/SC/nav/odom" to="/nav/odom"/>
-    <remap from="/buggy/input/steering" to="/SC/buggy/input/steering"/>
+    <!-- <remap from="/SC/nav/odom" to="/nav/odom"/>
+    <remap from="/buggy/input/steering" to="/SC/buggy/input/steering"/> -->
 
     <node name="serial_node" pkg="rosserial_python" type="serial_node.py">
         <param name="port" type="string" value="/dev/ttyUSB0"/>

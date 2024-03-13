@@ -13,7 +13,7 @@ class DebugController():
 
     def __init__(self) -> None:
         self.steer_publisher = rospy.Publisher(
-        "buggy/input/steering", Float64, queue_size=1)
+        "SC/buggy/input/steering", Float64, queue_size=1)
         self.rate = 100
 
     def loop(self):

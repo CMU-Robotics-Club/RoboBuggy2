@@ -8,7 +8,7 @@
     </node>
     <!-- ENABLE AUTON -->
     <node name="debug_steer" pkg="buggy" type="debug_steer.py" output="screen"/>
-    <node name="bnyahaj" pkg="buggy" type="bnyahaj_to_ros.py" output="screen">
+    <node name="bnyahaj_ros" pkg="buggy" type="bnyahaj_to_ros.py" output="screen">
         <param name="self_name" type="string" value="SC"/>
         <param name="other_name" type="string" value="NAND"/>
     </node>
