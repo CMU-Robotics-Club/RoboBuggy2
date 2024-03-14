@@ -61,7 +61,9 @@ class Simulator:
             "Hill1_SC": (Simulator.UTM_EAST_ZERO + 20, Simulator.UTM_NORTH_ZERO + 30, -110),
             "WESTINGHOUSE": (589647, 4477143, -150),
             "UC_TO_PURNELL": (589635, 4477468, 160),
-            "UC": (589681, 4477457, 160)
+            "UC": (589681, 4477457, 160),
+            "TRACK_EAST_END": (589953, 4477465, 90),
+            "TRACK_RESNICK": (589906, 4477437, -20)
         }
 
         # Start position for End of Hill 2
