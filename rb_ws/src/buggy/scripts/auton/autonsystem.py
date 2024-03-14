@@ -219,7 +219,7 @@ class AutonSystem:
                     self.distance_publisher.publish(Float64(distance))
 
                 self.planner_tick()
-                self.rosrate_planner.sleep()
+            self.rosrate_planner.sleep()
 
 
     def planner_tick(self):
