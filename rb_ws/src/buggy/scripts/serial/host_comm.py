@@ -1,4 +1,5 @@
 import struct
+import time
 from serial import Serial
 from dataclasses import dataclass
 
@@ -175,14 +176,15 @@ class Comms:
 
 
 def main():
-    comms = Comms('/dev/tty.usbserial-1140')
+    comms = Comms('/dev/ttyUSB0')
 
     print('Starting!')
 
+    last_time = time.time()
     while True:
         packet = comms.read_packet()
-        if packet is not None:
-            print(packet)
+        if time.time() - last_time > 0.01:
+            last_time = time.time()
             comms.send_steering(1234.5)
 
 if __name__ == '__main__':

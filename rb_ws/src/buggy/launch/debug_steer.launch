@@ -9,6 +9,6 @@
     <!-- ENABLE AUTON -->
     <node name="debug_steer" pkg="buggy" type="debug_steer.py" output="screen"/>
 
-    <node name="bnyahaj" pkg="buggy" type="bnyahaj_to_ros.py" output="screen" args="--self_name SC --other_name NAND"/>
+    <node name="bnyahaj" pkg="buggy" type="ros_to_bnyahaj.py" output="screen" args="--self_name SC --other_name NAND"/>
 
 </launch>
