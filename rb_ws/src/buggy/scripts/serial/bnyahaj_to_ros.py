@@ -43,7 +43,7 @@ while True:
         odom_pose.position.x = packet.x
         odom_pose.position.y = packet.y
 
-        odom.pos = odom_pose
+        odom.pose = odom_pose
 
-        print(odom)
+        # print(odom)
         odom_publisher.publish(odom)    
