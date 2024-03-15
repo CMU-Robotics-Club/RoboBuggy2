@@ -44,5 +44,6 @@
     <node name="sc_auton_system" pkg="buggy" type="autonsystem.py" output="screen"
         args="$(arg sc_autonsystem_args)"/>
 
+    <node name="sc_rolling_sanity_check" pkg="buggy" type="rolling_sanity_check.py" output="screen" args="SC">
 
 </launch>

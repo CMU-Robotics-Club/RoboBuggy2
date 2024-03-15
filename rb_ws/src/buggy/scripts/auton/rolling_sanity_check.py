@@ -1,4 +1,5 @@
 import numpy as np
+import sys
 from nav_msgs.msg import Odometry
 from rb_ws.src.buggy.scripts.auton.pose import Pose
 from rb_ws.src.buggy.scripts.auton.world import World
@@ -11,21 +12,17 @@ from auton.controller import Controller
 from trajectory import Trajectory
 from microstrain_inertial_msgs.msg import FilterStatus, MipFilterStatusGq7StatusFlags
 from microstrain_inertial_msgs.msg import SensorOverrangeStatus
+from sensor_msgs import Imu
 
 
 class SanityCheck:
     def __init__(self,
-            global_trajectory,
-            local_controller,
             self_name,
             ) -> None:
 
-        self.global_trajectory = global_trajectory
-        self.cur_traj = global_trajectory
-        self.local_controller = local_controller
-
         self.covariance = 0
 
+        self.self_odom_msg = None
         self.location = None
         self.filter_location = None
 
@@ -37,10 +34,9 @@ class SanityCheck:
         self.error_messages : list = ["filter stable/recovering", "filter converging", "roll/pitch warning", "heading warning", "position warning", "velocity warning", "IMU bias warning", "gnss clock warning", "antenna lever arm warning", "mounting transform warning", "solution error", "solution error", "solution error", "solution error", "solution error"]
 
 
-        self.self_odom_msg = None
-
         rospy.Subscriber(self_name + "/nav/odom", Odometry, self.update_self_odom)
         rospy.Subscriber(self_name + "/imu/overrange_status", SensorOverrangeStatus, self.update_overrange_status)
+        rospy.Subscriber(self_name + "/imu/data", Imu, self.update_filter_location)
 
         rospy.Subscriber(self_name + "/nav/status.status_flags", FilterStatus, self.update_status_flags)
 
@@ -52,11 +48,11 @@ class SanityCheck:
         self.covariance_status_publisher = rospy.Publisher(self_name + "/debug/covariance_status", Bool, queue_size=1)
 
         self.error_message_publisher = rospy.Publisher(
-            self_name + "/debug/error_message", String, queue_size=1
+            self_name + "/nav/status/error_messages", String, queue_size=1
         )
 
         self.status_flags_publisher = rospy.Publisher(
-            self_name + "/debug/filter_status_flags", IntList, queue_size=1
+            self_name + "/nav/status/tripped_status_flags", IntList, queue_size=1
         )
 
     def update_self_odom(self, msg):
@@ -71,6 +67,10 @@ class SanityCheck:
     def update_status_flags(self, msg : FilterStatus):
         self.status_flag_val = msg.gq7_status_flags
 
+    def update_filter_location(self, msg : Imu):
+        #TODO: what data should we store/ use to compare filter location
+        self.filter_location = msg.orientation.x
+
 
     def calc_covariance(self):
         self.covariance = self.self_odom_msg.pose.covariance[0] ** 2 + self.self_odom_msg.pose.covariance[7] ** 2
@@ -78,15 +78,12 @@ class SanityCheck:
         self.covariance_status_publisher(self.covariance <= 1**2)
 
     def calc_locations(self):
+        #TODO: actually publish relevant data
         current_rospose = self.self_odom_msg.pose.pose
-        current_speed = np.sqrt(
-            self.self_odom_msg.twist.twist.linear.x**2 + self.self_odom_msg.twist.twist.linear.y**2
-        )
         pose_gps = Pose.rospose_to_pose(current_rospose)
         self.location = World.gps_to_world_pose(pose_gps)
 
-        self.filter_location = None #TODO: where does ins publish its location
-        self.filter_gps_status_publisher(abs(self.filter_location - self.location) < 0.5)
+        # self.filter_gps_status_publisher(abs(self.filter_location - self.location) < 0.5)
 
     def is_overrange (self):
         s = self.imu_overrange_status
@@ -120,8 +117,7 @@ class SanityCheck:
 
 if __name__ == "__main__":
     rospy.init_node("rolling_sanity_check")
-    # need global trajectory, local trajectory, buggy name
-    check = SanityCheck()
+    check = SanityCheck(sys.argv[1])
     rate = rospy.Rate(100)
 
     while not rospy.is_shutdown():
