@@ -42,7 +42,7 @@ class SanityCheck:
 
         rospy.Subscriber(self_name + "/nav/status.status_flags", FilterStatus, self.update_status_flags)
 
-        # these publishers are all bools as quick sanity checks
+        # these publishers are all bools as quick sanity checks (can display as indicators on foxglove for colors)
         self.overrange_status_publisher = rospy.Publisher(self_name + "/debug/imu_overrange_status", Bool, queue_size=1)
 
         self.filter_gps_status_publisher = rospy.Publisher(self_name + "/debug/filter_gps_seperation_status", Bool, queue_size=1)
