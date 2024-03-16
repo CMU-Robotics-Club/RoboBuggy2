@@ -46,12 +46,14 @@ class Translator:
         print('Starting packet sending!')
         while True:
             packet = self.comms.read_packet()
+
+            # print("trying to read odom")
             if packet is not None:
-                print("read odom")
+                # print("packet", packet.x, packet.y)
                 #Publish to odom topic x and y coord
                 odom = ROSOdom()
                 # convert to long lat
-                lat, long = World.utm_to_gps(packet.x, packet.y)
+                lat, long = World.utm_to_gps(packet.y, packet.x)
                 odom.pose.pose.position.x = long
                 odom.pose.pose.position.y = lat
 
