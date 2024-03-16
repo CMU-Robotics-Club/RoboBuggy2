@@ -14,8 +14,7 @@ from controller import Controller
 from trajectory import Trajectory
 from microstrain_inertial_msgs.msg import FilterStatus
 from microstrain_inertial_msgs.msg import ImuOverrangeStatus
-from sensor_msgs.msg import Imu
-
+from geometry_msgs.msg import PoseStamped
 
 class SanityCheck:
     def __init__(self,
@@ -24,9 +23,8 @@ class SanityCheck:
 
         self.covariance = 0
 
-        self.self_odom_msg = None
-        self.location = None
         self.filter_location = None
+        self.gps_location = None
 
         self.imu_overrange_status = None
         self.status_flag_val : int = 0
@@ -36,11 +34,11 @@ class SanityCheck:
         self.error_messages : list = ["filter stable/recovering", "filter converging", "roll/pitch warning", "heading warning", "position warning", "velocity warning", "IMU bias warning", "gnss clock warning", "antenna lever arm warning", "mounting transform warning", "solution error", "solution error", "solution error", "solution error", "solution error"]
 
 
-        rospy.Subscriber(self_name + "/nav/odom", Odometry, self.update_self_odom)
         rospy.Subscriber(self_name + "/imu/overrange_status", ImuOverrangeStatus, self.update_overrange_status)
-        rospy.Subscriber(self_name + "/nav/filtered_imu/data", Imu, self.update_filter_location)
-
         rospy.Subscriber(self_name + "/nav/status.status_flags", FilterStatus, self.update_status_flags)
+        rospy.Subscriber(self_name + "/gnss1/fix_Pose/", PoseStamped, self.update_gps_location)
+        rospy.Subscriber(self_name + "/nav/odom", Odometry, self.update_filter_location)
+
 
         # these publishers are all bools as quick sanity checks (can display as indicators on foxglove for colors)
         self.overrange_status_publisher = rospy.Publisher(self_name + "/debug/imu_overrange_status", Bool, queue_size=1)
@@ -57,11 +55,7 @@ class SanityCheck:
             self_name + "/nav/status/tripped_status_flags", Int8MultiArray, queue_size=1
         )
 
-    def update_self_odom(self, msg):
-        self.self_odom_msg = msg
 
-    def update_other_odom(self, msg):
-        self.other_odom_msg = msg
 
     def update_overrange_status(self, msg : ImuOverrangeStatus):
         self.imu_overrange_status = msg.status
@@ -69,28 +63,25 @@ class SanityCheck:
     def update_status_flags(self, msg : FilterStatus):
         self.status_flag_val = msg.gq7_status_flags
 
-    def update_filter_location(self, msg : Imu):
-        #TODO: what data should we store/ use to compare filter location
-        if (self.filter_location != None):
-            self.filter_location = msg.orientation.x
+    def update_gps_location(self, msg : PoseStamped):
+        self.gps_location = msg.pose
 
+    def update_filter_location(self, msg):
+        self.filter_location = msg.pose
 
     def calc_covariance(self):
-        if (self.self_odom_msg == None):
+        if (self.filter_location == None):
             self.covariance_status_publisher.publish(False)
         else:
-            self.covariance_status_publisher.publish(self.self_odom_msg.pose.covariance[0] ** 2 + self.self_odom_msg.pose.covariance[7] ** 2 <= 1**2)
+            self.covariance_status_publisher.publish(self.filter_location.covariance[0] ** 2 + self.filter_location.covariance[7] ** 2 <= 1**2)
 
     def calc_locations(self):
-        #TODO: actually publish relevant data
-        if (self.self_odom_msg == None or self.location == None):
+        #TODO: what data should we store/ use to compare filter location
+        # currently comparing cross-track error, checking less than 0.5 m
+        if (self.filter_location == None or self.gps_location == None):
             self.filter_gps_status_publisher.publish(False)
         else:
-            current_rospose = self.self_odom_msg.pose.pose
-            pose_gps = Pose.rospose_to_pose(current_rospose)
-            self.location = World.gps_to_world_pose(pose_gps)
-
-            # self.filter_gps_status_publisher.publish(abs(self.filter_location - self.location) < 0.5)
+            self.filter_gps_status_publisher.publish(abs(self.filter_location.pose.position.y - self.gps_location.position.y) < 0.5)
 
     def is_overrange (self):
         s = self.imu_overrange_status
