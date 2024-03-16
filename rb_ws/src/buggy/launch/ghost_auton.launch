@@ -1,32 +1,25 @@
 <!-- roslaunch buggy main.launch -->
 
 <launch>
-    <arg name="controller"      default="stanley" />
+    <arg name="controller"      default="mpc" />
     <arg name="start_dist"      default="0.0" />
-    <arg name="path"      default="garage.json" />
+    <arg name="path"      default="buggycourse_raceline.json" />
 
     <include file="$(find microstrain_inertial_driver)/launch/microstrain.launch">
         <arg name="params_file" value="/rb_ws/src/buggy/INS_params.yml"/>
     </include>
 
     <!-- run a sim with name = NAND at velocity ~= 0 -->
-    <arg name="starting_pose"    default="GARAGE" />
+    <arg name="starting_pose"    default="PASS_PT" />
     <arg name="velocity"         default="0.0001" />
     <arg name="buggy_name"       default="NAND" />
 
     <node name="sim_2d_engine" pkg="buggy" type="engine.py" output="screen"
         args="$(arg starting_pose) $(arg velocity) $(arg buggy_name)"/>
 
-    <!-- <remap from="/SC/nav/odom" to="/nav/odom"/>
-    <remap from="/buggy/input/steering" to="/SC/buggy/input/steering"/> -->
+    <remap from="/SC/nav/odom" to="/nav/odom"/>
 
-    <!-- <node name="serial_node" pkg="rosserial_python" type="serial_node.py">
-        <param name="port" type="string" value="/dev/ttyUSB0"/>
-        <param name="baud" type="int" value="1000000"/>
-    </node> -->
-
-
-    <node name="bnyahaj" pkg="buggy" type="bnyahaj_to_ros.py" output="screen" args="--self_name SC --other_name NAND"/>
+    <node name="bnyahaj" pkg="buggy" type="ros_to_bnyahaj.py" output="screen" args="--self_name SC --other_name NAND"/>
 
     <node name="serial_node2" pkg="rosserial_python" type="serial_node.py">
         <param name="port" type="string" value="/dev/ttyACM1"/>

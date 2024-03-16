@@ -33,9 +33,10 @@ class DebugController():
         add = True
 
         while not rospy.is_shutdown():
-            
 
-            self.steer_publisher.publish(Float64(steer_cmd))
+
+            self.steer_publisher.publish(Float64(self.sin_steer(tick_count)))
+
 
             tick_count += 1
             steer_cmd = self.sin_steer(tick_count)

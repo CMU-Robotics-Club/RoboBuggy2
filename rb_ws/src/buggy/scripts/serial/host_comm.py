@@ -171,8 +171,14 @@ class Comms:
             # Odometry message
             x, y = struct.unpack('<dd', payload)
             return Odometry(x, y)
+        elif msg_type == MSG_TYPE_DEBUG:
+            # Debug message
+            debug = struct.unpack('<fff??B?BBxx', payload)
+            # print(debug)
+            return None
         else:
-            print(f'Unknown packet type {msg_type}')
+            return None
+            # print(f'Unknown packet type {msg_type}')
 
 
 def main():

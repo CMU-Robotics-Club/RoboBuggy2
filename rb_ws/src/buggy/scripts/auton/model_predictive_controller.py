@@ -29,7 +29,7 @@ class ModelPredictiveController(Controller):
     Convex Model Predictive Controller (MPC)
     """
 
-    DEBUG = True
+    DEBUG = False
     PLOT = False
     TIME = False
     ROS = True

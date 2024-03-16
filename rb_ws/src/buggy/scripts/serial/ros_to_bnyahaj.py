@@ -7,11 +7,15 @@ import threading
 
 import rospy
 import argparse
-from geometry_msgs.msg import Pose
+from geometry_msgs.msg import PoseWithCovariance
 
 #Ros Message Imports
 from std_msgs.msg import Float32, Float64, Bool, Int8
-from nav_msgs.msg import Odometry as ros_odom
+from nav_msgs.msg import Odometry as ROSOdom
+
+import sys
+sys.path.append("/rb_ws/src/buggy/scripts/auton")
+from world import World
 
 class Translator:
     def __init__(self, self_name, other_name):
@@ -20,8 +24,7 @@ class Translator:
         self.lock = Lock()
 
         rospy.Subscriber(self_name + "/buggy/input/steering", Float64, self.set_steering)
-        self.odom_publisher = rospy.Publisher(other_name + "/nav/odom", ros_odom, queue_size=1)
-        # odom_publisher = rospy.Publisher(other_name + "/nav/odom", ros_odom, queue_size=1)
+        self.odom_publisher = rospy.Publisher(other_name + "/nav/odom", ROSOdom, queue_size=1)
         self.steer_send_rate = rospy.Rate(100)
         self.read_rate = rospy.Rate(1000)
 
@@ -31,7 +34,7 @@ class Translator:
         # print("SET STEERING: " + str(msg.data))
         with self.lock:
             self.steer_angle = msg.data
-    
+
     def writer_thread(self):
         print('Starting packet reading!')
         while True:
@@ -44,19 +47,29 @@ class Translator:
         while True:
             packet = self.comms.read_packet()
             if packet is not None:
-                print(packet)
+                print("read odom")
                 #Publish to odom topic x and y coord
-                odom = ros_odom()
-                odom_pose = Pose()
-                odom_pose.position.x = packet.x
-                odom_pose.position.y = packet.y
+                odom = ROSOdom()
+                # convert to long lat
+                lat, long = World.utm_to_gps(packet.x, packet.y)
+                odom.pose.pose.position.x = long
+                odom.pose.pose.position.y = lat
 
-                odom.pos = odom_pose
+                self.odom_publisher.publish(odom)
 
-                print(odom)
-                odom_publisher.publish(odom)
+            # # for debug
+            # odom = ROSOdom()
+            # # convert to long lat
+            # lat, long = World.utm_to_gps(589846, 4477580)
+            # # lat, long = World.utm_to_gps(packet.x, packet.y)
+            # odom.pose.pose.position.x = long
+            # odom.pose.pose.position.y = lat
+
+            # self.odom_publisher.publish(odom)
+
+
             self.read_rate.sleep()
-               
+
 
 
     def loop(self):
@@ -65,7 +78,7 @@ class Translator:
 
         p1.start()
         p2.start()
-        
+
         p1.join()
         p2.join()
 
@@ -83,4 +96,3 @@ if __name__ == "__main__":
 
 
 
-    

@@ -12,10 +12,10 @@ from world import World
 class PathPlanner():
     # move the curb towards the center of the course by CURB_MARGIN meters
     # for a margin of safety
-    CURB_MARGIN = 1 #m
+    CURB_MARGIN = 0 #m
 
     # the offset is calculated as a mirrored sigmoid function of distance
-    OFFSET_SCALE_CROSS_TRACK = 1.7 #m
+    OFFSET_SCALE_CROSS_TRACK = 2 #m
     OFFSET_SCALE_ALONG_TRACK = 0.2
     ACTIVATE_OTHER_SCALE_ALONG_TRACK = 0.1
     OFFSET_SHIFT_ALONG_TRACK = 4 #m
@@ -46,6 +46,10 @@ class PathPlanner():
 
         self.debug_grid_cost_publisher = rospy.Publisher(
             "/auton/debug/grid_cost", Float64, queue_size=0
+        )
+
+        self.other_buggy_xtrack_publisher = rospy.Publisher(
+            "/auton/debug/other_buggy_xtrack", Float64, queue_size=1
         )
 
         self.nominal_traj = nominal_traj
@@ -138,7 +142,7 @@ class PathPlanner():
         other_cross_track_dist = np.sum(
             nominal_to_other * other_normal, axis=1)
 
-        print("other buggy cross track", other_cross_track_dist)
+        self.other_buggy_xtrack_publisher.publish(Float64(other_cross_track_dist))
 
         # here, use passing offsets to weight NAND's cross track signed distance:
         # if the sample point is far from SC, the cross track distance doesn't matter
@@ -149,7 +153,7 @@ class PathPlanner():
             self.activate_other_crosstrack_func(nominal_slice_to_other_dist) * other_cross_track_dist
 
         # clamp passing offset distances to distance to the curb
-        passing_offsets = np.minimum(passing_offsets, nominal_slice_to_curb_dist)
+        passing_offsets = np.minimum(passing_offsets, nominal_slice_to_curb_dist - self.CURB_MARGIN)
 
 
         # clamp negative passing offsets to zero, since we always pass on the left,

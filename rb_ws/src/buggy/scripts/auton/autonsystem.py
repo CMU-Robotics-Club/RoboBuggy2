@@ -61,7 +61,7 @@ class AutonSystem:
         self.local_controller = local_controller
         self.brake_controller = brake_controller
 
-        left_curb = Trajectory(json_filepath="/rb_ws/src/buggy/paths/garage_inner_bound.json")
+        left_curb = Trajectory(json_filepath="/rb_ws/src/buggy/paths/outside_curb_smooth.json")
         self.path_planner = PathPlanner(global_trajectory, left_curb)
         self.other_steering = 0
         self.rtk_status = 0
@@ -84,9 +84,6 @@ class AutonSystem:
         )
         self.steer_publisher = rospy.Publisher(
             self_name + "/buggy/input/steering", Float64, queue_size=1
-        )
-        self.brake_publisher = rospy.Publisher(
-            self_name + "/buggy/input/brake", Float64, queue_size=1
         )
         self.brake_debug_publisher = rospy.Publisher(
             self_name + "/auton/debug/brake", Float64, queue_size=1
@@ -133,7 +130,6 @@ class AutonSystem:
             return False
 
         # waits until covariance is acceptable to check heading
-
         with self.lock:
             self_pose, _ = self.get_world_pose_and_speed(self.self_odom_msg)
             current_heading = self_pose.theta
@@ -156,6 +152,8 @@ class AutonSystem:
 
     def tick_caller(self):
 
+
+        print("start checking initialization status")
         while ((not rospy.is_shutdown()) and not self.init_check()):
             self.init_check_publisher.publish(False)
             rospy.sleep(0.001)
@@ -200,6 +198,8 @@ class AutonSystem:
     def local_controller_tick(self):
         with self.lock:
             self_pose, self_speed = self.get_world_pose_and_speed(self.self_odom_msg)
+
+        self.heading_publisher.publish(Float32(np.rad2deg(self_pose.theta)))
 
         # Compute control output
         steering_angle = self.local_controller.compute_control(
