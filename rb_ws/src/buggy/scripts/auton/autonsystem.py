@@ -135,6 +135,8 @@ class AutonSystem:
             current_heading = self_pose.theta
             closest_heading = self.cur_traj.get_heading_by_index(trajectory.get_closest_index_on_path(self_pose.x, self_pose.y))
         print("current heading: ", np.rad2deg(current_heading))
+        self.heading_publisher.publish(Float32(np.rad2deg(current_heading)))
+
 
         # TENTATIVE:
         # headings are originally between -pi and pi
