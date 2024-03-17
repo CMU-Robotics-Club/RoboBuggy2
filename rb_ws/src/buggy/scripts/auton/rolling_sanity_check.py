@@ -1,13 +1,11 @@
 #! /usr/bin/env python3
 
 import sys
-from nav_msgs.msg import Odometry
-from std_msgs.msg import Bool, String, Int8MultiArray
-
 import rospy
 
-from microstrain_inertial_msgs.msg import FilterStatus
-from microstrain_inertial_msgs.msg import ImuOverrangeStatus
+from nav_msgs.msg import Odometry
+from std_msgs.msg import Bool, String, Int8MultiArray
+from microstrain_inertial_msgs.msg import FilterStatus, ImuOverrangeStatus
 from geometry_msgs.msg import PoseStamped
 
 class SanityCheck:
@@ -70,7 +68,6 @@ class SanityCheck:
             self.covariance_status_publisher.publish(self.filter_location.covariance[0] ** 2 + self.filter_location.covariance[7] ** 2 <= 1**2)
 
     def calc_locations(self):
-        #TODO: what data should we store/ use to compare filter location
         # currently comparing cross-track error, checking less than 0.5 m
         if (self.filter_location == None or self.gps_location == None):
             self.filter_gps_status_publisher.publish(False)
