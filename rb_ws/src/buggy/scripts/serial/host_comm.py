@@ -175,7 +175,7 @@ class Comms:
             # Debug message
             debug = struct.unpack('<fff??B?BBxx', payload)
             # print(debug)
-            return None
+            return debug
         else:
             return None
             # print(f'Unknown packet type {msg_type}')

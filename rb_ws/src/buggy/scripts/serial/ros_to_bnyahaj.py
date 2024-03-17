@@ -28,6 +28,18 @@ class Translator:
         self.steer_send_rate = rospy.Rate(100)
         self.read_rate = rospy.Rate(1000)
 
+        self.rc_steering_angle_publisher = rospy.Publisher(self_name + "/buggy/debug/rc_steering_angle", Float64, queue_size=1)
+        self.steering_angle_publisher = rospy.Publisher(self_name + "/buggy/debug/steering_angle", Float64, queue_size=1)
+        self.battery_voltage_publisher = rospy.Publisher(self_name + "/buggy/debug/battery_voltage", Float64, queue_size=1)
+        self.operator_ready_publisher = rospy.Publisher(self_name + "/buggy/debug/operator_ready", Bool, queue_size=1)
+        self.steering_alarm_publisher = rospy.Publisher(self_name + "/buggy/debug/steering_alarm", Bool, queue_size=1)
+        self.brake_status_publisher = rospy.Publisher(self_name + "/buggy/debug/brake_status", Bool, queue_size=1)
+        self.use_auton_steer_publisher = rospy.Publisher(self_name + "/buggy/debug/use_auton_steer", Bool, queue_size=1)
+        self.rc_uplink_qual_publisher = rospy.Publisher(self_name + "/buggy/debug/rc_uplink_quality", Int8, queue_size=1)
+        self.nand_fix_publisher = rospy.Publisher(self_name + "/buggy/debug/nand_fix", Int8, queue_size=1)
+        # self.padding_1_publisher = rospy.Publisher(self_name + "/buggy/debug/padding_1", Int8, queue_size=1)
+        # self.padding_2_publisher = rospy.Publisher(self_name + "/buggy/debug/padding_2", Int8, queue_size=1)
+
     #Steering Angle Updater
     def set_steering(self, msg):
         #print("Steering angle: " + str(msg.data))
@@ -48,7 +60,7 @@ class Translator:
             packet = self.comms.read_packet()
 
             # print("trying to read odom")
-            if packet is not None:
+            if isinstance(packet, Odometry):
                 # print("packet", packet.x, packet.y)
                 #Publish to odom topic x and y coord
                 odom = ROSOdom()
@@ -58,6 +70,20 @@ class Translator:
                 odom.pose.pose.position.y = lat
 
                 self.odom_publisher.publish(odom)
+            elif isinstance(packet, tuple): #Are there any other packet that is a tuple
+                # print(packet)
+                self.rc_steering_angle_publisher.publish(Float64(packet[0]))
+                self.steering_angle_publisher.publish(Float64(packet[1]))
+                self.battery_voltage_publisher.publish(Float64(packet[2]))
+                self.operator_ready_publisher.publish(Bool(packet[3]))
+                self.steering_alarm_publisher.publish(Bool(packet[4]))
+                self.brake_status_publisher.publish(Bool(packet[5]))
+                self.use_auton_steer_publisher.publish(Bool(packet[6]))
+                self.rc_uplink_qual_publisher.publish(Int8(packet[7]))
+                self.nand_fix_publisher.publish(Int8(packet[8]))
+                # self.padding_1_publisher.publish(packet[9][0])
+                # self.padding_2_publisher.publish(packet[9][1])
+
 
             # # for debug
             # odom = ROSOdom()
