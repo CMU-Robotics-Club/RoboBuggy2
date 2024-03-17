@@ -1,17 +1,11 @@
 #! /usr/bin/env python3
 
-import numpy as np
 import sys
 from nav_msgs.msg import Odometry
-from pose import Pose
-from world import World
-from std_msgs.msg import Float32, Float64, Bool, Int8, String, Int8MultiArray
+from std_msgs.msg import Bool, String, Int8MultiArray
 
 import rospy
 
-from brake_controller import BrakeController
-from controller import Controller
-from trajectory import Trajectory
 from microstrain_inertial_msgs.msg import FilterStatus
 from microstrain_inertial_msgs.msg import ImuOverrangeStatus
 from geometry_msgs.msg import PoseStamped
