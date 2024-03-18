@@ -28,6 +28,6 @@
 
     <!-- ENABLE AUTON -->
     <!-- autonsystem args: controller start_dist path buggy_name is_sim -->
-    <arg name="autonsystem_args" default="--controller $(arg controller) --dist 0.0 --traj $(arg path) --self_name NAND" />
+    <arg name="autonsystem_args" value="--controller $(arg controller) --dist 0.0 --traj $(arg path) --self_name NAND" />
     <node name="auton_system" pkg="buggy" type="autonsystem.py" output="screen" args="$(arg autonsystem_args)"/>
 </launch>
