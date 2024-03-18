@@ -28,15 +28,6 @@
 
     <!-- ENABLE AUTON -->
     <!-- autonsystem args: controller start_dist path buggy_name is_sim -->
-    <!-- Conditional Launch Files, depending on if NAND Exists or not -->
-    <arg name="NAND_exist" default="true"/>
-    <group if="$(arg NAND_exist)">
-        <!-- Run the simulation with NAND -->
-        <arg name="autonsystem_args" default="--controller $(arg controller) --dist 0.0 --traj $(arg path) --self_name SC --other_name NAND" />
-        <node name="auton_system" pkg="buggy" type="autonsystem.py" output="screen" args="$(arg autonsystem_args)"/>
-    </group>
-    <group unless="$(arg NAND_exist)">
-        <arg name="autonsystem_args" default="--controller $(arg controller) --dist 0.0 --traj $(arg path) --self_name SC" />
-        <node name="auton_system" pkg="buggy" type="autonsystem.py" output="screen" args="$(arg autonsystem_args)"/>
-    </group>
+    <arg name="autonsystem_args" default="--controller $(arg controller) --dist 0.0 --traj $(arg path) --self_name NAND" />
+    <node name="auton_system" pkg="buggy" type="autonsystem.py" output="screen" args="$(arg autonsystem_args)"/>
 </launch>
