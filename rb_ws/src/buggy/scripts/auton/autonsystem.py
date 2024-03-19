@@ -156,7 +156,6 @@ class AutonSystem:
             rospy.sleep(0.001)
         print("done checking initialization status")
         self.init_check_publisher.publish(True)
-        
         # initialize global trajectory index
 
         with self.lock:
