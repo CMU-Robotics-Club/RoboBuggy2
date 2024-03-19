@@ -19,14 +19,20 @@ class SanityCheck:
         self.gps_location = None
 
         self.imu_overrange_status = None
+
         self.status_flag_val : int = 0
         self.flags = []
-
-        self.warning = False
-
         # string list where indices match the meaning of relevant bits
-        self.error_messages : list = ["filter stable/recovering", "filter converging", "roll/pitch warning", "heading warning", "position warning", "velocity warning", "IMU bias warning", "gnss clock warning", "antenna lever arm warning", "mounting transform warning", "solution error", "solution error", "solution error", "solution error", "solution error"]
+        self.error_messages : list = ["filter unstable", "filter converging", "roll/pitch warning", "heading warning", "position warning", "velocity warning", "IMU bias warning", "gnss clock warning", "antenna lever arm warning", "mounting transform warning", "solution error", "solution error", "solution error", "solution error", "solution error"]
 
+        # filter seperation = 2, other error = 1, nothing wrong = 0
+        self.warning = 0
+
+        self.warning_buffer_time = 1000 # alert human driver if any flags are tripped for more than one second
+
+        self.warning_durations = [0] * 18 # keeps track of how long covariance, overrange warning, any of the filter status flags
+
+        #TODO: consider the fact that the first two bits of filter status flags aren't necessarily bad (shouldn't trip warning if they've been on!)
 
         rospy.Subscriber(self_name + "/imu/overrange_status", ImuOverrangeStatus, self.update_overrange_status)
         rospy.Subscriber(self_name + "/nav/status.status_flags", FilterStatus, self.update_status_flags)
@@ -65,14 +71,22 @@ class SanityCheck:
     def update_filter_location(self, msg):
         self.filter_location = msg.pose
 
+    def update_warning_flags (self, idx):
+        self.warning_durations[idx] += 10
+        if (self.warning_durations[idx] > self.warning_buffer_time):
+            self.warning = 1
+
     def calc_covariance(self):
         if (self.filter_location == None):
             self.covariance_status_publisher.publish(False)
         else:
             good_covariance = self.filter_location.covariance[0] ** 2 + self.filter_location.covariance[7] ** 2 <= 1**2
             if (not good_covariance):
-                self.warning = True
+                self.update_warning_flags(16)
+            else:
+                self.warning_durations[16] = 0
             self.covariance_status_publisher.publish(good_covariance)
+
 
     def calc_locations(self):
         # currently comparing cross-track error, checking less than 0.5 m
@@ -81,7 +95,8 @@ class SanityCheck:
         else:
             good_seperation = abs(self.filter_location.pose.position.y - self.gps_location.position.y) < 0.5
             if (not good_seperation):
-                self.warning = True
+                self.warning = 2
+
             self.filter_gps_status_publisher.publish(good_seperation)
 
     def is_overrange (self):
@@ -94,8 +109,9 @@ class SanityCheck:
             mag_status = s.status_mag_x or s.status_mag_y or s.status_mag_z
             is_overrange = accel_status or gyro_status or mag_status or s.status_press
             if (is_overrange):
-                self.warning = True
-
+                self.update_warning_flags(17)
+            else:
+                self.warning_durations[17] = 0
             # publishes true if ALL flags are FALSE (if the imu looks good)
             self.imu_overrange_status.publish(not is_overrange)
 
@@ -104,12 +120,27 @@ class SanityCheck:
         self.flags = Int8MultiArray()
         self.flags.data = []
         error_message = ""
-        for i in range (len(b)):
-            if (b[i] == '1'):
-                self.warning = True
-                self.flags.append(i)
-                error_message += self.error_messages[i] + " "
 
+        # reading filter condition bits
+        if (b[0] == 1 and b[1] == 1): # filter unstable
+            self.update_warning_flags(0)
+            self.flags.append(0)
+            self.flags.append(1)
+            error_message += self.error_messages[0] + " "
+
+        if (b[0] == 1 and b[1] == 0): # filter converging
+            self.update_warning_flags(1)
+            self.flags.append(0)
+            error_message += self.error_messages[1] + " "
+
+        for i in range (len(b)):
+            if (i >= 2): # if not reading filter condiiton bits (already considered)
+                if (b[i] == '1'):
+                    self.update_warning_flags(i)
+                    self.flags.append(i)
+                    error_message += self.error_messages[i] + " "
+                else:
+                    self.warning_durations[i] = 0
         # publish bit values
         self.status_flags_publisher.publish(self.flags)
 
