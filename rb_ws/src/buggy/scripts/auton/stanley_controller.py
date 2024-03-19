@@ -47,7 +47,7 @@ class StanleyController(Controller):
             float (desired steering angle)
         """
         if self.current_traj_index >= trajectory.get_num_points() - 1:
-            return 0
+            raise Exception("[Stanley]: Ran out of path to follow!")
 
         heading = current_pose.theta  # in radians
         x = current_pose.x
