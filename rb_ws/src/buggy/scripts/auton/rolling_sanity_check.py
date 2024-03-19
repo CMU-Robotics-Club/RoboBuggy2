@@ -4,7 +4,7 @@ import sys
 import rospy
 
 from nav_msgs.msg import Odometry
-from std_msgs.msg import Bool, String, Int8MultiArray
+from std_msgs.msg import Bool, String, Int8MultiArray, Int8
 from microstrain_inertial_msgs.msg import FilterStatus, ImuOverrangeStatus
 from geometry_msgs.msg import PoseStamped
 
@@ -28,11 +28,9 @@ class SanityCheck:
         # filter seperation = 2, other error = 1, nothing wrong = 0
         self.warning = 0
 
-        self.warning_buffer_time = 1000 # alert human driver if any flags are tripped for more than one second
+        self.warning_buffer_time = 1000 # warning flags active >1 second before human driver alerted
 
-        self.warning_durations = [0] * 18 # keeps track of how long covariance, overrange warning, any of the filter status flags
-
-        #TODO: consider the fact that the first two bits of filter status flags aren't necessarily bad (shouldn't trip warning if they've been on!)
+        self.warning_durations = [0] * 18 # keeps track of how long covariance, overrange warning, any of the filter status flags are active
 
         rospy.Subscriber(self_name + "/imu/overrange_status", ImuOverrangeStatus, self.update_overrange_status)
         rospy.Subscriber(self_name + "/nav/status.status_flags", FilterStatus, self.update_status_flags)
@@ -56,7 +54,7 @@ class SanityCheck:
         )
 
         self.overall_warning_publisher = rospy.Publisher(
-            self_name + "/debug/sanity_warning", Bool, queue_size=1
+            self_name + "/debug/sanity_warning", Int8, queue_size=1
         )
 
     def update_overrange_status(self, msg : ImuOverrangeStatus):
