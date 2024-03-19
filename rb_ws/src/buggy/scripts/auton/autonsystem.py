@@ -7,7 +7,7 @@ from threading import Lock
 import rospy
 
 # ROS Message Imports
-from std_msgs.msg import Float32, Float64, Bool, Int8
+from std_msgs.msg import Float32, Float64, Bool
 from nav_msgs.msg import Odometry
 
 import numpy as np
