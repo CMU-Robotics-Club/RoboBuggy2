@@ -22,6 +22,8 @@ class SanityCheck:
         self.status_flag_val : int = 0
         self.flags = []
 
+        self.warning = False
+
         # string list where indices match the meaning of relevant bits
         self.error_messages : list = ["filter stable/recovering", "filter converging", "roll/pitch warning", "heading warning", "position warning", "velocity warning", "IMU bias warning", "gnss clock warning", "antenna lever arm warning", "mounting transform warning", "solution error", "solution error", "solution error", "solution error", "solution error"]
 
@@ -47,7 +49,9 @@ class SanityCheck:
             self_name + "/nav/status/tripped_status_flags", Int8MultiArray, queue_size=1
         )
 
-
+        self.overall_warning_publisher = rospy.Publisher(
+            self_name + "/debug/sanity_warning", Bool, queue_size=1
+        )
 
     def update_overrange_status(self, msg : ImuOverrangeStatus):
         self.imu_overrange_status = msg.status
@@ -65,14 +69,20 @@ class SanityCheck:
         if (self.filter_location == None):
             self.covariance_status_publisher.publish(False)
         else:
-            self.covariance_status_publisher.publish(self.filter_location.covariance[0] ** 2 + self.filter_location.covariance[7] ** 2 <= 1**2)
+            good_covariance = self.filter_location.covariance[0] ** 2 + self.filter_location.covariance[7] ** 2 <= 1**2
+            if (not good_covariance):
+                self.warning = True
+            self.covariance_status_publisher.publish(good_covariance)
 
     def calc_locations(self):
         # currently comparing cross-track error, checking less than 0.5 m
         if (self.filter_location == None or self.gps_location == None):
             self.filter_gps_status_publisher.publish(False)
         else:
-            self.filter_gps_status_publisher.publish(abs(self.filter_location.pose.position.y - self.gps_location.position.y) < 0.5)
+            good_seperation = abs(self.filter_location.pose.position.y - self.gps_location.position.y) < 0.5
+            if (not good_seperation):
+                self.warning = True
+            self.filter_gps_status_publisher.publish(good_seperation)
 
     def is_overrange (self):
         s = self.imu_overrange_status
@@ -82,9 +92,12 @@ class SanityCheck:
             accel_status = s.status_accel_x or s.status_accel_y or s.status_accel_z
             gyro_status = s.status_gyro_x or s.status_gyro_y or s.status_gyro_z
             mag_status = s.status_mag_x or s.status_mag_y or s.status_mag_z
+            is_overrange = accel_status or gyro_status or mag_status or s.status_press
+            if (is_overrange):
+                self.warning = True
 
             # publishes true if ALL flags are FALSE (if the imu looks good)
-            self.imu_overrange_status.publish(not (accel_status or gyro_status or mag_status or s.status_press))
+            self.imu_overrange_status.publish(not is_overrange)
 
     def filter_status_warning (self):
         b = bin(self.status_flag_val)
@@ -93,6 +106,7 @@ class SanityCheck:
         error_message = ""
         for i in range (len(b)):
             if (b[i] == '1'):
+                self.warning = True
                 self.flags.append(i)
                 error_message += self.error_messages[i] + " "
 
@@ -103,10 +117,12 @@ class SanityCheck:
         self.error_message_publisher.publish(error_message)
 
     def sanity_check(self):
+        self.warning = False
         self.calc_covariance()
         self.calc_locations()
         self.is_overrange()
         self.filter_status_warning()
+        self.overall_warning_publisher.publish(self.warning)
 
 if __name__ == "__main__":
     rospy.init_node("rolling_sanity_check")
