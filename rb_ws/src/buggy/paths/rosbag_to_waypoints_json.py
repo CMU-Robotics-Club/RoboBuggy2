@@ -44,8 +44,8 @@ def main():
         waypoints.append(
             {
                 "key": str(uuid.uuid4()),
-                "lat": lat,
-                "lon": lon,
+                "lat": lon,
+                "lon": lat,
                 "active": False,
             }
         )
