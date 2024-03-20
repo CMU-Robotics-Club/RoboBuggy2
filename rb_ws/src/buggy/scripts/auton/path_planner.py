@@ -12,7 +12,7 @@ from world import World
 class PathPlanner():
     # move the curb towards the center of the course by CURB_MARGIN meters
     # for a margin of safety
-    CURB_MARGIN = 0 #m
+    CURB_MARGIN = 1#m
 
     # the offset is calculated as a mirrored sigmoid function of distance
     OFFSET_SCALE_CROSS_TRACK = 2 #m

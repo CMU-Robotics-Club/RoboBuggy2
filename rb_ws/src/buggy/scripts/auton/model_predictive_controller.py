@@ -37,7 +37,7 @@ class ModelPredictiveController(Controller):
     # MPC Params
     WHEELBASE = 1.17 #m
     MASS = 62 #kg
-    MAX_LAT_FORCE = 250 #N, Factor of Safety = 1.4
+    MAX_LAT_FORCE = 350 #N
     MAX_STEER = np.deg2rad(20) #degrees
     MIN_SPEED = 1.0
     MPC_TIMESTEP = 0.02
@@ -52,10 +52,10 @@ class ModelPredictiveController(Controller):
     final_state_cost = 2 * np.array([0.0001, 250, 5, 25])  # x, y, theta, steer
 
     # Control constraints
-    control_lb = np.array([-np.pi * 2])  # d_steer
-    control_ub = np.array([np.pi * 2])  # d_steer
-    # control_lb = np.array([-np.inf])  # d_steer
-    # control_ub = np.array([np.inf])  # d_steer
+    # control_lb = np.array([-np.pi / 2])  # d_steer
+    # control_ub = np.array([np.pi / 2])  # d_steer
+    control_lb = np.array([-np.inf])  # d_steer
+    control_ub = np.array([np.inf])  # d_steer
 
     # Solver params
     solver_settings: dict = {
@@ -63,8 +63,9 @@ class ModelPredictiveController(Controller):
         "eps_abs": 1e-4,
         "eps_rel": 1e-4,
         "polish": 1,
-        "time_limit": 5e-2,
+        "time_limit": 2e-2,
         "warm_start": True,
+        # "linsys_solver": "mkl pardiso",
     }
 
     # Precomputed arrays
@@ -552,24 +553,24 @@ class ModelPredictiveController(Controller):
 
         lb = np.hstack(
             (
-                -self.state_jacobian(reference_trajectory[0, :])
-                @ (self.state(0, 0, 0, 0) - reference_trajectory[0, :]),
+                -self.state_jacobian(reference_trajectory[0, :]) @ (self.state(0, 0, 0, 0) - reference_trajectory[0, :]),
                 np.zeros(self.N_STATES * (self.MPC_HORIZON - 1)),
-                np.tile(state_lb, self.MPC_HORIZON),
-                np.tile(self.control_lb, self.MPC_HORIZON) + reference_control.ravel(),
+                np.tile(state_lb, self.MPC_HORIZON) - reference_trajectory.ravel(),
+                np.tile(self.control_lb, self.MPC_HORIZON) - reference_control.ravel(),
                 # np.tile(n.T @ p, self.MPC_HORIZON),
             )
         )
         ub = np.hstack(
             (
-                -self.state_jacobian(reference_trajectory[0, :])
-                @ (self.state(0, 0, 0, 0) - reference_trajectory[0, :]),
+                -self.state_jacobian(reference_trajectory[0, :]) @ (self.state(0, 0, 0, 0) - reference_trajectory[0, :]),
                 np.zeros(self.N_STATES * (self.MPC_HORIZON - 1)),
-                np.tile(state_ub, self.MPC_HORIZON),
-                np.tile(self.control_ub, self.MPC_HORIZON) + reference_control.ravel(),
+                np.tile(state_ub, self.MPC_HORIZON) - reference_trajectory.ravel(),
+                np.tile(self.control_ub, self.MPC_HORIZON) - reference_control.ravel(),
                 # np.tile(np.inf, self.MPC_HORIZON),
             )
         )
+
+        print("bounds", lb[(self.N_STATES * self.MPC_HORIZON):], ub[(self.N_STATES * self.MPC_HORIZON):])
 
         if self.TIME:
             create_mat_time_bounds = 1000.0 * (time.time() - t)
