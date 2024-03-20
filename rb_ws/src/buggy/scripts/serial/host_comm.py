@@ -1,7 +1,8 @@
 import struct
 import time
-from serial import Serial
 from dataclasses import dataclass
+
+from serial import Serial
 
 class Crc16:
     def __init__(self):
@@ -190,6 +191,7 @@ def main():
     while True:
         packet = comms.read_packet()
         if time.time() - last_time > 0.01:
+            print(packet)
             last_time = time.time()
             comms.send_steering(1234.5)
 

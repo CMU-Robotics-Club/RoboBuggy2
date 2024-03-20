@@ -222,7 +222,7 @@ class AutonSystem:
     def planner_tick(self):
         with self.lock:
             self_pose, _ = self.get_world_pose_and_speed(self.self_odom_msg)
-            other_pose, other_speed = self.get_world_pose_and_speed(self.other_odom_msg)
+            other_pose, _ = self.get_world_pose_and_speed(self.other_odom_msg)
 
         # update local trajectory via path planner
         self.cur_traj, cur_idx = self.path_planner.compute_traj(

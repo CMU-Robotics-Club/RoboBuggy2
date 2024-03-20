@@ -30,12 +30,11 @@ class DebugController():
         rate = rospy.Rate(self.rate)
         tick_count = 0
         steer_cmd = 0
-        add = True
 
         while not rospy.is_shutdown():
 
 
-            self.steer_publisher.publish(Float64(self.sin_steer(tick_count)))
+            self.steer_publisher.publish(Float64(steer_cmd))
 
 
             tick_count += 1

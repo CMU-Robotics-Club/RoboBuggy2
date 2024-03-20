@@ -1,20 +1,20 @@
 #!/usr/bin/env python3
 
-from host_comm import *
-from threading import Lock
-
 import threading
-
-import rospy
-import argparse
-from geometry_msgs.msg import PoseWithCovariance
-
-#Ros Message Imports
-from std_msgs.msg import Float32, Float64, Bool, Int8
-from nav_msgs.msg import Odometry as ROSOdom
+from threading import Lock
 
 import sys
 sys.path.append("/rb_ws/src/buggy/scripts/auton")
+
+import argparse
+import rospy
+
+#Ros Message Imports
+from std_msgs.msg import Float64, Bool, Int8
+from nav_msgs.msg import Odometry as ROSOdom
+
+from host_comm import *
+
 from world import World
 
 class Translator:
