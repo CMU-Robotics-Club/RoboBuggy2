@@ -5,8 +5,6 @@ import json
 
 import rosbag
 
-from tf.transformations import euler_from_quaternion
-
 def main():
     # Read in bag path from command line
     parser = argparse.ArgumentParser()
