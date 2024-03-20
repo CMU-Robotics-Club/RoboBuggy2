@@ -47,5 +47,6 @@
         args="$(arg sc_start_pos) $(arg sc_velocity) SC"/>
 
 
+    <node name="sc_rolling_sanity_check" pkg="buggy" type="rolling_sanity_check.py" output="screen" args="SC"/>
 
 </launch>
