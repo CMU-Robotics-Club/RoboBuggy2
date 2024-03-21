@@ -27,4 +27,6 @@
     <node name="auton_system" pkg="buggy" type="autonsystem.py" output="screen"
         args="$(arg autonsystem_args)"/>
 
+    <node name="geojson" pkg="buggy" type="reference_visualizer.py" output="screen" args="--self_name SC --waypoint_file buggycourse_safe_1.json"/>
+
 </launch>
