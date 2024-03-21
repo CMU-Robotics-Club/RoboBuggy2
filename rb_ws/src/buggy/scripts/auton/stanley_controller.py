@@ -65,7 +65,7 @@ class StanleyController(Controller):
             end_index=self.current_traj_index + 50,
         )
         self.current_traj_index = max(traj_index, self.current_traj_index)
-
+        print("STANLEY INDEX: " + str(self.current_traj_index) + " STANLEY POSE: ", current_pose)
         # Calculate heading error
 
         lookahead_dist = np.clip(
@@ -129,4 +129,5 @@ class StanleyController(Controller):
         reference_navsat.longitude = ref_gps[1]
         self.debug_reference_pos_publisher.publish(reference_navsat)
 
-        return steering_cmd
+        print("STANLEY STEER: ", steering_cmd)
+        return steering_cmd, True

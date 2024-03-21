@@ -19,6 +19,7 @@ from pure_pursuit_controller import PurePursuitController
 from stanley_controller import StanleyController
 from brake_controller import BrakeController
 from model_predictive_controller import ModelPredictiveController
+from controller_wrapper import ControllerWrapper
 # from model_predictive_interpolation import ModelPredictiveController
 from path_planner import PathPlanner
 from pose import Pose
@@ -194,15 +195,16 @@ class AutonSystem:
     def local_controller_thread(self):
         while (not rospy.is_shutdown()):
             self.local_controller_tick()
-            self.rosrate_controller.sleep()
 
     def local_controller_tick(self):
         with self.lock:
             self_pose, self_speed = self.get_world_pose_and_speed(self.self_odom_msg)
 
         # Compute control output
-        steering_angle = self.local_controller.compute_control(
+        steering_angle, solved = self.local_controller.compute_control(
             self_pose, self.cur_traj, self_speed)
+        if not solved:
+            print("DIDN'T SOLVE, UNDEFINED BEHAVIOUR")
         steering_angle_deg = np.rad2deg(steering_angle)
         self.steer_publisher.publish(Float64(steering_angle_deg))
 
@@ -298,6 +300,9 @@ if __name__ == "__main__":
         local_ctrller = ModelPredictiveController(
             self_name,
             start_index=start_index)
+
+    elif (ctrl == "wrapper"):
+        local_ctrller = ControllerWrapper(self_name, start_index=start_index)
 
     if (local_ctrller == None):
         raise Exception("Invalid Controller Argument")

@@ -29,7 +29,7 @@ class ModelPredictiveController(Controller):
     Convex Model Predictive Controller (MPC)
     """
 
-    DEBUG = True
+    DEBUG = False
     PLOT = False
     TIME = False
     ROS = True
@@ -64,7 +64,7 @@ class ModelPredictiveController(Controller):
         "eps_abs": 1e-4,
         "eps_rel": 1e-4,
         "polish": 1,
-        # "time_limit": 0.01,
+        "time_limit": 0.001,
         "warm_start": True,
     }
 
@@ -383,6 +383,8 @@ class ModelPredictiveController(Controller):
             subsample_resolution=1000,
         )
         self.current_traj_index = max(traj_index, self.current_traj_index)
+        print("MPC INDEX: " + str(self.current_traj_index))
+
         traj_distance = trajectory.get_distance_from_index(self.current_traj_index)
         traj_distance += self.LOOKAHEAD_TIME * self.current_speed
 
@@ -607,7 +609,7 @@ class ModelPredictiveController(Controller):
 
         print("status", results.info.status, results.info.status_val)
         if not (results.info.status == "solved" or results.info.status == "solved inaccurate"):
-            return reference_trajectory
+            return reference_trajectory, False
 
         state_trajectory += reference_trajectory
 
@@ -709,14 +711,14 @@ class ModelPredictiveController(Controller):
             print(" Plot/pub: ", plot_time)
             print("Total time: ", 1000 * (time.time() - totaltime))
 
-        return state_trajectory
+        return state_trajectory, True
         # return steer_angle
 
     def compute_control(self, current_pose: Pose, trajectory: Trajectory, current_speed: float):
-        state_trajectory = self.compute_trajectory(current_pose, trajectory, current_speed)
+        state_trajectory, solved = self.compute_trajectory(current_pose, trajectory, current_speed)
         steer_angle = state_trajectory[0, self.N_STATES - 1]
 
-        return steer_angle
+        return steer_angle, solved
 
 
 if __name__ == "__main__":
