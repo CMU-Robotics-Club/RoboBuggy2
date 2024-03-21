@@ -7,7 +7,7 @@ import threading
 import rospy
 
 # ROS Message Imports
-from std_msgs.msg import Float32, Float64, Bool, Int8
+from std_msgs.msg import Float32, Float64, Bool
 from nav_msgs.msg import Odometry
 
 import numpy as np
@@ -63,7 +63,6 @@ class AutonSystem:
 
         self.path_planner = PathPlanner(global_trajectory)
         self.other_steering = 0
-        self.rtk_status = 0
 
         self.lock = Lock()
         self.ticks = 0
@@ -120,8 +119,7 @@ class AutonSystem:
 
     def init_check(self):
         # checks that messages are being receieved
-        # (from both buggies if relevant),
-        # RTK status is fixed
+        # (from both buggies if relevant)
         # covariance is less than 1 meter
         if (self.self_odom_msg == None) or (self.has_other_buggy and self.other_odom_msg == None) or (self.self_odom_msg.pose.covariance[0] ** 2 + self.self_odom_msg.pose.covariance[7] ** 2 > 1**2):
             return False
