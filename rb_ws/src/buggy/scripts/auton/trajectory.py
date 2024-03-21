@@ -301,7 +301,7 @@ class Trajectory:
         return unit_normal
 
     def get_closest_index_on_path(
-        self, x, y, start_index=0, end_index=None, subsample_resolution=10000
+        self, x, y, start_index=0, end_index=None, subsample_resolution=1000
     ):
         """Gets the index of the closest point on the trajectory to the given point
 
@@ -335,7 +335,7 @@ class Trajectory:
 
         # Now interpolate at a higher resolution to get a more accurate result
         r_interp = self.interpolation(
-            np.linspace(start_index, end_index, subsample_resolution + 1)         )
+            np.linspace(start_index, end_index, subsample_resolution + 1))
         x_interp, y_interp = r_interp[:, 0], r_interp[:, 1] #x_interp, y_interp are numpy column vectors
 
         distances = (x_interp - x) ** 2 + (y_interp - y) ** 2 #Again distances are relative

@@ -61,9 +61,10 @@ class AutonSystem:
         self.local_controller = local_controller
         self.brake_controller = brake_controller
 
-        self.path_planner = PathPlanner(global_trajectory)
+        # left_curb = Trajectory(json_filepath="/rb_ws/src/buggy/paths/outside_curb_smooth.json")
+        left_curb = None
+        self.path_planner = PathPlanner(global_trajectory, left_curb)
         self.other_steering = 0
-        self.rtk_status = 0
 
         self.lock = Lock()
         self.ticks = 0
@@ -76,16 +77,12 @@ class AutonSystem:
             self.other_steer_subscriber = rospy.Subscriber(
                 other_name + "/buggy/input/steering", Float64, self.update_other_steering_angle
             )
-        rospy.Subscriber(self_name + "/gnss1/fix_info_republished_int", Int8, self.update_rtk_status)
 
         self.init_check_publisher = rospy.Publisher(
             self_name + "/debug/init_safety_check", Bool, queue_size=1
         )
         self.steer_publisher = rospy.Publisher(
             self_name + "/buggy/input/steering", Float64, queue_size=1
-        )
-        self.brake_publisher = rospy.Publisher(
-            self_name + "/buggy/input/brake", Float64, queue_size=1
         )
         self.brake_debug_publisher = rospy.Publisher(
             self_name + "/auton/debug/brake", Float64, queue_size=1
@@ -122,17 +119,18 @@ class AutonSystem:
     def init_check(self):
         # checks that messages are being receieved
         # (from both buggies if relevant),
-        # RTK status is fixed
         # covariance is less than 1 meter
         if (self.self_odom_msg == None) or (self.has_other_buggy and self.other_odom_msg == None) or (self.self_odom_msg.pose.covariance[0] ** 2 + self.self_odom_msg.pose.covariance[7] ** 2 > 1**2):
             return False
 
         # waits until covariance is acceptable to check heading
-
         with self.lock:
             self_pose, _ = self.get_world_pose_and_speed(self.self_odom_msg)
             current_heading = self_pose.theta
             closest_heading = self.cur_traj.get_heading_by_index(trajectory.get_closest_index_on_path(self_pose.x, self_pose.y))
+        print("current heading: ", np.rad2deg(current_heading))
+        self.heading_publisher.publish(Float32(np.rad2deg(current_heading)))
+
 
         # TENTATIVE:
         # headings are originally between -pi and pi
@@ -151,6 +149,8 @@ class AutonSystem:
 
     def tick_caller(self):
 
+
+        print("start checking initialization status")
         while ((not rospy.is_shutdown()) and not self.init_check()):
             self.init_check_publisher.publish(False)
             rospy.sleep(0.001)
@@ -194,6 +194,8 @@ class AutonSystem:
         with self.lock:
             self_pose, self_speed = self.get_world_pose_and_speed(self.self_odom_msg)
 
+        self.heading_publisher.publish(Float32(np.rad2deg(self_pose.theta)))
+
         # Compute control output
         steering_angle = self.local_controller.compute_control(
             self_pose, self.cur_traj, self_speed)
@@ -212,16 +214,20 @@ class AutonSystem:
                     self.distance_publisher.publish(Float64(distance))
 
                 self.planner_tick()
-                self.rosrate_planner.sleep()
+            self.rosrate_planner.sleep()
 
 
     def planner_tick(self):
         with self.lock:
-            other_pose, other_speed = self.get_world_pose_and_speed(self.other_odom_msg)
+            self_pose, _ = self.get_world_pose_and_speed(self.self_odom_msg)
+            other_pose, _ = self.get_world_pose_and_speed(self.other_odom_msg)
+
         # update local trajectory via path planner
-        self.cur_traj = self.path_planner.compute_traj(
-                                            other_pose,
-                                            other_speed)
+        self.cur_traj, cur_idx = self.path_planner.compute_traj(
+                                            self_pose,
+                                            other_pose)
+        self.local_controller.current_traj_index = cur_idx
+
 if __name__ == "__main__":
     rospy.init_node("auton_system")
     parser = argparse.ArgumentParser()

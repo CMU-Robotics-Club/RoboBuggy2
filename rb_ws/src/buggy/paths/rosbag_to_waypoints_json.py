@@ -40,7 +40,7 @@ def main():
         waypoints.append(
             {
                 "key": str(uuid.uuid4()),
-                "lat": lon,
+                "lat": lon, 
                 "lon": lat,
                 "active": False,
             }
