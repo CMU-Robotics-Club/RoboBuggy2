@@ -110,27 +110,11 @@ class PathPlanner():
                nominal_slice_dists[i]
             ))
 
-        # grab slice of curb correponding to slice of nominal trajectory.
-        curb_idx = self.left_curb.get_closest_index_on_path(self_pose.x, self_pose.y)
-        curb_dist_along = self.left_curb.get_distance_from_index(curb_idx)
-        curb_idx_end = self.left_curb.get_closest_index_on_path(nominal_slice[-1, 0], nominal_slice[-1, 1])
-        curb_dist_along_end = self.left_curb.get_distance_from_index(curb_idx_end)
-        curb_dists = np.linspace(curb_dist_along, curb_dist_along_end, self.RESOLUTION)
-
-        curb_slice = np.empty((self.RESOLUTION, 2))
-        for i in range(self.RESOLUTION):
-            curb_slice[i, :] = np.array(self.left_curb.get_position_by_distance(
-                curb_dists[i]
-            ))
-
-
         # get index of the other buggy along the trajetory and convert to distance
         other_idx = self.nominal_traj.get_closest_index_on_path(other_pose.x, other_pose.y)
         other_dist = self.nominal_traj.get_distance_from_index(other_idx)
         nominal_slice_to_other_dist = np.abs(nominal_slice_dists - other_dist)
 
-        # compute distances from the sample points to the curb
-        nominal_slice_to_curb_dist = np.linalg.norm(curb_slice - nominal_slice, axis=1)
         passing_offsets = self.offset_func(nominal_slice_to_other_dist)
 
         # compute signed cross-track distance between NAND and nominal
@@ -153,8 +137,23 @@ class PathPlanner():
             self.activate_other_crosstrack_func(nominal_slice_to_other_dist) * other_cross_track_dist
 
         # clamp passing offset distances to distance to the curb
-        passing_offsets = np.minimum(passing_offsets, nominal_slice_to_curb_dist - self.CURB_MARGIN)
+        if not self.left_curb is None:
+            # grab slice of curb correponding to slice of nominal trajectory.
+            curb_idx = self.left_curb.get_closest_index_on_path(self_pose.x, self_pose.y)
+            curb_dist_along = self.left_curb.get_distance_from_index(curb_idx)
+            curb_idx_end = self.left_curb.get_closest_index_on_path(nominal_slice[-1, 0], nominal_slice[-1, 1])
+            curb_dist_along_end = self.left_curb.get_distance_from_index(curb_idx_end)
+            curb_dists = np.linspace(curb_dist_along, curb_dist_along_end, self.RESOLUTION)
 
+            curb_slice = np.empty((self.RESOLUTION, 2))
+            for i in range(self.RESOLUTION):
+                curb_slice[i, :] = np.array(self.left_curb.get_position_by_distance(
+                    curb_dists[i]
+                ))
+
+            # compute distances from the sample points to the curb
+            nominal_slice_to_curb_dist = np.linalg.norm(curb_slice - nominal_slice, axis=1)
+            passing_offsets = np.minimum(passing_offsets, nominal_slice_to_curb_dist - self.CURB_MARGIN)
 
         # clamp negative passing offsets to zero, since we always pass on the left,
         # the passing offsets should never pull SC to the right.

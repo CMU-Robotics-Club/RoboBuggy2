@@ -15,7 +15,7 @@ class DebugController():
     def __init__(self) -> None:
         self.steer_publisher = rospy.Publisher(
         "SC/buggy/input/steering", Float64, queue_size=1)
-        self.rate = 100
+        self.rate = 1000
 
     def sin_steer(self, tick_count):
         return 50 * np.sin((2 * np.pi) * tick_count/500)
