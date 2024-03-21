@@ -65,7 +65,8 @@ class Simulator:
             "TRACK_EAST_END": (589953, 4477465, 90),
             "TRACK_RESNICK": (589906, 4477437, -20),
             "GARAGE": (589846, 4477580, 180),
-            "PASS_PT": (589491, 4477003, -160)
+            "PASS_PT": (589491, 4477003, -160),
+            "FREW_ST": (589646, 4477359, -20),
         }
 
         # Start position for End of Hill 2
