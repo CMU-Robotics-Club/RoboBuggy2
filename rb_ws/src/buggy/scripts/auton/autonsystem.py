@@ -76,7 +76,6 @@ class AutonSystem:
             self.other_steer_subscriber = rospy.Subscriber(
                 other_name + "/buggy/input/steering", Float64, self.update_other_steering_angle
             )
-        rospy.Subscriber(self_name + "/gnss1/fix_info_republished_int", Int8, self.update_rtk_status)
 
         self.init_check_publisher = rospy.Publisher(
             self_name + "/debug/init_safety_check", Bool, queue_size=1
