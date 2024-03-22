@@ -67,6 +67,7 @@ class Simulator:
             "GARAGE": (589846, 4477580, 180),
             "PASS_PT": (589491, 4477003, -160),
             "FREW_ST": (589646, 4477359, -20),
+            "FREW_ST_PASS": (589644, 4477368, -20),
         }
 
         # Start position for End of Hill 2

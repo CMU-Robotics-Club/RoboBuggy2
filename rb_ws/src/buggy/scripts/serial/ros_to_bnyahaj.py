@@ -79,8 +79,8 @@ class Translator:
                 self.steering_alarm_publisher.publish(Bool(packet[4]))
                 self.brake_status_publisher.publish(Bool(packet[5]))
                 self.use_auton_steer_publisher.publish(Bool(packet[6]))
-                self.rc_uplink_qual_publisher.publish(Int8(packet[7]))
-                self.nand_fix_publisher.publish(Int8(packet[8]))
+                # self.rc_uplink_qual_publisher.publish(Int8(packet[7]))
+                # self.nand_fix_publisher.publish(Int8(packet[8]))
                 # self.padding_1_publisher.publish(packet[9][0])
                 # self.padding_2_publisher.publish(packet[9][1])
 
