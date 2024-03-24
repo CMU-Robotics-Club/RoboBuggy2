@@ -6,7 +6,7 @@
 
     <node name="foxglove" pkg="foxglove_bridge" type="foxglove_bridge" />
 
-    <arg name="manual_vel"          default="true" />
+    <arg name="manual_vel"          default="false" />
     <arg name="auto_vel"            default="false" />
 
     <group if="$(arg auto_vel)">
@@ -26,5 +26,7 @@
 
     <node name="auton_system" pkg="buggy" type="autonsystem.py" output="screen"
         args="$(arg autonsystem_args)"/>
+
+    <node name="rolling_sanity_check" pkg="buggy" type="rolling_sanity_check.py" output="screen" args="$(arg buggy_name)"/>
 
 </launch>

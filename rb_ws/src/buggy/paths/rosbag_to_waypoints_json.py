@@ -1,10 +1,9 @@
 #! /usr/bin/env python3
-import rosbag
 import argparse
 import uuid
 import json
 
-from tf.transformations import euler_from_quaternion
+import rosbag
 
 def main():
     # Read in bag path from command line
@@ -26,7 +25,7 @@ def main():
     i = 0
 
     # Loop through bag
-    for topic, msg, t in bag.read_messages(topics="/nav/odom"):
+    for _, msg, _ in bag.read_messages(topics="/nav/odom"):
         # Skip waypoints
         if i % args.subsample != 0:
             i += 1
@@ -35,17 +34,14 @@ def main():
 
         lat = msg.pose.pose.position.x
         lon = msg.pose.pose.position.y
-        orientation_q = msg.pose.pose.orientation
 
-        orientation_list = [orientation_q.x, orientation_q.y, orientation_q.z, orientation_q.w]
-        (roll, pitch, yaw) = euler_from_quaternion (orientation_list)
 
 
         waypoints.append(
             {
                 "key": str(uuid.uuid4()),
-                "lat": lat,
-                "lon": lon,
+                "lat": lon,
+                "lon": lat,
                 "active": False,
             }
         )

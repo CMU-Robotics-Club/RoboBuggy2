@@ -1,13 +1,21 @@
 <!-- roslaunch buggy main.launch -->
 
 <launch>
-    <arg name="controller"      default="mpc" />
+    <arg name="controller"      default="stanley" />
     <arg name="start_dist"      default="0.0" />
     <arg name="path"      default="buggycourse_safe_1.json" />
 
     <include file="$(find microstrain_inertial_driver)/launch/microstrain.launch">
         <arg name="params_file" value="/rb_ws/src/buggy/INS_params.yml"/>
     </include>
+
+    <!-- run a sim with name = NAND at velocity ~= 0 -->
+    <arg name="starting_pose"    default="UC_TO_PURNELL" />
+    <arg name="velocity"         default="0.0001" />
+    <arg name="buggy_name"       default="NAND" />
+
+    <node name="sim_2d_engine" pkg="buggy" type="engine.py" output="screen"
+        args="$(arg starting_pose) $(arg velocity) $(arg buggy_name)"/>
 
     <remap from="/SC/nav/odom" to="/nav/odom"/>
     <remap from="/buggy/input/steering" to="/SC/buggy/input/steering"/>
@@ -23,20 +31,7 @@
     <node name="foxglove" pkg="foxglove_bridge" type="foxglove_bridge" />
     <node name="telematics" pkg="buggy" type="telematics.py" />
 
-
-
-
-    <!-- ENABLE AUTON -->
-    <!-- autonsystem args: controller start_dist path buggy_name is_sim -->
-    <!-- Conditional Launch Files, depending on if NAND Exists or not -->
-    <arg name="NAND_exist" default="true"/>
-    <group if="$(arg NAND_exist)">
-        <!-- Run the simulation with NAND -->
-        <arg name="autonsystem_args" default="--controller $(arg controller) --dist 0.0 --traj $(arg path) --self_name SC --other_name NAND" />
-        <node name="auton_system" pkg="buggy" type="autonsystem.py" output="screen" args="$(arg autonsystem_args)"/>
-    </group>
-    <group unless="$(arg NAND_exist)">
-        <arg name="autonsystem_args" default="--controller $(arg controller) --dist 0.0 --traj $(arg path) --self_name SC" />
-        <node name="auton_system" pkg="buggy" type="autonsystem.py" output="screen" args="$(arg autonsystem_args)"/>
-    </group>
+    <!-- Run the simulation with NAND -->
+    <arg name="autonsystem_args" default="--controller $(arg controller) --dist 0.0 --traj $(arg path) --self_name SC --other_name NAND" />
+    <node name="auton_system" pkg="buggy" type="autonsystem.py" output="screen" args="$(arg autonsystem_args)"/>
 </launch>
