@@ -5,10 +5,6 @@
     <arg name="start_dist"      default="0.0" />
     <arg name="path"            default="buggycourse_safe_1.json" />
 
-    <include file="$(find microstrain_inertial_driver)/launch/microstrain.launch">
-        <arg name="params_file" value="/rb_ws/src/buggy/INS_params.yml"/>
-    </include>
-
     <remap from="/NAND/nav/odom" to="/nav/odom"/>
     <remap from="/buggy/input/steering" to="/NAND/buggy/input/steering"/>
 
