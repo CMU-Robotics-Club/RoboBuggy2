@@ -119,10 +119,6 @@ class AutonSystem:
         with self.lock:
             self.other_steering = msg.data
 
-    def update_rtk_status(self, msg):
-        with self.lock:
-            self.rtk_status = msg.data
-
     def init_check(self):
         # checks that messages are being receieved
         # (from both buggies if relevant),
@@ -160,8 +156,6 @@ class AutonSystem:
             rospy.sleep(0.001)
         print("done checking initialization status")
         self.init_check_publisher.publish(True)
-
-
         # initialize global trajectory index
 
         with self.lock:
