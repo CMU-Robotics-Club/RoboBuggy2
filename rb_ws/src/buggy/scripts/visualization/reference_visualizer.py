@@ -3,7 +3,7 @@ import argparse
 import json
 
 import rospy
-from foxglove_msgs.msg import GeoJSON
+from foxglove_msg.msg import GeoJSON
 
 class geojsonVisualizer():
     def __init__(self, waypoint_file, buggy_name):
