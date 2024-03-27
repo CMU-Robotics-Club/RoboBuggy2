@@ -122,7 +122,7 @@ Then `$ cd RoboBuggy2`
 -	Go to docker container
 `$ docker_exec`
 -	Open foxglove and do local connection to “ws://192.168.1.217/8765”
--	Roslauch in docker container by `$ roslaunch buggy main.launch`
+-	Roslauch in docker container by `$ roslaunch buggy sc-main.launch` (or `$ roslaunch buggy nand-main.launch` for NAND)
 (wait until no longer prints “waiting for covariance to be better”)
 
 When shutting down the buggy:

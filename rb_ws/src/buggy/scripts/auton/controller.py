@@ -19,11 +19,15 @@ class Controller(ABC):
 
     NAND_WHEELBASE = 1.3
     SC_WHEELBASE = 1.104
-    WHEELBASE = SC_WHEELBASE
     current_traj_index = 0
 
     def __init__(self, start_index, buggy_name) -> None:
         self.buggy_name = buggy_name
+        if buggy_name.upper() == 'NAND':
+            Controller.WHEELBASE = self.NAND_WHEELBASE
+        else:
+            Controller.WHEELBASE = self.SC_WHEELBASE
+
         # self.trajectory_forward_1 = rospy.Publisher(
         #     buggy_name + "/auton/debug/forward1_navsat", NavSatFix, queue_size=1
         # )

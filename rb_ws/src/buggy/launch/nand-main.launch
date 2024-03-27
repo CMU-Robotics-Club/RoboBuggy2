@@ -1,0 +1,25 @@
+<!-- roslaunch buggy main.launch -->
+
+<launch>
+    <arg name="controller"      value="stanley" />
+    <arg name="start_dist"      default="0.0" />
+    <arg name="path"            default="buggycourse_safe_1.json" />
+
+    <remap from="/NAND/nav/odom" to="/nav/odom"/>
+    <remap from="/buggy/input/steering" to="/NAND/buggy/input/steering"/>
+
+    <node name="serial_node" pkg="rosserial_python" type="serial_node.py">
+        <param name="port" type="string" value="/dev/nand-teensy"/>
+        <param name="baud" type="int" value="1000000"/>
+    </node>
+    <node name="foxglove" pkg="foxglove_bridge" type="foxglove_bridge" />
+    <node name="telematics" pkg="buggy" type="telematics.py" />
+
+
+
+
+    <!-- ENABLE AUTON -->
+    <!-- autonsystem args: controller start_dist path buggy_name is_sim -->
+    <arg name="autonsystem_args" value="--controller $(arg controller) --dist 0.0 --traj $(arg path) --self_name NAND" />
+    <node name="auton_system" pkg="buggy" type="autonsystem.py" output="screen" args="$(arg autonsystem_args)"/>
+</launch>
