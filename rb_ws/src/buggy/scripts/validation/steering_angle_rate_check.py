@@ -1,9 +1,8 @@
 # A script to log battery data to a .txt file
 
+import csv
 import rospy
 from std_msgs.msg import Float64,Bool # Callback function to print the subscribed data on the terminal
-import numpy as np
-import csv
 
 file = open('steering_data.txt', 'w', newline='')
 writer = csv.writer(file)
@@ -15,14 +14,14 @@ class SteeringAngleRateChecker:
         self.steering_data_rate = 0
         self.last_steering_data = 0
         # threshold value and steering angle r in degree per second
-        self.threshold_steering_data_rate = 100 
+        self.threshold_steering_data_rate = 100
         self.velocity_publisher = rospy.Publisher("SteeringAngleRate",
                                                   Float64, queue_size=10)
         self.flag_publisher = rospy.Publisher("SteeringAngleRateFlag",
                                               Bool, queue_size=10)
-        rospy.Subscriber("/SC/buggy/input/steering", Float64, 
+        rospy.Subscriber("/SC/buggy/input/steering", Float64,
                          self.callback_steering_angle)
-        
+
     def callback_steering_angle(self, steering_data):
         current_time = rospy.Time.now()
         self.steering_data_rate = (steering_data.data-self.last_steering_data) \
@@ -32,7 +31,7 @@ class SteeringAngleRateChecker:
         self.last_time_stamp = current_time
         self.last_steering_data = steering_data.data
         self.steering_steering_data_rate_publisher()
-        writer.writerow([current_time, steering_data.data, 
+        writer.writerow([current_time, steering_data.data,
                          self.steering_data_rate])
 
     def steering_steering_data_rate_publisher(self):
