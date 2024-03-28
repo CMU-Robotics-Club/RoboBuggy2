@@ -14,8 +14,9 @@ class Telematics:
     def __init__(self):
         """Generate all the subscribers and publishers that need to be reformatted.
         """
-        self.odom_subscriber = rospy.Subscriber("/nav/odom", Odometry, self.convert_odometry_to_navsatfix)
-        self.odom_publisher = rospy.Publisher("/nav/odom_NavSatFix", NavSatFix, queue_size=10)
+
+        self.odom_subscriber = rospy.Subscriber("/NAND/nav/odom", Odometry, self.convert_odometry_to_navsatfix)
+        self.odom_publisher = rospy.Publisher("/NAND/nav/odom_NavSatFix", NavSatFix, queue_size=10)
 
         self.gnss1_pose_publisher = rospy.Publisher("/gnss1/fix_Pose", PoseStamped, queue_size=10)
         self.gnss1_covariance_publisher = rospy.Publisher("/gnss1/fix_FloatArray_Covariance", Float64MultiArray, queue_size=10)
