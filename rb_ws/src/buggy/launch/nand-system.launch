@@ -1,0 +1,9 @@
+<!-- roslaunch buggy main.launch -->
+
+<launch>
+
+    <node name="bnyahaj" pkg="buggy" type="ros_to_bnyahaj.py" output="screen" args="--self_name NAND --other_name SC"/>
+
+    <node name="foxglove" pkg="foxglove_bridge" type="foxglove_bridge" />
+    <node name="telematics" pkg="buggy" type="telematics.py" />
+</launch>
