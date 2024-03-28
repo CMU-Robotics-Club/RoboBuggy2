@@ -29,6 +29,7 @@ class SanityCheck:
         self.warning = 0
 
         self.warning_buffer_time = 1000 # warning flags active >1 second before human driver alerted
+        self.filter_seperation_distance = 1 #meters
 
         self.warning_durations = [0] * 18 # keeps track of how long covariance, overrange warning, any of the filter status flags are active
 
@@ -91,7 +92,7 @@ class SanityCheck:
         if (self.filter_location == None or self.gps_location == None):
             self.filter_gps_status_publisher.publish(False)
         else:
-            good_seperation = abs(self.filter_location.pose.position.y - self.gps_location.position.y) < 0.5
+            good_seperation = abs(self.filter_location.pose.position.y - self.gps_location.position.y) < self.filter_seperation_distance
             if (not good_seperation):
                 self.warning = 2
 
