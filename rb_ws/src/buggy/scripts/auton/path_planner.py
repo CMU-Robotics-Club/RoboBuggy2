@@ -110,7 +110,9 @@ class PathPlanner():
             other buggy cross track distance +
             offset_func(distance to other buggy along track)
 
-        clamp(passing offset, left curb, nominal trajectory)
+        trajectory = nominal trajectory +
+            left nominal trajectory unit normal vector *
+            clamp(passing offsets, 0, distance from nominal trajectory to left curb)
 
         Args:
             other_pose (Pose): Pose containing NAND's easting (x),
@@ -168,7 +170,7 @@ class PathPlanner():
             self.activate_other_crosstrack_func(nominal_slice_to_other_dist) * other_cross_track_dist
 
         # clamp passing offset distances to distance to the curb
-        if not self.left_curb is None:
+        if self.left_curb is not None:
             # grab slice of curb correponding to slice of nominal trajectory.
             curb_idx = self.left_curb.get_closest_index_on_path(self_pose.x, self_pose.y)
             curb_dist_along = self.left_curb.get_distance_from_index(curb_idx)
