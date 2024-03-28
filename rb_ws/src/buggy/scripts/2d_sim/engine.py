@@ -61,7 +61,13 @@ class Simulator:
             "Hill1_SC": (Simulator.UTM_EAST_ZERO + 20, Simulator.UTM_NORTH_ZERO + 30, -110),
             "WESTINGHOUSE": (589647, 4477143, -150),
             "UC_TO_PURNELL": (589635, 4477468, 160),
-            "UC": (589681, 4477457, 160)
+            "UC": (589681, 4477457, 160),
+            "TRACK_EAST_END": (589953, 4477465, 90),
+            "TRACK_RESNICK": (589906, 4477437, -20),
+            "GARAGE": (589846, 4477580, 180),
+            "PASS_PT": (589491, 4477003, -160),
+            "FREW_ST": (589646, 4477359, -20),
+            "FREW_ST_PASS": (589644, 4477368, -20),
         }
 
         # Start position for End of Hill 2
@@ -111,7 +117,7 @@ class Simulator:
 
         self.steering_angle = 0  # degrees
         self.rate = 200  # Hz
-        self.pub_skip = 1  # publish every pub_skip ticks
+        self.pub_skip = 2  # publish every pub_skip ticks
 
         self.lock = threading.Lock()
 
@@ -192,6 +198,7 @@ class Simulator:
             self.e_utm = e_utm_new
             self.n_utm = n_utm_new
             self.heading = heading_new
+
     def publish(self):
         """Publishes the pose the arrow in visualizer should be at"""
         p = Pose()
@@ -227,8 +234,8 @@ class Simulator:
         heading_noisy = heading
 
         if (Simulator.NOISE):
-            lat_noisy = lat + np.random.normal(0, 1e-8)  # ~.1cm error
-            long_noisy = long + np.random.normal(0, 1e-8)  # ~.1cm error
+            lat_noisy = lat + np.random.normal(0, 1e-6)  # ~10cm error
+            long_noisy = long + np.random.normal(0, 1e-6)  # ~10cm error
             velocity_noisy = velocity + np.random.normal(0, 0.01)
             heading_noisy = heading + np.random.normal(0, 0.01)
 
@@ -300,7 +307,6 @@ class Simulator:
             0.01,
         ]
 
-
         self.pose_publisher.publish(odom)
 
     def loop(self):
@@ -331,5 +337,16 @@ if __name__ == "__main__":
     buggy_name = sys.argv[3]
 
     sim = Simulator(start_pos, velocity, buggy_name)
+    for i in range(100):
+        sim.publish()
+        rospy.sleep(0.01)
+
+    # publish initial position, then sleep
+    # so that auton stack has time to initialize
+    # before buggy moves
+    print("SIM PUBLISHED", rospy.get_time())
+    if buggy_name == "SC":
+        rospy.sleep(15.0)
+    print("SIM STARTED STEPPING", rospy.get_time())
     sim.loop()
 
