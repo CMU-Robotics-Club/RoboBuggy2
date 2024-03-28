@@ -35,7 +35,10 @@ class ModelPredictiveController(Controller):
     ROS = True
 
     # MPC Params
-    WHEELBASE = 1.3
+    WHEELBASE = 1.17 #m
+    MASS = 62 #kg
+    MAX_LAT_FORCE = 350 #N
+    MAX_STEER = np.deg2rad(20) #degrees
     MIN_SPEED = 1.0
     MPC_TIMESTEP = 0.02
     MPC_HORIZON = 125
@@ -44,19 +47,15 @@ class ModelPredictiveController(Controller):
     N_CONTROLS = 1
 
     # MPC Cost Weights
-    state_cost = np.array([0.0001, 250, 5, 25])  # x, y, theta, steer
+    state_cost = np.array([0.0001, 250, 5, 2500])  # x, y, theta, steer
     control_cost = np.array([5])  # d_steer
     final_state_cost = 2 * np.array([0.0001, 250, 5, 25])  # x, y, theta, steer
 
-    # State constraints (relative to the reference)
-    state_lb = np.array([-np.inf, -np.inf, -np.inf, -np.pi / 9])  # x, y, theta, steer
-    state_ub = np.array([np.inf, np.inf, np.inf, np.pi / 9])  # x, y, theta, steer
-
     # Control constraints
-    control_lb = np.array([-np.pi * 2])  # d_steer
-    control_ub = np.array([np.pi * 2])  # d_steer
-    # control_lb = np.array([-np.inf])  # d_steer
-    # control_ub = np.array([np.inf])  # d_steer
+    # control_lb = np.array([-np.pi / 2])  # d_steer
+    # control_ub = np.array([np.pi / 2])  # d_steer
+    control_lb = np.array([-np.inf])  # d_steer
+    control_ub = np.array([np.inf])  # d_steer
 
     # Solver params
     solver_settings: dict = {
@@ -64,8 +63,9 @@ class ModelPredictiveController(Controller):
         "eps_abs": 1e-4,
         "eps_rel": 1e-4,
         "polish": 1,
-        # "time_limit": 0.01,
+        "time_limit": 1.5e-2,
         "warm_start": True,
+        # "linsys_solver": "mkl pardiso",
     }
 
     # Precomputed arrays
@@ -348,6 +348,11 @@ class ModelPredictiveController(Controller):
 
     first_iteration = True
 
+    def compute_steering_limit(self, speed):
+        # in radians
+        max_steer = np.arctan(self.WHEELBASE * self.MAX_LAT_FORCE / (self.MASS * speed ** 2))
+        return max_steer
+
     def compute_trajectory(self, current_pose: Pose, trajectory: Trajectory, current_speed: float):
         """
         Computes the desired control output given the current state and reference trajectory
@@ -538,23 +543,29 @@ class ModelPredictiveController(Controller):
         if self.TIME:
             t = time.time()
 
+        steer_limit = min(self.compute_steering_limit(current_speed), self.MAX_STEER)
+        if self.DEBUG:
+            print("max steer:", np.rad2deg(steer_limit))
+
+        # State constraints
+        state_lb = np.array([-np.inf, -np.inf, -np.inf, -steer_limit])  # x, y, theta, steer
+        state_ub = np.array([np.inf, np.inf, np.inf, steer_limit])  # x, y, theta, steer
+
         lb = np.hstack(
             (
-                -self.state_jacobian(reference_trajectory[0, :])
-                @ (self.state(0, 0, 0, 0) - reference_trajectory[0, :]),
+                -self.state_jacobian(reference_trajectory[0, :]) @ (self.state(0, 0, 0, 0) - reference_trajectory[0, :]),
                 np.zeros(self.N_STATES * (self.MPC_HORIZON - 1)),
-                np.tile(self.state_lb, self.MPC_HORIZON) + reference_trajectory.ravel(),
-                np.tile(self.control_lb, self.MPC_HORIZON) + reference_control.ravel(),
+                np.tile(state_lb, self.MPC_HORIZON) - reference_trajectory.ravel(),
+                np.tile(self.control_lb, self.MPC_HORIZON) - reference_control.ravel(),
                 # np.tile(n.T @ p, self.MPC_HORIZON),
             )
         )
         ub = np.hstack(
             (
-                -self.state_jacobian(reference_trajectory[0, :])
-                @ (self.state(0, 0, 0, 0) - reference_trajectory[0, :]),
+                -self.state_jacobian(reference_trajectory[0, :]) @ (self.state(0, 0, 0, 0) - reference_trajectory[0, :]),
                 np.zeros(self.N_STATES * (self.MPC_HORIZON - 1)),
-                np.tile(self.state_ub, self.MPC_HORIZON) + reference_trajectory.ravel(),
-                np.tile(self.control_ub, self.MPC_HORIZON) + reference_control.ravel(),
+                np.tile(state_ub, self.MPC_HORIZON) - reference_trajectory.ravel(),
+                np.tile(self.control_ub, self.MPC_HORIZON) - reference_control.ravel(),
                 # np.tile(np.inf, self.MPC_HORIZON),
             )
         )
@@ -605,8 +616,8 @@ class ModelPredictiveController(Controller):
         solution_trajectory = np.reshape(results.x, (self.MPC_HORIZON, self.N_STATES + self.N_CONTROLS))
         state_trajectory = solution_trajectory[:, self.N_CONTROLS:(self.N_CONTROLS + self.N_STATES)]
 
-        print("status", results.info.status, results.info.status_val)
         if not (results.info.status == "solved" or results.info.status == "solved inaccurate"):
+            print("unable to solve!")
             return reference_trajectory
 
         state_trajectory += reference_trajectory
@@ -673,8 +684,8 @@ class ModelPredictiveController(Controller):
 
         # Publish error for debugging
         try:
-            reference_position = trajectory.get_position_by_index(
-                self.current_traj_index
+            reference_position = trajectory.get_position_by_distance(
+                traj_distance
             )
             reference_error = current_pose.convert_point_from_global_to_local_frame(
                 reference_position
