@@ -62,6 +62,7 @@ MSG_TYPE_DEBUG    = b'DB'
 MSG_TYPE_ODOMETRY = b'OD'
 MSG_TYPE_STEERING = b'ST'
 MSG_TYPE_BRAKE    = b'BR'
+MSG_TYPE_ALARM    = b'AL'
 
 @dataclass
 class Odometry:
@@ -98,6 +99,9 @@ class Comms:
 
     def send_steering(self, angle: float):
         self.send_packet_raw(MSG_TYPE_STEERING, struct.pack('<d', angle))
+    
+    def send_alarm(self, status: int):
+        self.send_packet_raw(MSG_TYPE_ALARM, struct.pack('<B', status))
 
     def read_packet_raw(self):
         self.rx_buffer += self.port.read_all() #type:ignore
