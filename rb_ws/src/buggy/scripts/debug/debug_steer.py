@@ -2,6 +2,7 @@
 
 import rospy
 from std_msgs.msg import Float64
+import numpy as np
 
 
 class DebugController():
@@ -13,32 +14,31 @@ class DebugController():
 
     def __init__(self) -> None:
         self.steer_publisher = rospy.Publisher(
-        "buggy/input/steering", Float64, queue_size=1)
-        self.rate = 100
+        "SC/buggy/input/steering", Float64, queue_size=1)
+        self.rate = 1000
+
+    def sin_steer(self, tick_count):
+        return 50 * np.sin((2 * np.pi) * tick_count/500)
+
+
+    def constant_steer(self, tick_count):
+        return 42.0
+
+
 
     def loop(self):
         rate = rospy.Rate(self.rate)
         tick_count = 0
         steer_cmd = 0
-        add = True
 
         while not rospy.is_shutdown():
-            if (add):
-                steer_cmd += 18 / 100
-            else:
-                steer_cmd -= 18 / 100
+
 
             self.steer_publisher.publish(Float64(steer_cmd))
 
+
             tick_count += 1
-            if (tick_count == 200):
-                tick_count = 0
-
-            if (steer_cmd >= 18):
-                add = False
-
-            if (steer_cmd <= -18):
-                add = True
+            steer_cmd = self.sin_steer(tick_count)
             rate.sleep()
 
 if __name__ == "__main__":
