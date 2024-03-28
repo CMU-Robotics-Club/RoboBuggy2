@@ -132,7 +132,6 @@ class AutonSystem:
         self.heading_publisher.publish(Float32(np.rad2deg(current_heading)))
 
 
-        # TENTATIVE:
         # headings are originally between -pi and pi
         # if they are negative, convert them to be between 0 and pi
         if current_heading < 0:
