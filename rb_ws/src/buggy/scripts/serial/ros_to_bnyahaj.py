@@ -10,7 +10,7 @@ import argparse
 import rospy
 
 #Ros Message Imports
-from std_msgs.msg import Float64, Bool UInt8
+from std_msgs.msg import Float64, Bool, Int8, UInt8
 from nav_msgs.msg import Odometry as ROSOdom
 
 from host_comm import *
