@@ -48,6 +48,7 @@ class AutonSystem:
             brake_controller,
             self_name,
             other_name,
+            curb_traj,
             profile) -> None:
 
 
@@ -61,8 +62,7 @@ class AutonSystem:
         self.local_controller = local_controller
         self.brake_controller = brake_controller
 
-        # left_curb = Trajectory(json_filepath="/rb_ws/src/buggy/paths/outside_curb_smooth.json")
-        left_curb = None
+        left_curb = curb_traj
         self.path_planner = PathPlanner(global_trajectory, left_curb)
         self.other_steering = 0
 
@@ -259,6 +259,13 @@ if __name__ == "__main__":
         required=True)
 
     parser.add_argument(
+        "--left_curb",
+        type=str,
+        help="Path of curb data, relative to /rb_ws/src/buggy/paths/",
+        default=""
+,        required=True)
+
+    parser.add_argument(
         "--other_name",
         type=str,
         help="name of other buggy, if left unspecified, the autonsystem assumes it is the only buggy on the course",
@@ -276,12 +283,16 @@ if __name__ == "__main__":
     self_name = args.self_name
     other_name = args.other_name
     profile = args.profile
+    left_curb_file = args.left_curb
 
     print("\n\nStarting Controller: " + str(ctrl) + "\n\n")
     print("\n\nUsing path: /rb_ws/src/buggy/paths/" + str(traj) + "\n\n")
     print("\n\nStarting at distance: " + str(start_dist) + "\n\n")
 
     trajectory = Trajectory(json_filepath="/rb_ws/src/buggy/paths/" + traj)
+    left_curb = None
+    if left_curb_file != "":
+        left_curb = Trajectory(json_filepath="/rb_ws/src/buggy/paths/" + left_curb_file)
 
     # calculate starting index
     start_index = trajectory.get_index_from_distance(start_dist)
@@ -311,6 +322,7 @@ if __name__ == "__main__":
         BrakeController(),
         self_name,
         other_name,
+        left_curb,
         profile
     )
 
