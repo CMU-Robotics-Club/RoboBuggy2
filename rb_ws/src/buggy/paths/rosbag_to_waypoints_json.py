@@ -32,16 +32,16 @@ def main():
             continue
         i += 1
 
-        lat = msg.pose.pose.position.x
-        lon = msg.pose.pose.position.y
+        lon = msg.pose.pose.position.x
+        lat = msg.pose.pose.position.y
 
 
 
         waypoints.append(
             {
                 "key": str(uuid.uuid4()),
-                "lat": lon, 
-                "lon": lat,
+                "lat": lat,
+                "lon": lon,
                 "active": False,
             }
         )
