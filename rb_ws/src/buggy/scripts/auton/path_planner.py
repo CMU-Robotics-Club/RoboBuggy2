@@ -58,12 +58,31 @@ class PathPlanner():
         # TODO: estimate this value based on the curvature of NAND's recent positions
         self.other_steering_angle = 0
 
+
+
     def offset_func(self, dist):
+        """
+        Args:
+            dist: (N, ) numpy array, distances between ego-buggy and obstacle,
+            along the trajectory
+        Returns:
+            (N, ) numpy array, offsets from nominal trajectory required to overtake,
+            defined by a sigmoid function
+        """
+
         return self.OFFSET_SCALE_CROSS_TRACK / \
             (1 + np.exp(-(-self.OFFSET_SCALE_ALONG_TRACK * dist +
             self.OFFSET_SHIFT_ALONG_TRACK)))
 
     def activate_other_crosstrack_func(self, dist):
+        """
+        Args:
+            dist: (N, ) numpy array, distances between ego-buggy and obstacle,
+            along the trajectory
+        Returns:
+            (N, ) numpy array, multiplier used to weigh the cross-track distance of
+            the obstacle into the passing offset calculation.
+        """
         return 1 / \
             (1 + np.exp(-(-self.ACTIVATE_OTHER_SCALE_ALONG_TRACK * dist +
             self.OFFSET_SHIFT_ALONG_TRACK)))
@@ -76,10 +95,22 @@ class PathPlanner():
         ) -> Trajectory:
         """
         draw trajectory starting at the current pose and ending at a fixed distance
-        ahead. For each trajectory point, calculate the required offset from the nominal
-        trajectory. Most of the time, this deviation will be zero. The offset is a function of
-        distance to the obstacle, defined in offset_func. The upperbound of the offset is
-        the distance from the nominal trajectory to the curb.
+        ahead. For each trajectory point, calculate the required offset perpendicular to the nominal
+        trajectory. A sigmoid function of the distance along track to the other buggy is used to
+        weigh the other buggy's cross-track distance. This calculation produces a line that
+        allows the ego-buggy's trajectory to go through the other buggy. Since we want to pass
+        the other buggy at some constant distance to the left, another sigmoid function is multiplied
+        by that constant distance to produce a smooth trajectory that passes the other buggy.
+
+        Finally, the trajectory is bounded to the left by the left curb (if it exists), and to the right
+        by the nominal trajectory. (we never pass on the right)
+
+        passing offsets =
+            activate_other_crosstrack_func(distance to other buggy along track) *
+            other buggy cross track distance +
+            offset_func(distance to other buggy along track)
+
+        clamp(passing offset, left curb, nominal trajectory)
 
         Args:
             other_pose (Pose): Pose containing NAND's easting (x),
