@@ -37,10 +37,8 @@ class Translator:
         self.steering_alarm_publisher = rospy.Publisher(self_name + "/buggy/debug/steering_alarm", Bool, queue_size=1)
         self.brake_status_publisher = rospy.Publisher(self_name + "/buggy/debug/brake_status", Bool, queue_size=1)
         self.use_auton_steer_publisher = rospy.Publisher(self_name + "/buggy/debug/use_auton_steer", Bool, queue_size=1)
-        self.rc_uplink_qual_publisher = rospy.Publisher(self_name + "/buggy/debug/rc_uplink_quality", Int8, queue_size=1)
-        self.nand_fix_publisher = rospy.Publisher(self_name + "/buggy/debug/nand_fix", Int8, queue_size=1)
-        self.padding_1_publisher = rospy.Publisher(self_name + "/buggy/debug/padding_1", UInt8, queue_size=1)
-        self.padding_2_publisher = rospy.Publisher(self_name + "/buggy/debug/padding_2", UInt8, queue_size=1)
+        self.rc_uplink_qual_publisher = rospy.Publisher(self_name + "/buggy/debug/rc_uplink_quality", UInt8, queue_size=1)
+        self.nand_fix_publisher = rospy.Publisher(self_name + "/buggy/debug/nand_fix", UInt8, queue_size=1)
 
     #Steering Angle Updater
     def set_steering(self, msg):
@@ -84,22 +82,8 @@ class Translator:
                 self.steering_alarm_publisher.publish(Bool(packet[4]))
                 self.brake_status_publisher.publish(Bool(packet[5]))
                 self.use_auton_steer_publisher.publish(Bool(packet[6]))
-                # self.rc_uplink_qual_publisher.publish(Int8(packet[7]))
-                # self.nand_fix_publisher.publish(Int8(packet[8]))
-                # self.padding_1_publisher.publish(packet[9][0])
-                # self.padding_2_publisher.publish(packet[9][1])
-
-
-            # # for debug
-            # odom = ROSOdom()
-            # # convert to long lat
-            # lat, long = World.utm_to_gps(589846, 4477580)
-            # # lat, long = World.utm_to_gps(packet.x, packet.y)
-            # odom.pose.pose.position.x = long
-            # odom.pose.pose.position.y = lat
-
-            # self.odom_publisher.publish(odom)
-
+                self.rc_uplink_qual_publisher.publish(UInt8(packet[7]))
+                self.nand_fix_publisher.publish(UInt8(packet[8]))
 
             self.read_rate.sleep()
 

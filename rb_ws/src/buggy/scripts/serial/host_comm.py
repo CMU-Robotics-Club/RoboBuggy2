@@ -99,7 +99,7 @@ class Comms:
 
     def send_steering(self, angle: float):
         self.send_packet_raw(MSG_TYPE_STEERING, struct.pack('<d', angle))
-    
+
     def send_alarm(self, status: int):
         self.send_packet_raw(MSG_TYPE_ALARM, struct.pack('<B', status))
 
