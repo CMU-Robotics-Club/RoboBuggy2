@@ -9,8 +9,7 @@
         <arg name="params_file" value="/rb_ws/src/buggy/INS_params.yml"/>
     </include>
 
-    <!-- <remap from="/SC/nav/odom" to="/nav/odom"/>
-    <remap from="/buggy/input/steering" to="/SC/buggy/input/steering"/> -->
+    <remap from="/SC/nav/odom" to="/nav/odom"/>
 
     <node name="serial_node" pkg="rosserial_python" type="serial_node.py">
         <param name="port" type="string" value="/dev/ttyUSB0"/>

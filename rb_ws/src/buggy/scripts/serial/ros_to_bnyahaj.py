@@ -10,7 +10,7 @@ import argparse
 import rospy
 
 #Ros Message Imports
-from std_msgs.msg import Float64, Bool, Int8
+from std_msgs.msg import Float64, Bool, UInt8
 from nav_msgs.msg import Odometry as ROSOdom
 
 from host_comm import *
@@ -21,6 +21,7 @@ class Translator:
     def __init__(self, self_name, other_name):
         self.comms = Comms("/dev/ttyUSB0")
         self.steer_angle = 0
+        self.fresh_steer = False
         self.lock = Lock()
 
         rospy.Subscriber(self_name + "/buggy/input/steering", Float64, self.set_steering)
@@ -28,6 +29,7 @@ class Translator:
         self.steer_send_rate = rospy.Rate(100)
         self.read_rate = rospy.Rate(1000)
 
+        # DOES NAND GET ALL THIS DEBUG INFORMATION???
         self.rc_steering_angle_publisher = rospy.Publisher(self_name + "/buggy/debug/rc_steering_angle", Float64, queue_size=1)
         self.steering_angle_publisher = rospy.Publisher(self_name + "/buggy/debug/steering_angle", Float64, queue_size=1)
         self.battery_voltage_publisher = rospy.Publisher(self_name + "/buggy/debug/battery_voltage", Float64, queue_size=1)
@@ -35,10 +37,8 @@ class Translator:
         self.steering_alarm_publisher = rospy.Publisher(self_name + "/buggy/debug/steering_alarm", Bool, queue_size=1)
         self.brake_status_publisher = rospy.Publisher(self_name + "/buggy/debug/brake_status", Bool, queue_size=1)
         self.use_auton_steer_publisher = rospy.Publisher(self_name + "/buggy/debug/use_auton_steer", Bool, queue_size=1)
-        self.rc_uplink_qual_publisher = rospy.Publisher(self_name + "/buggy/debug/rc_uplink_quality", Int8, queue_size=1)
-        self.nand_fix_publisher = rospy.Publisher(self_name + "/buggy/debug/nand_fix", Int8, queue_size=1)
-        # self.padding_1_publisher = rospy.Publisher(self_name + "/buggy/debug/padding_1", Int8, queue_size=1)
-        # self.padding_2_publisher = rospy.Publisher(self_name + "/buggy/debug/padding_2", Int8, queue_size=1)
+        self.rc_uplink_qual_publisher = rospy.Publisher(self_name + "/buggy/debug/rc_uplink_quality", UInt8, queue_size=1)
+        self.nand_fix_publisher = rospy.Publisher(self_name + "/buggy/debug/nand_fix", UInt8, queue_size=1)
 
     #Steering Angle Updater
     def set_steering(self, msg):
@@ -46,12 +46,15 @@ class Translator:
         # print("SET STEERING: " + str(msg.data))
         with self.lock:
             self.steer_angle = msg.data
+            self.fresh_steer = True
 
     def writer_thread(self):
         print('Starting packet reading!')
         while True:
-            with self.lock:
-                self.comms.send_steering(self.steer_angle)
+            if self.fresh_steer:
+                with self.lock:
+                    self.comms.send_steering(self.steer_angle)
+                    self.fresh_steer = False
             self.steer_send_rate.sleep()
 
     def reader_thread(self):
@@ -79,22 +82,8 @@ class Translator:
                 self.steering_alarm_publisher.publish(Bool(packet[4]))
                 self.brake_status_publisher.publish(Bool(packet[5]))
                 self.use_auton_steer_publisher.publish(Bool(packet[6]))
-                # self.rc_uplink_qual_publisher.publish(Int8(packet[7]))
-                # self.nand_fix_publisher.publish(Int8(packet[8]))
-                # self.padding_1_publisher.publish(packet[9][0])
-                # self.padding_2_publisher.publish(packet[9][1])
-
-
-            # # for debug
-            # odom = ROSOdom()
-            # # convert to long lat
-            # lat, long = World.utm_to_gps(589846, 4477580)
-            # # lat, long = World.utm_to_gps(packet.x, packet.y)
-            # odom.pose.pose.position.x = long
-            # odom.pose.pose.position.y = lat
-
-            # self.odom_publisher.publish(odom)
-
+                self.rc_uplink_qual_publisher.publish(UInt8(packet[7]))
+                self.nand_fix_publisher.publish(UInt8(packet[8]))
 
             self.read_rate.sleep()
 
@@ -121,6 +110,3 @@ if __name__ == "__main__":
     rospy.init_node("ros_bnyahaj")
     translate = Translator(self_name, other_name)
     translate.loop()
-
-
-

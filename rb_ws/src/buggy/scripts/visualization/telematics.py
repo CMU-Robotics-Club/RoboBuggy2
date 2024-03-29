@@ -15,7 +15,6 @@ class Telematics:
         """Generate all the subscribers and publishers that need to be reformatted.
         """
 
-        # TODO: add buggy name to argparse
         self.odom_subscriber = rospy.Subscriber("/NAND/nav/odom", Odometry, self.convert_odometry_to_navsatfix)
         self.odom_publisher = rospy.Publisher("/NAND/nav/odom_NavSatFix", NavSatFix, queue_size=10)
 

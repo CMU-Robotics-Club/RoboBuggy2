@@ -7,7 +7,7 @@ import threading
 import rospy
 
 # ROS Message Imports
-from std_msgs.msg import Float32, Float64, Bool, Int8
+from std_msgs.msg import Float32, Float64, Bool
 from nav_msgs.msg import Odometry
 
 import numpy as np
@@ -118,7 +118,7 @@ class AutonSystem:
 
     def init_check(self):
         # checks that messages are being receieved
-        # (from both buggies if relevant),
+        # (from both buggies if relevant)
         # covariance is less than 1 meter
         if (self.self_odom_msg == None) or (self.has_other_buggy and self.other_odom_msg == None) or (self.self_odom_msg.pose.covariance[0] ** 2 + self.self_odom_msg.pose.covariance[7] ** 2 > 1**2):
             return False
@@ -161,18 +161,23 @@ class AutonSystem:
         with self.lock:
             _, _ = self.get_world_pose_and_speed(self.self_odom_msg)
 
-        p2 = threading.Thread(target=self.planner_thread)
-        p1 = threading.Thread(target=self.local_controller_thread)
+        t_planner = threading.Thread(target=self.planner_thread)
+        t_controller = threading.Thread(target=self.local_controller_thread)
 
         # starting processes
         # See LOOKAHEAD_TIME in path_planner.py for the horizon of the
         # planner. Make sure it is significantly (at least 2x) longer
         # than 1 period of the planner when you change the planner frequency.
-        p2.start() #Planner runs every 10 hz
-        p1.start() #Main Cycles runs at 100hz
 
-        p2.join()
-        p1.join()
+
+        t_controller.start() #Main Cycles runs at 100hz
+        if self.has_other_buggy:
+            t_planner.start() #Planner runs every 10 hz
+
+        t_controller.join()
+        if self.has_other_buggy:
+            t_planner.join()
+
 
     def get_world_pose_and_speed(self, msg):
         current_rospose = msg.pose.pose
@@ -205,6 +210,7 @@ class AutonSystem:
 
     def planner_thread(self):
         while (not rospy.is_shutdown()):
+            self.rosrate_planner.sleep()
             if not self.other_odom_msg is None:
                 with self.lock:
                     self_pose, _ = self.get_world_pose_and_speed(self.self_odom_msg)
@@ -214,7 +220,6 @@ class AutonSystem:
                     self.distance_publisher.publish(Float64(distance))
 
                 self.planner_tick()
-            self.rosrate_planner.sleep()
 
 
     def planner_tick(self):
