@@ -37,7 +37,6 @@ class SanityCheck:
         rospy.Subscriber(self_name + "/gnss1/fix_Pose/", PoseStamped, self.update_gps_location)
         rospy.Subscriber(self_name + "/nav/odom", Odometry, self.update_filter_location)
 
-
         # these publishers are all bools as quick sanity checks (can display as indicators on foxglove for colors)
         self.overrange_status_publisher = rospy.Publisher(self_name + "/debug/imu_overrange_status", Bool, queue_size=1)
 

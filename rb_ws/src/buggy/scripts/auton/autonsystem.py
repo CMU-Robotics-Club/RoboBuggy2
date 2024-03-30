@@ -7,7 +7,7 @@ import threading
 import rospy
 
 # ROS Message Imports
-from std_msgs.msg import Float32, Float64, Bool
+from std_msgs.msg import Float32, Float64, Bool, Int8
 from nav_msgs.msg import Odometry
 
 import numpy as np
@@ -65,6 +65,7 @@ class AutonSystem:
         left_curb = curb_traj
         self.path_planner = PathPlanner(global_trajectory, left_curb)
         self.other_steering = 0
+        self.rtk_status = 0
 
         self.lock = Lock()
         self.ticks = 0
@@ -77,6 +78,7 @@ class AutonSystem:
             self.other_steer_subscriber = rospy.Subscriber(
                 other_name + "/buggy/input/steering", Float64, self.update_other_steering_angle
             )
+        rospy.Subscriber(self_name + "/gnss1/fix_info_republished_int", Int8, self.update_rtk_status)
 
         self.init_check_publisher = rospy.Publisher(
             self_name + "/debug/init_safety_check", Bool, queue_size=1
@@ -147,6 +149,13 @@ class AutonSystem:
         return True
 
     def tick_caller(self):
+
+        while ((not rospy.is_shutdown()) and not self.init_check()):
+            self.init_check_publisher.publish(False)
+            rospy.sleep(0.001)
+        print("done checking initialization status")
+        self.init_check_publisher.publish(True)
+
 
 
         print("start checking initialization status")
