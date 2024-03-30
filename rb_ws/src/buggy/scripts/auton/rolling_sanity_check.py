@@ -33,12 +33,10 @@ class SanityCheck:
         # string list where indices match the meaning of relevant bits
         self.error_messages : list = ["filter stable/recovering", "filter converging", "roll/pitch warning", "heading warning", "position warning", "velocity warning", "IMU bias warning", "gnss clock warning", "antenna lever arm warning", "mounting transform warning", "solution error", "solution error", "solution error", "solution error", "solution error"]
 
-
         rospy.Subscriber(self_name + "/imu/overrange_status", ImuOverrangeStatus, self.update_overrange_status)
         rospy.Subscriber(self_name + "/nav/status.status_flags", FilterStatus, self.update_status_flags)
         rospy.Subscriber(self_name + "/gnss1/fix_Pose/", PoseStamped, self.update_gps_location)
         rospy.Subscriber(self_name + "/nav/odom", Odometry, self.update_filter_location)
-
 
         # these publishers are all bools as quick sanity checks (can display as indicators on foxglove for colors)
         self.overrange_status_publisher = rospy.Publisher(self_name + "/debug/imu_overrange_status", Bool, queue_size=1)
@@ -54,7 +52,6 @@ class SanityCheck:
         self.status_flags_publisher = rospy.Publisher(
             self_name + "/nav/status/tripped_status_flags", Int8MultiArray, queue_size=1
         )
-
 
 
     def update_overrange_status(self, msg : ImuOverrangeStatus):
@@ -78,10 +75,18 @@ class SanityCheck:
     def calc_locations(self):
         #TODO: what data should we store/ use to compare filter location
         # currently comparing cross-track error, checking less than 0.5 m
+
         if (self.filter_location == None or self.gps_location == None):
             self.filter_gps_status_publisher.publish(False)
         else:
-            self.filter_gps_status_publisher.publish(abs(self.filter_location.pose.position.y - self.gps_location.position.y) < 0.5)
+            filter_pose = Pose.rospose_to_pose(self.filter_location.pose)
+            filter_loc = World.gps_to_world_pose(filter_pose)
+            rear_antenna_pose = Pose.rospose_to_pose(self.gps_location.pose)
+            rear_antenna_loc = World.gps_to_world_pose(rear_antenna_pose)
+
+            diff = filter_loc - rear_antenna_loc
+            dist = np.sqrt(diff.x ** 2 + diff.y ** 2)
+            self.filter_gps_status_publisher.publish(dist < 1.0)
 
     def is_overrange (self):
         s = self.imu_overrange_status
