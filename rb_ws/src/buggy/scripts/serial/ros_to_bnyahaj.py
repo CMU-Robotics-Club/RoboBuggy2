@@ -68,11 +68,14 @@ class Translator:
                 #Publish to odom topic x and y coord
                 odom = ROSOdom()
                 # convert to long lat
-                lat, long = World.utm_to_gps(packet.y, packet.x)
-                odom.pose.pose.position.x = long
-                odom.pose.pose.position.y = lat
+                try:
+                    lat, long = World.utm_to_gps(packet.y, packet.x)
+                    odom.pose.pose.position.x = long
+                    odom.pose.pose.position.y = lat
+                    self.odom_publisher.publish(odom)
+                except:
+                    continue
 
-                self.odom_publisher.publish(odom)
             elif isinstance(packet, tuple): #Are there any other packet that is a tuple
                 # print(packet)
                 self.rc_steering_angle_publisher.publish(Float64(packet[0]))
@@ -86,8 +89,6 @@ class Translator:
                 self.nand_fix_publisher.publish(UInt8(packet[8]))
 
             self.read_rate.sleep()
-
-
 
     def loop(self):
         p1 = threading.Thread(target=self.writer_thread)
