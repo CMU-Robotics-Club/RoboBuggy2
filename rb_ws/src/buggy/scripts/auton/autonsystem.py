@@ -1,13 +1,13 @@
 #!/usr/bin/env python3
 
 import argparse
-import cProfile
 from threading import Lock
 
+import threading
 import rospy
 
 # ROS Message Imports
-from std_msgs.msg import Float32, Float64, Bool, Int8
+from std_msgs.msg import Float32, Float64, Bool
 from nav_msgs.msg import Odometry
 
 import numpy as np
@@ -63,7 +63,6 @@ class AutonSystem:
 
         self.path_planner = PathPlanner(global_trajectory)
         self.other_steering = 0
-        self.rtk_status = 0
 
         self.lock = Lock()
         self.ticks = 0
@@ -74,18 +73,17 @@ class AutonSystem:
         if self.has_other_buggy:
             rospy.Subscriber(other_name + "/nav/odom", Odometry, self.update_other_odom)
             self.other_steer_subscriber = rospy.Subscriber(
-                other_name + "/input/steering", Float64, self.update_other_steering_angle
+                other_name + "/buggy/input/steering", Float64, self.update_other_steering_angle
             )
-        rospy.Subscriber(self_name + "/gnss1/fix_info_republished_int", Int8, self.update_rtk_status)
 
         self.init_check_publisher = rospy.Publisher(
             self_name + "/debug/init_safety_check", Bool, queue_size=1
         )
         self.steer_publisher = rospy.Publisher(
-            self_name + "/input/steering", Float64, queue_size=1
+            self_name + "/buggy/input/steering", Float64, queue_size=1
         )
         self.brake_publisher = rospy.Publisher(
-            self_name + "/input/brake", Float64, queue_size=1
+            self_name + "/buggy/input/brake", Float64, queue_size=1
         )
         self.brake_debug_publisher = rospy.Publisher(
             self_name + "/auton/debug/brake", Float64, queue_size=1
@@ -98,8 +96,11 @@ class AutonSystem:
         )
 
 
-        self.auton_rate = 100
-        self.rosrate = rospy.Rate(self.auton_rate)
+        self.controller_rate = 100
+        self.rosrate_controller = rospy.Rate(self.controller_rate)
+
+        self.planner_rate = 10
+        self.rosrate_planner = rospy.Rate(self.planner_rate)
 
         self.profile = profile
         self.tick_caller()
@@ -116,14 +117,9 @@ class AutonSystem:
         with self.lock:
             self.other_steering = msg.data
 
-    def update_rtk_status(self, msg):
-        with self.lock:
-            self.rtk_status = msg.data
-
     def init_check(self):
         # checks that messages are being receieved
-        # (from both buggies if relevant),
-        # RTK status is fixed
+        # (from both buggies if relevant)
         # covariance is less than 1 meter
         if (self.self_odom_msg == None) or (self.has_other_buggy and self.other_odom_msg == None) or (self.self_odom_msg.pose.covariance[0] ** 2 + self.self_odom_msg.pose.covariance[7] ** 2 > 1**2):
             return False
@@ -157,44 +153,27 @@ class AutonSystem:
             rospy.sleep(0.001)
         print("done checking initialization status")
         self.init_check_publisher.publish(True)
-
-
         # initialize global trajectory index
 
         with self.lock:
-            e, _ = self.get_world_pose_and_speed(self.self_odom_msg)
+            _, _ = self.get_world_pose_and_speed(self.self_odom_msg)
 
-        while (not rospy.is_shutdown()):
-            # start the actual control loop
-            # run the planner every 10 ticks
-            # the main cycle runs at 100hz, the planner runs at 10hz.
-            # See LOOKAHEAD_TIME in path_planner.py for the horizon of the
-            # planner. Make sure it is significantly (at least 2x) longer
-            # than 1 period of the planner when you change the planner frequency.
+        t_planner = threading.Thread(target=self.planner_thread)
+        t_controller = threading.Thread(target=self.local_controller_thread)
 
-            if not self.other_odom_msg is None and self.ticks == 0:
-                # for debugging, publish distance to other buggy
-                with self.lock:
-                    self_pose, _ = self.get_world_pose_and_speed(self.self_odom_msg)
-                    other_pose, _ = self.get_world_pose_and_speed(self.other_odom_msg)
-                    distance = (self_pose.x - other_pose.x) ** 2 + (self_pose.y - other_pose.y) ** 2
-                    distance = np.sqrt(distance)
-                    self.distance_publisher.publish(Float64(distance))
+        # starting processes
+        # See LOOKAHEAD_TIME in path_planner.py for the horizon of the
+        # planner. Make sure it is significantly (at least 2x) longer
+        # than 1 period of the planner when you change the planner frequency.
 
-                # profiling
-                if self.profile:
-                    cProfile.runctx('self.planner_tick()', globals(), locals(), sort="cumtime")
-                else:
-                    self.planner_tick()
 
-            self.local_controller_tick()
+        t_controller.start() #Main Cycles runs at 100hz
+        if self.has_other_buggy:
+            t_planner.start() #Planner runs every 10 hz
 
-            self.ticks += 1
-
-            if self.ticks >= 10:
-                self.ticks = 0
-
-            self.rosrate.sleep()
+        t_controller.join()
+        if self.has_other_buggy:
+            t_planner.join()
 
 
     def get_world_pose_and_speed(self, msg):
@@ -208,6 +187,11 @@ class AutonSystem:
         pose_gps = Pose.rospose_to_pose(current_rospose)
         return World.gps_to_world_pose(pose_gps), current_speed
 
+    def local_controller_thread(self):
+        while (not rospy.is_shutdown()):
+            self.local_controller_tick()
+            self.rosrate_controller.sleep()
+
     def local_controller_tick(self):
         with self.lock:
             self_pose, self_speed = self.get_world_pose_and_speed(self.self_odom_msg)
@@ -217,6 +201,21 @@ class AutonSystem:
             self_pose, self.cur_traj, self_speed)
         steering_angle_deg = np.rad2deg(steering_angle)
         self.steer_publisher.publish(Float64(steering_angle_deg))
+
+
+    def planner_thread(self):
+        while (not rospy.is_shutdown()):
+            self.rosrate_planner.sleep()
+            if not self.other_odom_msg is None:
+                with self.lock:
+                    self_pose, _ = self.get_world_pose_and_speed(self.self_odom_msg)
+                    other_pose, _ = self.get_world_pose_and_speed(self.other_odom_msg)
+                    distance = (self_pose.x - other_pose.x) ** 2 + (self_pose.y - other_pose.y) ** 2
+                    distance = np.sqrt(distance)
+                    self.distance_publisher.publish(Float64(distance))
+
+                self.planner_tick()
+
 
     def planner_tick(self):
         with self.lock:
