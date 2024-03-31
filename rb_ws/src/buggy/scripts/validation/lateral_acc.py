@@ -1,17 +1,16 @@
 # A script to log lateral acceleration in a txt file
 
+import csv
+import time
 import rospy
 from std_msgs.msg import Float64
 import numpy as np
-import csv
-import time
 
 file = open("/rb_ws/src/buggy/scripts/validation/lateral_acc.txt", 'w', newline='')
 writer = csv.writer(file)
 writer.writerow(["time", "lateral accel front","lateral accel rear","average","flag front","flag rear"])
 
 class LateralAcc:
-  
     def __init__(self):
         self.velocity = 0
         self.steering = 0
@@ -64,7 +63,7 @@ class LateralAcc:
     def callback_steer(self, steer):
         lateral_acc.update_steering(steer.data)
         lateral_acc.calculate_lateral_acc()
-    
+
 if __name__ == '__main__':
     try:
         lateral_acc = LateralAcc()
