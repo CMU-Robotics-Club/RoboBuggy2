@@ -1,29 +1,25 @@
 #!/usr/bin/env python3
-from abc import ABC, abstractmethod
 
 import time
+from threading import Lock
 
 from numba import njit
 
 import numpy as np
 import osqp
-import scipy
 from scipy import sparse
 
 import rospy
-from std_msgs.msg import Float32, Float64, Float64MultiArray, MultiArrayDimension, Bool
-from nav_msgs.msg import Odometry
+from std_msgs.msg import Float64, Float64MultiArray, MultiArrayDimension, Bool
 from sensor_msgs.msg import NavSatFix
 from geometry_msgs.msg import Pose as ROSPose
 from geometry_msgs.msg import Pose2D
-from rospy.numpy_msg import numpy_msg
 
 from pose import Pose
 from trajectory import Trajectory
 from controller import Controller
 from world import World
 
-from threading import Lock
 
 import matplotlib.pyplot as plt
 
@@ -33,7 +29,7 @@ class ModelPredictiveController(Controller):
     Convex Model Predictive Controller (MPC)
     """
 
-    DEBUG = False
+    DEBUG = True
     PLOT = False
     TIME = False
     ROS = True
@@ -382,8 +378,8 @@ class ModelPredictiveController(Controller):
         traj_index = trajectory.get_closest_index_on_path(
             current_pose.x,
             current_pose.y,
-            start_index=self.current_traj_index,
-            end_index=self.current_traj_index + 20,
+            start_index=self.current_traj_index -20,
+            end_index=self.current_traj_index + 50,
             subsample_resolution=1000,
         )
         self.current_traj_index = max(traj_index, self.current_traj_index)
@@ -392,6 +388,9 @@ class ModelPredictiveController(Controller):
 
         if self.DEBUG:
             print("Current traj index: ", self.current_traj_index)
+
+        if self.current_traj_index >= trajectory.get_num_points() - 1:
+            raise Exception("[MPC]: Ran out of path to follow!")
 
         # Get reference trajectory from the current traj index for the next [MPC_HORIZON] seconds
         knot_point_distances = np.linspace(
@@ -437,6 +436,7 @@ class ModelPredictiveController(Controller):
         #      0  0  0  A2 B2 ... 0    0    0
         #      0  0  0  0  0  ... 0    0    0
         #      0  0  0  0  0  ... AN-1 BN-1 -I]
+        #
         # D = [C; X; U]
         # X selects all the states from z
         # U selects all the controls from z
@@ -509,7 +509,28 @@ class ModelPredictiveController(Controller):
                 np.zeros((self.N_STATES * self.MPC_HORIZON, self.N_STATES)),
             )
         )
+
+        # halfplane constraint
+        # c = [n 0 0], where n is the normal vector of the halfplane in x-y space
+        # p is the position of NAND in x-y space
+
+        # n = np.array([100, 100])
+        # p = np.array([0, 1])
+        # c = np.concatenate((n, np.zeros((2, )))).reshape(1, self.N_STATES)
+
+        # C2 = sparse.kron(
+        #     np.eye(self.MPC_HORIZON),
+        #     np.hstack(
+        #         (
+        #             np.zeros((1, self.N_CONTROLS)),
+        #             c
+        #         )
+        #     ),
+        #     format="csc",
+        # )
+
         D = sparse.vstack([self.C + C1, self.X, self.U])
+        # D = sparse.vstack([self.C + C1, self.X, self.U, C2])
 
         if self.TIME:
             create_mat_time_D = 1000.0 * (time.time() - t)
@@ -524,6 +545,7 @@ class ModelPredictiveController(Controller):
                 np.zeros(self.N_STATES * (self.MPC_HORIZON - 1)),
                 np.tile(self.state_lb, self.MPC_HORIZON) + reference_trajectory.ravel(),
                 np.tile(self.control_lb, self.MPC_HORIZON) + reference_control.ravel(),
+                # np.tile(n.T @ p, self.MPC_HORIZON),
             )
         )
         ub = np.hstack(
@@ -533,6 +555,7 @@ class ModelPredictiveController(Controller):
                 np.zeros(self.N_STATES * (self.MPC_HORIZON - 1)),
                 np.tile(self.state_ub, self.MPC_HORIZON) + reference_trajectory.ravel(),
                 np.tile(self.control_ub, self.MPC_HORIZON) + reference_control.ravel(),
+                # np.tile(np.inf, self.MPC_HORIZON),
             )
         )
 
@@ -577,11 +600,16 @@ class ModelPredictiveController(Controller):
         if self.TIME:
             t = time.time()
         results = self.solver.solve()
+
         steer_angle = results.x[self.N_CONTROLS + self.N_STATES - 1]
         solution_trajectory = np.reshape(results.x, (self.MPC_HORIZON, self.N_STATES + self.N_CONTROLS))
         state_trajectory = solution_trajectory[:, self.N_CONTROLS:(self.N_CONTROLS + self.N_STATES)]
+
+        print("status", results.info.status, results.info.status_val)
+        if not (results.info.status == "solved" or results.info.status == "solved inaccurate"):
+            return reference_trajectory
+
         state_trajectory += reference_trajectory
-        steer_rate_trajectory = solution_trajectory[:, :self.N_CONTROLS]
 
         if self.TIME:
             solve_time = 1000 * (time.time() - t)
@@ -597,7 +625,7 @@ class ModelPredictiveController(Controller):
 
         if self.PLOT:
             # Plot the results
-            fig, [[ax1, ax2], [ax3, ax4]] = plt.subplots(2, 2)
+            _, [[ax1, ax2], [ax3, ax4]] = plt.subplots(2, 2)
 
             # Extract the states
             states = np.zeros((self.MPC_HORIZON, self.N_STATES))

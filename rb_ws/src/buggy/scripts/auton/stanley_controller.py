@@ -1,5 +1,3 @@
-from abc import ABC, abstractmethod
-
 import numpy as np
 
 import rospy
@@ -23,7 +21,7 @@ class StanleyController(Controller):
     MAX_LOOK_AHEAD_DIST = 2
 
     CROSS_TRACK_GAIN = 1
-    HEADING_GAIN = 0.75
+    HEADING_GAIN = 0.3
 
     def __init__(self, buggy_name, start_index=0) -> None:
         super(StanleyController, self).__init__(start_index, buggy_name)
@@ -49,7 +47,7 @@ class StanleyController(Controller):
             float (desired steering angle)
         """
         if self.current_traj_index >= trajectory.get_num_points() - 1:
-            return 0
+            raise Exception("[Stanley]: Ran out of path to follow!")
 
         heading = current_pose.theta  # in radians
         x = current_pose.x
@@ -63,8 +61,8 @@ class StanleyController(Controller):
         traj_index = trajectory.get_closest_index_on_path(
             front_x,
             front_y,
-            start_index=self.current_traj_index,
-            end_index=self.current_traj_index + 10,
+            start_index=self.current_traj_index - 20,
+            end_index=self.current_traj_index + 50,
         )
         self.current_traj_index = max(traj_index, self.current_traj_index)
 

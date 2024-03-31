@@ -1,0 +1,22 @@
+<!-- roslaunch buggy main.launch -->
+
+<launch>
+    <arg name="controller"      default="mpc" />
+    <arg name="start_dist"      default="0.0" />
+    <arg name="path"      default="buggycourse_raceline.json" />
+
+    <!-- run a sim with name = NAND at velocity ~= 0 -->
+    <arg name="starting_pose"    default="PASS_PT" />
+    <arg name="velocity"         default="0.0001" />
+    <arg name="buggy_name"       default="NAND" />
+
+    <node name="sim_2d_engine" pkg="buggy" type="engine.py" output="screen"
+        args="$(arg starting_pose) $(arg velocity) $(arg buggy_name)"/>
+
+
+    <remap from="/SC/nav/odom" to="/nav/odom"/>
+
+    <!-- Run the simulation with NAND -->
+    <arg name="autonsystem_args" default="--controller $(arg controller) --dist 0.0 --traj $(arg path) --self_name SC --other_name NAND" />
+    <node name="auton_system" pkg="buggy" type="autonsystem.py" output="screen" args="$(arg autonsystem_args)"/>
+</launch>
