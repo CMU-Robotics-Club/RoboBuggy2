@@ -63,7 +63,7 @@ class ModelPredictiveController(Controller):
         "eps_abs": 1e-4,
         "eps_rel": 1e-4,
         "polish": 1,
-        "time_limit": 1.5e-2,
+        "time_limit": 2.0e-2,
         "warm_start": True,
         # "linsys_solver": "mkl pardiso",
     }

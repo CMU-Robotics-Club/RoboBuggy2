@@ -5,9 +5,10 @@
 
     <arg name="nand_controller"     default="stanley" />
     <arg name="nand_path"           default="buggycourse_safe_1.json" />
-    <arg name="sc_path"           default="buggycourse_raceline.json" />
-    <arg name="nand_start_pos"     default="Hill1_NAND" />
-    <arg name="nand_velocity"       default="10.0" />
+    <arg name="sc_path"           default="buggycourse_safe_1.json" />
+
+    <arg name="nand_start_pos"    default="PASS_PT" />
+    <arg name="nand_velocity"         default="0.0001" />
 
     <arg name="manual_vel"          default="false" />
     <arg name="auto_vel"            default="false" />

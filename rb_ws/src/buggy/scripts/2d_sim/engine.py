@@ -65,7 +65,7 @@ class Simulator:
             "TRACK_EAST_END": (589953, 4477465, 90),
             "TRACK_RESNICK": (589906, 4477437, -20),
             "GARAGE": (589846, 4477580, 180),
-            "PASS_PT": (589491, 4477003, -160),
+            "PASS_PT": (589504, 4477001, -160),
             "FREW_ST": (589646, 4477359, -20),
             "FREW_ST_PASS": (589644, 4477368, -20),
         }
@@ -116,8 +116,8 @@ class Simulator:
         self.velocity = velocity # m/s
 
         self.steering_angle = 0  # degrees
-        self.rate = 200  # Hz
-        self.pub_skip = 2  # publish every pub_skip ticks
+        self.rate = 100  # Hz
+        self.pub_skip = 1  # publish every pub_skip ticks
 
         self.lock = threading.Lock()
 

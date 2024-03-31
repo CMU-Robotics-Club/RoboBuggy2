@@ -61,8 +61,8 @@ class AutonSystem:
         self.local_controller = local_controller
         self.brake_controller = brake_controller
 
-        # left_curb = Trajectory(json_filepath="/rb_ws/src/buggy/paths/outside_curb_smooth.json")
-        left_curb = None
+        left_curb = Trajectory(json_filepath="/rb_ws/src/buggy/paths/curb.json")
+        # left_curb = None
         self.path_planner = PathPlanner(global_trajectory, left_curb)
         self.other_steering = 0
 

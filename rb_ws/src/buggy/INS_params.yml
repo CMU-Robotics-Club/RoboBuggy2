@@ -184,7 +184,7 @@ publish_nmea   : False
 # ******************************************************************
 # Kalman Filter Settings (only applicable for devices with a Kalman Filter)
 # ******************************************************************
-filter_data_rate : 50
+filter_data_rate : 100
 
 # The speed at which the individual Filter publishers will publish at.
 #      If set to -1, will use filter_data_rate to determine the rate at which to stream and publish

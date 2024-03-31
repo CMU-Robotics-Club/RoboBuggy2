@@ -67,12 +67,15 @@ class Translator:
                 # print("packet", packet.x, packet.y)
                 #Publish to odom topic x and y coord
                 odom = ROSOdom()
-                # convert to long lat
-                lat, long = World.utm_to_gps(packet.y, packet.x)
-                odom.pose.pose.position.x = long
-                odom.pose.pose.position.y = lat
+                try:
+                    # convert to long lat
+                    lat, long = World.utm_to_gps(packet.y, packet.x)
+                    odom.pose.pose.position.x = long
+                    odom.pose.pose.position.y = lat
 
-                self.odom_publisher.publish(odom)
+                    self.odom_publisher.publish(odom)
+                except:
+                    print("nand pos not sane")
             elif isinstance(packet, tuple): #Are there any other packet that is a tuple
                 # print(packet)
                 self.rc_steering_angle_publisher.publish(Float64(packet[0]))
