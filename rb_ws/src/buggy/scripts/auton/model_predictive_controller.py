@@ -62,7 +62,7 @@ class ModelPredictiveController(Controller):
         "verbose": DEBUG,
         "eps_abs": 1e-4,
         "eps_rel": 1e-4,
-        "polish": 1,
+        "polish": True,
         "time_limit": 2.0e-2,
         "warm_start": True,
         # "linsys_solver": "mkl pardiso",
@@ -83,7 +83,7 @@ class ModelPredictiveController(Controller):
     state_cost_diag = np.diag(state_cost)
     control_cost_diag = np.diag(control_cost)
 
-    def __init__(self, buggy_name, start_index=0, ref_trajectory=None, ROS=False) -> None:
+    def __init__(self, buggy_name, start_index=0, ref_trajectory=None, traj_lock=None, ROS=False) -> None:
         # instantiate parent
         super(ModelPredictiveController, self).__init__(start_index, buggy_name)
 
@@ -122,7 +122,7 @@ class ModelPredictiveController(Controller):
             self.status_publisher = rospy.Publisher('mpc/solver_status',
                                                     Bool,
                                                     queue_size=1)
-            rospy.init_node('mpc_calculator')
+            # rospy.init_node('mpc_calculator')
 
     def update_speed(self, msg):
         with self.lock:
@@ -373,8 +373,8 @@ class ModelPredictiveController(Controller):
         current_speed = max(current_speed, self.MIN_SPEED)
 
         # Get reference pose
-        if self.current_traj_index >= trajectory.get_num_points() - 1:
-            return 0
+        # if self.current_traj_index >= trajectory.get_num_points() - 1:
+        #     return 0
 
         if self.TIME:
             t = time.time()
@@ -570,7 +570,6 @@ class ModelPredictiveController(Controller):
             )
         )
 
-        print("bounds", lb[(self.N_STATES * self.MPC_HORIZON):], ub[(self.N_STATES * self.MPC_HORIZON):])
 
         if self.TIME:
             create_mat_time_bounds = 1000.0 * (time.time() - t)

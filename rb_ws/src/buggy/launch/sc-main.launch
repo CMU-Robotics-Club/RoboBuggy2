@@ -1,5 +1,3 @@
-<!-- roslaunch buggy main.launch -->
-
 <launch>
     <arg name="controller"      default="mpc" />
     <arg name="start_dist"      default="0.0" />

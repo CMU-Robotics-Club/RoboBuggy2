@@ -234,8 +234,8 @@ class Simulator:
         heading_noisy = heading
 
         if (Simulator.NOISE):
-            lat_noisy = lat + np.random.normal(0, 1e-6)  # ~10cm error
-            long_noisy = long + np.random.normal(0, 1e-6)  # ~10cm error
+            lat_noisy = lat + np.random.normal(0, 1e-7)  # ~1cm error
+            long_noisy = long + np.random.normal(0, 1e-7)  # ~1cm error
             velocity_noisy = velocity + np.random.normal(0, 0.01)
             heading_noisy = heading + np.random.normal(0, 0.01)
 
@@ -346,7 +346,7 @@ if __name__ == "__main__":
     # before buggy moves
     print("SIM PUBLISHED", rospy.get_time())
     if buggy_name == "SC":
-        rospy.sleep(15.0)
+        rospy.sleep(3.0)
     print("SIM STARTED STEPPING", rospy.get_time())
     sim.loop()
 

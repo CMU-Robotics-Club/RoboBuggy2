@@ -26,8 +26,8 @@ class Translator:
 
         rospy.Subscriber(self_name + "/buggy/input/steering", Float64, self.set_steering)
         self.odom_publisher = rospy.Publisher(other_name + "/nav/odom", ROSOdom, queue_size=1)
-        self.steer_send_rate = rospy.Rate(100)
-        self.read_rate = rospy.Rate(1000)
+        self.steer_send_rate = rospy.Rate(200)
+        self.read_rate = rospy.Rate(200)
 
         # DOES NAND GET ALL THIS DEBUG INFORMATION???
         self.rc_steering_angle_publisher = rospy.Publisher(self_name + "/buggy/debug/rc_steering_angle", Float64, queue_size=1)

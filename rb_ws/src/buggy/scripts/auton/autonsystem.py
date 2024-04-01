@@ -19,7 +19,7 @@ from pure_pursuit_controller import PurePursuitController
 from stanley_controller import StanleyController
 from brake_controller import BrakeController
 from model_predictive_controller import ModelPredictiveController
-# from model_predictive_interpolation import ModelPredictiveController
+from model_predictive_threading import ModelPredictiveInterpolator
 from path_planner import PathPlanner
 from pose import Pose
 
@@ -95,7 +95,7 @@ class AutonSystem:
         )
 
 
-        self.controller_rate = 100
+        self.controller_rate = 150
         self.rosrate_controller = rospy.Rate(self.controller_rate)
 
         self.planner_rate = 10
@@ -120,7 +120,8 @@ class AutonSystem:
         # checks that messages are being receieved
         # (from both buggies if relevant)
         # covariance is less than 1 meter
-        if (self.self_odom_msg == None) or (self.has_other_buggy and self.other_odom_msg == None) or (self.self_odom_msg.pose.covariance[0] ** 2 + self.self_odom_msg.pose.covariance[7] ** 2 > 1**2):
+        if (self.self_odom_msg == None) or (self.self_odom_msg.pose.covariance[0] ** 2 + self.self_odom_msg.pose.covariance[7] ** 2 > 1**2):
+            print("checking existence of self odom and covariance within range ")
             return False
 
         # waits until covariance is acceptable to check heading
@@ -148,12 +149,10 @@ class AutonSystem:
         return True
 
     def tick_caller(self):
-
-
         print("start checking initialization status")
         while ((not rospy.is_shutdown()) and not self.init_check()):
             self.init_check_publisher.publish(False)
-            rospy.sleep(0.001)
+            rospy.sleep(0.01)
         print("done checking initialization status")
         self.init_check_publisher.publish(True)
         # initialize global trajectory index
@@ -177,6 +176,8 @@ class AutonSystem:
         t_controller.join()
         if self.has_other_buggy:
             t_planner.join()
+
+
 
 
     def get_world_pose_and_speed(self, msg):
@@ -298,11 +299,15 @@ if __name__ == "__main__":
         local_ctrller = PurePursuitController(
             self_name,
             start_index=start_index)
-
     elif (ctrl == "mpc"):
         local_ctrller = ModelPredictiveController(
             self_name,
             start_index=start_index)
+    elif (ctrl == "mpc_interp"):
+        local_ctrller = ModelPredictiveInterpolator(
+            self_name,
+            start_index=start_index)
+
 
     if (local_ctrller == None):
         raise Exception("Invalid Controller Argument")
@@ -317,3 +322,4 @@ if __name__ == "__main__":
 
     while not rospy.is_shutdown():
         rospy.spin()
+

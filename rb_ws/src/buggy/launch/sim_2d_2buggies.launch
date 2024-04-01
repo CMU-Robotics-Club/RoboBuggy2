@@ -1,5 +1,5 @@
 <launch>
-    <arg name="sc_controller"     default="mpc" />
+    <arg name="sc_controller"     default="mpc"/>
     <arg name="sc_start_pos"    default="Hill1_SC" />
     <arg name="sc_velocity"         default="12.0" />
 
@@ -49,5 +49,6 @@
 
 
     <node name="sc_rolling_sanity_check" pkg="buggy" type="rolling_sanity_check.py" output="screen" args="SC"/>
+
 
 </launch>
