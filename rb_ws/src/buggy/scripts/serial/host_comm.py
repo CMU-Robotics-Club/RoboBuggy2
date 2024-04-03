@@ -68,6 +68,8 @@ MSG_TYPE_ALARM    = b'AL'
 class Odometry:
     x: float
     y: float
+    radio_seqnum: int
+    gps_seqnum: int
 
 class IncompletePacket(Exception):
     pass
@@ -174,8 +176,8 @@ class Comms:
         msg_type, payload = packet
         if msg_type == MSG_TYPE_ODOMETRY:
             # Odometry message
-            x, y = struct.unpack('<dd', payload)
-            return Odometry(x, y)
+            x, y, radio_seqnum, gps_seqnum = struct.unpack('<ddII', payload)
+            return Odometry(x, y, radio_seqnum, gps_seqnum)
         elif msg_type == MSG_TYPE_DEBUG:
             # Debug message
             debug = struct.unpack('<fff??B?BBxx', payload)
