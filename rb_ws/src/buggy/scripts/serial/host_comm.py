@@ -68,6 +68,8 @@ MSG_TYPE_ALARM    = b'AL'
 class Odometry:
     x: float
     y: float
+    radio_seqnum: int
+    gps_seqnum: int
 
 class IncompletePacket(Exception):
     pass
