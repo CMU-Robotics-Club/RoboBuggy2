@@ -29,7 +29,8 @@ class Translator:
         rospy.Subscriber(self_name + "/debug/sanity_warning", Int8, self.set_alarm)
 
         self.odom_publisher = rospy.Publisher(other_name + "/nav/odom", ROSOdom, queue_size=1)
-        self.steer_send_rate = rospy.Rate(100)
+        # upper bound of steering update rate, make sure auton sends slower than this
+        self.steer_send_rate = rospy.Rate(500)
         self.read_rate = rospy.Rate(1000)
 
         # DOES NAND GET ALL THIS DEBUG INFORMATION???
@@ -56,7 +57,7 @@ class Translator:
             self.fresh_steer = True
 
     def writer_thread(self):
-        print('Starting packet reading!')
+        print('Starting sending alarm and steering to teensy!')
         while True:
             if self.fresh_steer:
                 with self.lock:
@@ -69,13 +70,12 @@ class Translator:
             self.steer_send_rate.sleep()
 
     def reader_thread(self):
-        print('Starting packet sending!')
+        print('Starting reading odom from teensy!')
         while True:
             packet = self.comms.read_packet()
-
             # print("trying to read odom")
             if isinstance(packet, Odometry):
-                # print("packet", packet.x, packet.y)
+                # print("packet", packet.radio_seqnum, packet.gps_seqnum)
                 #Publish to odom topic x and y coord
                 odom = ROSOdom()
                 # convert to long lat
