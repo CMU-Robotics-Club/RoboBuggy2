@@ -18,8 +18,8 @@ from host_comm import *
 from world import World
 
 class Translator:
-    def __init__(self, self_name, other_name):
-        self.comms = Comms("/dev/ttyUSB0")
+    def __init__(self, self_name, other_name, teensy_name):
+        self.comms = Comms("/dev/" + teensy_name)
         self.steer_angle = 0
         self.fresh_steer = False
         self.lock = Lock()
@@ -103,9 +103,11 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("--self_name", type=str, help="name of ego-buggy", required=True)
     parser.add_argument("--other_name", type=str, help="name of other buggy", required=True)
+    parser.add_argument("--teensy_name", type=str, help="name of teensy port", required=True)
     args, _ = parser.parse_known_args()
     self_name = args.self_name
     other_name = args.other_name
+    teensy_name = args.teensy_name
 
     rospy.init_node("ros_bnyahaj")
     translate = Translator(self_name, other_name)
