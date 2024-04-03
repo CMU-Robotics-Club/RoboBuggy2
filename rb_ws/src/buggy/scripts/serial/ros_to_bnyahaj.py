@@ -73,8 +73,8 @@ class Translator:
                     odom.pose.pose.position.x = long
                     odom.pose.pose.position.y = lat
                     self.odom_publisher.publish(odom)
-                except:
-                    continue
+                except Exception as e:
+                    rospy.logwarn("Unable to convert other buggy position to lon lat" + e)
 
             elif isinstance(packet, tuple): #Are there any other packet that is a tuple
                 # print(packet)
