@@ -67,9 +67,15 @@ class AutonSystem:
         self.lock = Lock()
         self.ticks = 0
         self.self_odom_msg = None
+        self.gps_odom_msg = None
         self.other_odom_msg = None
+        self.use_gps_pos = False
 
         rospy.Subscriber(self_name + "/nav/odom", Odometry, self.update_self_odom)
+        rospy.Subscriber(self_name + "/gnss1/odom", Odometry, self.update_self_odom_backup)
+        # only if the filtered position has separated do we use the antenna position
+        rospy.Subscriber(self_name + "/debug/filter_gps_seperation_status", Bool, self.update_use_gps)
+
         if self.has_other_buggy:
             rospy.Subscriber(other_name + "/nav/odom", Odometry, self.update_other_odom)
             self.other_steer_subscriber = rospy.Subscriber(
@@ -104,6 +110,14 @@ class AutonSystem:
 
         self.profile = profile
         self.tick_caller()
+
+    def update_use_gps(self, msg):
+        with self.lock:
+            self.use_gps_pos = msg.data
+
+    def update_self_odom_backup(self, msg):
+        with self.lock:
+            self.gps_odom_msg = msg
 
     def update_self_odom(self, msg):
         with self.lock:
@@ -193,8 +207,13 @@ class AutonSystem:
             self.rosrate_controller.sleep()
 
     def local_controller_tick(self):
-        with self.lock:
-            self_pose, self_speed = self.get_world_pose_and_speed(self.self_odom_msg)
+        if not self.use_gps_pos:
+            with self.lock:
+                self_pose, self_speed = self.get_world_pose_and_speed(self.self_odom_msg)
+        else:
+            with self.lock:
+                self_pose, self_speed = self.get_world_pose_and_speed(self.gps_odom_msg)
+
 
         # Compute control output
         steering_angle = self.local_controller.compute_control(
@@ -215,7 +234,6 @@ class AutonSystem:
                     self.distance_publisher.publish(Float64(distance))
 
                 self.planner_tick()
-
 
     def planner_tick(self):
         with self.lock:
