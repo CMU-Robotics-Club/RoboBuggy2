@@ -10,7 +10,7 @@ import argparse
 import rospy
 
 #Ros Message Imports
-from std_msgs.msg import Float64, Bool, UInt8
+from std_msgs.msg import Float64, Bool, Int8, UInt8
 from nav_msgs.msg import Odometry as ROSOdom
 
 from host_comm import *
@@ -21,10 +21,13 @@ class Translator:
     def __init__(self, self_name, other_name, teensy_name):
         self.comms = Comms("/dev/" + teensy_name)
         self.steer_angle = 0
+        self.alarm = 0
         self.fresh_steer = False
         self.lock = Lock()
 
         rospy.Subscriber(self_name + "/buggy/input/steering", Float64, self.set_steering)
+        rospy.Subscriber(self_name + "/buggy/debug/sanity_warning", Int8, self.set_alarm)
+
         self.odom_publisher = rospy.Publisher(other_name + "/nav/odom", ROSOdom, queue_size=1)
         self.steer_send_rate = rospy.Rate(100)
         self.read_rate = rospy.Rate(1000)
@@ -39,6 +42,10 @@ class Translator:
         self.use_auton_steer_publisher = rospy.Publisher(self_name + "/buggy/debug/use_auton_steer", Bool, queue_size=1)
         self.rc_uplink_qual_publisher = rospy.Publisher(self_name + "/buggy/debug/rc_uplink_quality", UInt8, queue_size=1)
         self.nand_fix_publisher = rospy.Publisher(self_name + "/buggy/debug/nand_fix", UInt8, queue_size=1)
+
+    def set_alarm(self, msg):
+        with self.lock:
+            self.alarm = msg.data
 
     #Steering Angle Updater
     def set_steering(self, msg):
@@ -55,6 +62,10 @@ class Translator:
                 with self.lock:
                     self.comms.send_steering(self.steer_angle)
                     self.fresh_steer = False
+
+            with self.lock:
+                self.comms.send_alarm(self.alarm)
+
             self.steer_send_rate.sleep()
 
     def reader_thread(self):

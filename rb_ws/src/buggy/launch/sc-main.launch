@@ -6,6 +6,7 @@
     <arg name="path"      default="frew_test.json" />
 
     <remap from="/SC/nav/odom" to="/nav/odom"/>
+    <node name="sc_rolling_sanity_check" pkg="buggy" type="rolling_sanity_check.py" output="screen" args="SC"/>
 
     <!-- ENABLE AUTON -->
     <!-- autonsystem args: controller start_dist path buggy_name is_sim -->
