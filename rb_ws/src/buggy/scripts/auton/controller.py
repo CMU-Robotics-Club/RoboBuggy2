@@ -47,7 +47,7 @@ class Controller(ABC):
 
     @abstractmethod
     def compute_control(
-        self, current_pose: Pose, trajectory: Trajectory, current_speed: float
+        self, current_pose: Pose, trajectory: Trajectory, current_speed: float, yaw_rate: float
     ):
         """
         Computes the desired control output given the current state and reference trajectory
