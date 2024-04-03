@@ -130,7 +130,7 @@ class AutonSystem:
 
         # waits until covariance is acceptable to check heading
         with self.lock:
-            self_pose, _ = self.get_world_pose_and_speed(self.self_odom_msg)
+            self_pose, _, _ = self.get_world_pose_and_speed(self.self_odom_msg)
             current_heading = self_pose.theta
             closest_heading = self.cur_traj.get_heading_by_index(trajectory.get_closest_index_on_path(self_pose.x, self_pose.y))
         print("current heading: ", np.rad2deg(current_heading))
@@ -163,7 +163,7 @@ class AutonSystem:
         # initialize global trajectory index
 
         with self.lock:
-            _, _ = self.get_world_pose_and_speed(self.self_odom_msg)
+            _, _, _ = self.get_world_pose_and_speed(self.self_odom_msg)
 
         t_planner = threading.Thread(target=self.planner_thread)
         t_controller = threading.Thread(target=self.local_controller_thread)
@@ -192,7 +192,7 @@ class AutonSystem:
 
         # Get data from message
         pose_gps = Pose.rospose_to_pose(current_rospose)
-        return World.gps_to_world_pose(pose_gps), current_speed
+        return World.gps_to_world_pose(pose_gps), current_speed, msg.twist.twist.angular.z
 
     def local_controller_thread(self):
         while (not rospy.is_shutdown()):
@@ -201,13 +201,13 @@ class AutonSystem:
 
     def local_controller_tick(self):
         with self.lock:
-            self_pose, self_speed = self.get_world_pose_and_speed(self.self_odom_msg)
+            self_pose, self_speed, self_yaw_rate = self.get_world_pose_and_speed(self.self_odom_msg)
 
         self.heading_publisher.publish(Float32(np.rad2deg(self_pose.theta)))
 
         # Compute control output
         steering_angle = self.local_controller.compute_control(
-            self_pose, self.cur_traj, self_speed)
+            self_pose, self.cur_traj, self_speed, self_yaw_rate)
         steering_angle_deg = np.rad2deg(steering_angle)
         self.steer_publisher.publish(Float64(steering_angle_deg))
 
@@ -217,8 +217,8 @@ class AutonSystem:
             self.rosrate_planner.sleep()
             if not self.other_odom_msg is None:
                 with self.lock:
-                    self_pose, _ = self.get_world_pose_and_speed(self.self_odom_msg)
-                    other_pose, _ = self.get_world_pose_and_speed(self.other_odom_msg)
+                    self_pose, _, _ = self.get_world_pose_and_speed(self.self_odom_msg)
+                    other_pose, _, _ = self.get_world_pose_and_speed(self.other_odom_msg)
                     distance = (self_pose.x - other_pose.x) ** 2 + (self_pose.y - other_pose.y) ** 2
                     distance = np.sqrt(distance)
                     self.distance_publisher.publish(Float64(distance))
@@ -228,8 +228,8 @@ class AutonSystem:
 
     def planner_tick(self):
         with self.lock:
-            self_pose, _ = self.get_world_pose_and_speed(self.self_odom_msg)
-            other_pose, _ = self.get_world_pose_and_speed(self.other_odom_msg)
+            self_pose, _, _ = self.get_world_pose_and_speed(self.self_odom_msg)
+            other_pose, _, _ = self.get_world_pose_and_speed(self.other_odom_msg)
 
         # update local trajectory via path planner
         self.cur_traj, cur_idx = self.path_planner.compute_traj(
