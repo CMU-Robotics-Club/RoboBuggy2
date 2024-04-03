@@ -2,13 +2,18 @@
 
 import sys
 import rospy
+import numpy as np
 
 from nav_msgs.msg import Odometry
 from std_msgs.msg import Bool, String, Int8MultiArray, Int8
 from microstrain_inertial_msgs.msg import FilterStatus, ImuOverrangeStatus
 from geometry_msgs.msg import PoseStamped
 
+from world import World
+from pose import Pose
+
 class SanityCheck:
+    FILTER_WARN_THRES = 1 #m
     def __init__(self,
             self_name,
             ) -> None:
@@ -85,17 +90,24 @@ class SanityCheck:
                 self.warning_durations[16] = 0
             self.covariance_status_publisher.publish(good_covariance)
 
-
     def calc_locations(self):
-        # currently comparing cross-track error, checking less than 0.5 m
+        # currently comparing distance between rear antenna and filtered loc
         if (self.filter_location == None or self.gps_location == None):
             self.filter_gps_status_publisher.publish(False)
         else:
-            good_seperation = abs(self.filter_location.pose.position.y - self.gps_location.position.y) < 0.5
-            if (not good_seperation):
+            filter_pose = Pose.rospose_to_pose(self.filter_location.pose)
+            filter_loc = World.gps_to_world_pose(filter_pose)
+            rear_antenna_pose = Pose.rospose_to_pose(self.gps_location.pose)
+            rear_antenna_loc = World.gps_to_world_pose(rear_antenna_pose)
+
+            diff = filter_loc - rear_antenna_loc
+            dist = np.sqrt(diff.x ** 2 + diff.y ** 2)
+            filter_diverge = dist >= self.FILTER_WARN_THRES
+            if filter_diverge:
                 self.warning = 2
 
-            self.filter_gps_status_publisher.publish(good_seperation)
+            # checking less than 1 m
+            self.filter_gps_status_publisher.publish(Bool(not filter_diverge))
 
     def is_overrange (self):
         s = self.imu_overrange_status
