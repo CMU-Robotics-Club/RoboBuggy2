@@ -35,8 +35,6 @@ def main():
         lon = msg.pose.pose.position.x
         lat = msg.pose.pose.position.y
 
-
-
         waypoints.append(
             {
                 "key": str(uuid.uuid4()),
