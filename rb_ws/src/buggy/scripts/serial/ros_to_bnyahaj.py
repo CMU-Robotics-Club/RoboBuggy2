@@ -26,7 +26,7 @@ class Translator:
         self.lock = Lock()
 
         rospy.Subscriber(self_name + "/buggy/input/steering", Float64, self.set_steering)
-        rospy.Subscriber(self_name + "/buggy/debug/sanity_warning", Int8, self.set_alarm)
+        rospy.Subscriber(self_name + "/debug/sanity_warning", Int8, self.set_alarm)
 
         self.odom_publisher = rospy.Publisher(other_name + "/nav/odom", ROSOdom, queue_size=1)
         self.steer_send_rate = rospy.Rate(100)
@@ -122,5 +122,5 @@ if __name__ == "__main__":
     teensy_name = args.teensy_name
 
     rospy.init_node("ros_bnyahaj")
-    translate = Translator(self_name, other_name)
+    translate = Translator(self_name, other_name, teensy_name)
     translate.loop()
