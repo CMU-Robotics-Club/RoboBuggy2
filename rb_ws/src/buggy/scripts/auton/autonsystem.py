@@ -120,7 +120,12 @@ class AutonSystem:
         # checks that messages are being receieved
         # (from both buggies if relevant)
         # covariance is less than 1 meter
-        if (self.self_odom_msg == None) or (self.has_other_buggy and self.other_odom_msg == None) or (self.self_odom_msg.pose.covariance[0] ** 2 + self.self_odom_msg.pose.covariance[7] ** 2 > 1**2):
+        if (self.self_odom_msg == None):
+            print("WARNING: no available position estimate")
+            return False
+
+        if (self.self_odom_msg.pose.covariance[0] ** 2 + self.self_odom_msg.pose.covariance[7] ** 2 > 1**2):
+            print("checking position estimate certainty")
             return False
 
         # waits until covariance is acceptable to check heading
@@ -141,7 +146,7 @@ class AutonSystem:
             closest_heading = 2*np.pi + closest_heading
 
         if (abs(current_heading - closest_heading) >= np.pi/2):
-            print("WARNING: INCORRECT HEADING! restart stack")
+            print("WARNING: INCORRECT HEADING! restart stack. Current heading [-180, 180]: ", np.rad2deg(self_pose.theta))
             return False
 
         return True
