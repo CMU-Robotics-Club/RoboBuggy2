@@ -48,6 +48,7 @@ class AutonSystem:
             brake_controller,
             self_name,
             other_name,
+            curb_traj,
             profile) -> None:
 
 
@@ -61,7 +62,8 @@ class AutonSystem:
         self.local_controller = local_controller
         self.brake_controller = brake_controller
 
-        self.path_planner = PathPlanner(global_trajectory)
+        left_curb = curb_traj
+        self.path_planner = PathPlanner(global_trajectory, left_curb)
         self.other_steering = 0
 
         self.lock = Lock()
@@ -81,9 +83,6 @@ class AutonSystem:
         )
         self.steer_publisher = rospy.Publisher(
             self_name + "/buggy/input/steering", Float64, queue_size=1
-        )
-        self.brake_publisher = rospy.Publisher(
-            self_name + "/buggy/input/brake", Float64, queue_size=1
         )
         self.brake_debug_publisher = rospy.Publisher(
             self_name + "/auton/debug/brake", Float64, queue_size=1
@@ -125,13 +124,14 @@ class AutonSystem:
             return False
 
         # waits until covariance is acceptable to check heading
-
         with self.lock:
             self_pose, _ = self.get_world_pose_and_speed(self.self_odom_msg)
             current_heading = self_pose.theta
             closest_heading = self.cur_traj.get_heading_by_index(trajectory.get_closest_index_on_path(self_pose.x, self_pose.y))
+        print("current heading: ", np.rad2deg(current_heading))
+        self.heading_publisher.publish(Float32(np.rad2deg(current_heading)))
 
-        # TENTATIVE:
+
         # headings are originally between -pi and pi
         # if they are negative, convert them to be between 0 and pi
         if current_heading < 0:
@@ -148,6 +148,8 @@ class AutonSystem:
 
     def tick_caller(self):
 
+
+        print("start checking initialization status")
         while ((not rospy.is_shutdown()) and not self.init_check()):
             self.init_check_publisher.publish(False)
             rospy.sleep(0.001)
@@ -196,6 +198,8 @@ class AutonSystem:
         with self.lock:
             self_pose, self_speed = self.get_world_pose_and_speed(self.self_odom_msg)
 
+        self.heading_publisher.publish(Float32(np.rad2deg(self_pose.theta)))
+
         # Compute control output
         steering_angle = self.local_controller.compute_control(
             self_pose, self.cur_traj, self_speed)
@@ -219,11 +223,15 @@ class AutonSystem:
 
     def planner_tick(self):
         with self.lock:
-            other_pose, other_speed = self.get_world_pose_and_speed(self.other_odom_msg)
+            self_pose, _ = self.get_world_pose_and_speed(self.self_odom_msg)
+            other_pose, _ = self.get_world_pose_and_speed(self.other_odom_msg)
+
         # update local trajectory via path planner
-        self.cur_traj = self.path_planner.compute_traj(
-                                            other_pose,
-                                            other_speed)
+        self.cur_traj, cur_idx = self.path_planner.compute_traj(
+                                            self_pose,
+                                            other_pose)
+        self.local_controller.current_traj_index = cur_idx
+
 if __name__ == "__main__":
     rospy.init_node("auton_system")
     parser = argparse.ArgumentParser()
@@ -251,6 +259,13 @@ if __name__ == "__main__":
         required=True)
 
     parser.add_argument(
+        "--left_curb",
+        type=str,
+        help="Path of curb data, relative to /rb_ws/src/buggy/paths/",
+        default=""
+,        required=True)
+
+    parser.add_argument(
         "--other_name",
         type=str,
         help="name of other buggy, if left unspecified, the autonsystem assumes it is the only buggy on the course",
@@ -268,12 +283,16 @@ if __name__ == "__main__":
     self_name = args.self_name
     other_name = args.other_name
     profile = args.profile
+    left_curb_file = args.left_curb
 
     print("\n\nStarting Controller: " + str(ctrl) + "\n\n")
     print("\n\nUsing path: /rb_ws/src/buggy/paths/" + str(traj) + "\n\n")
     print("\n\nStarting at distance: " + str(start_dist) + "\n\n")
 
     trajectory = Trajectory(json_filepath="/rb_ws/src/buggy/paths/" + traj)
+    left_curb = None
+    if left_curb_file != "":
+        left_curb = Trajectory(json_filepath="/rb_ws/src/buggy/paths/" + left_curb_file)
 
     # calculate starting index
     start_index = trajectory.get_index_from_distance(start_dist)
@@ -303,6 +322,7 @@ if __name__ == "__main__":
         BrakeController(),
         self_name,
         other_name,
+        left_curb,
         profile
     )
 
