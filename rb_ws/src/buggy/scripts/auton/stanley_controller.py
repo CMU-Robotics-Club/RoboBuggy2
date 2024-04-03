@@ -22,7 +22,7 @@ class StanleyController(Controller):
 
     CROSS_TRACK_GAIN = 1.3
     K_SOFT = 1.0 # m/s
-    K_D_YAW = 0.06 # rad / (rad/s)
+    K_D_YAW = 0.012 # rad / (rad/s)
 
     def __init__(self, buggy_name, start_index=0) -> None:
         super(StanleyController, self).__init__(start_index, buggy_name)
@@ -74,14 +74,14 @@ class StanleyController(Controller):
             self.LOOK_AHEAD_DIST_CONST * current_speed,
             self.MIN_LOOK_AHEAD_DIST,
             self.MAX_LOOK_AHEAD_DIST)
-        
+
         traj_dist = trajectory.get_distance_from_index(self.current_traj_index) + lookahead_dist
-        
+
         ref_heading = trajectory.get_heading_by_index(
             trajectory.get_index_from_distance(traj_dist))
-        
+
         error_heading = ref_heading - current_pose.theta
-        error_heading = np.arctan2(np.sin(error_heading), np.cos(error_heading))    
+        error_heading = np.arctan2(np.sin(error_heading), np.cos(error_heading))
 
         # Calculate cross track error by finding the distance from the buggy to the tangent line of
         # the reference trajectory
@@ -104,9 +104,9 @@ class StanleyController(Controller):
 
         # Calculate yaw rate error
         r_meas = yaw_rate
-        r_traj = speed * (trajectory.get_heading_by_index(trajectory.get_index_from_distance(traj_dist) + 0.05) 
+        r_traj = speed * (trajectory.get_heading_by_index(trajectory.get_index_from_distance(traj_dist) + 0.05)
         - trajectory.get_heading_by_index(trajectory.get_index_from_distance(traj_dist))) / 0.05
-        
+
 
         steering_cmd = error_heading + cross_track_component + StanleyController.K_D_YAW * (r_traj - r_meas)
         steering_cmd = np.clip(steering_cmd, -np.pi / 9, np.pi / 9)
