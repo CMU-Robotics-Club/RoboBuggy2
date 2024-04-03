@@ -16,12 +16,13 @@ class StanleyController(Controller):
     Calculations based off FRONT axle of Buggy
     """
 
-    LOOK_AHEAD_DIST_CONST = 0.1
+    LOOK_AHEAD_DIST_CONST = 0.05 # s
     MIN_LOOK_AHEAD_DIST = 0.1
-    MAX_LOOK_AHEAD_DIST = 2
+    MAX_LOOK_AHEAD_DIST = 2.0
 
-    CROSS_TRACK_GAIN = 1
-    HEADING_GAIN = 0.3
+    CROSS_TRACK_GAIN = 1.3
+    K_SOFT = 1.0 # m/s
+    K_D_YAW = 0.06 # rad / (rad/s)
 
     def __init__(self, buggy_name, start_index=0) -> None:
         super(StanleyController, self).__init__(start_index, buggy_name)
@@ -33,7 +34,7 @@ class StanleyController(Controller):
         )
 
     def compute_control(
-        self, current_pose: Pose, trajectory: Trajectory, current_speed: float
+        self, current_pose: Pose, trajectory: Trajectory, current_speed: float, yaw_rate: float
     ):
         """Computes the steering angle necessary for stanley controller.
         Does this by looking at the crosstrack error + heading error
@@ -41,7 +42,8 @@ class StanleyController(Controller):
         Args:
             current_pose (Pose): current pose (x, y, theta) (UTM coordinates)
             trajectory (Trajectory): reference trajectory
-            current_speed (float): current speed of the buggy
+            current_speed (float): current speed of the buggy (m/s)
+            yaw_rate (float): current yaw rate of the buggy (rad/s)
 
         Returns:
             float (desired steering angle)
@@ -71,19 +73,15 @@ class StanleyController(Controller):
         lookahead_dist = np.clip(
             self.LOOK_AHEAD_DIST_CONST * current_speed,
             self.MIN_LOOK_AHEAD_DIST,
-            self.MAX_LOOK_AHEAD_DIST,
-        )
-        traj_dist = (
-            trajectory.get_distance_from_index(self.current_traj_index) + lookahead_dist
-        )
+            self.MAX_LOOK_AHEAD_DIST)
+        
+        traj_dist = trajectory.get_distance_from_index(self.current_traj_index) + lookahead_dist
+        
         ref_heading = trajectory.get_heading_by_index(
-            trajectory.get_index_from_distance(traj_dist)
-        )
+            trajectory.get_index_from_distance(traj_dist))
+        
         error_heading = ref_heading - current_pose.theta
-        error_heading = (
-            np.arctan2(np.sin(error_heading), np.cos(error_heading))
-            * StanleyController.HEADING_GAIN
-        )
+        error_heading = np.arctan2(np.sin(error_heading), np.cos(error_heading))    
 
         # Calculate cross track error by finding the distance from the buggy to the tangent line of
         # the reference trajectory
@@ -100,14 +98,17 @@ class StanleyController(Controller):
         )
 
         speed = current_speed
-        if current_speed < 1:
-            speed = 1
-
-        cross_track_error = -np.arctan2(
-            StanleyController.CROSS_TRACK_GAIN * error_dist, speed
+        cross_track_component = -np.arctan2(
+            StanleyController.CROSS_TRACK_GAIN * error_dist, speed + StanleyController.K_SOFT
         )
 
-        steering_cmd = error_heading + cross_track_error
+        # Calculate yaw rate error
+        r_meas = yaw_rate
+        r_traj = speed * (trajectory.get_heading_by_index(trajectory.get_index_from_distance(traj_dist) + 0.05) 
+        - trajectory.get_heading_by_index(trajectory.get_index_from_distance(traj_dist))) / 0.05
+        
+
+        steering_cmd = error_heading + cross_track_component + StanleyController.K_D_YAW * (r_traj - r_meas)
         steering_cmd = np.clip(steering_cmd, -np.pi / 9, np.pi / 9)
 
         reference_position = trajectory.get_position_by_index(self.current_traj_index)
