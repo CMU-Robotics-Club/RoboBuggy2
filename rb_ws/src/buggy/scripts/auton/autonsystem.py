@@ -245,8 +245,14 @@ class AutonSystem:
                 self.planner_tick()
 
     def planner_tick(self):
+        if not self.use_gps_pos:
+            with self.lock:
+                self_pose, _ = self.get_world_pose_and_speed(self.self_odom_msg)
+        else:
+            with self.lock:
+                self_pose, _ = self.get_world_pose_and_speed(self.gps_odom_msg)
+
         with self.lock:
-            self_pose, _ = self.get_world_pose_and_speed(self.self_odom_msg)
             other_pose, _ = self.get_world_pose_and_speed(self.other_odom_msg)
 
         # update local trajectory via path planner
