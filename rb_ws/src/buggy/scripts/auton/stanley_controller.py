@@ -21,7 +21,8 @@ class StanleyController(Controller):
     MAX_LOOK_AHEAD_DIST = 2
 
     CROSS_TRACK_GAIN = 1
-    HEADING_GAIN = 0.3
+    # THIS GAIN SHOULD NOT EXIST, it should always be 1
+    HEADING_GAIN = 0.75
 
     def __init__(self, buggy_name, start_index=0) -> None:
         super(StanleyController, self).__init__(start_index, buggy_name)
