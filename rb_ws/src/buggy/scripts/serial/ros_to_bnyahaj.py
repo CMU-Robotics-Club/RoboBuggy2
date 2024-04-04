@@ -61,7 +61,7 @@ class Translator:
             self.fresh_steer = True
 
     def writer_thread(self):
-        print('Starting sending alarm and steering to teensy!')
+        rospy.loginfo('Starting sending alarm and steering to teensy!')
         while True:
             if self.fresh_steer:
                 with self.lock:
@@ -74,12 +74,12 @@ class Translator:
             self.steer_send_rate.sleep()
 
     def reader_thread(self):
-        print('Starting reading odom from teensy!')
+        rospy.loginfo('Starting reading odom from teensy!')
         while True:
             packet = self.comms.read_packet()
             # print("trying to read odom")
             if isinstance(packet, Odometry):
-                # print("packet", packet.radio_seqnum, packet.gps_seqnum)
+                rospy.logdebug("packet", packet)
                 #Publish to odom topic x and y coord
                 odom = ROSOdom()
                 # convert to long lat
