@@ -28,7 +28,11 @@ class Translator:
         rospy.Subscriber(self_name + "/buggy/input/steering", Float64, self.set_steering)
         rospy.Subscriber(self_name + "/debug/sanity_warning", Int8, self.set_alarm)
 
-        self.odom_publisher = rospy.Publisher(other_name + "/nav/odom", ROSOdom, queue_size=1)
+
+        if other_name is None and self_name == "NAND":
+            self.odom_publisher = rospy.Publisher(self_name + "/nav/odom", ROSOdom, queue_size=1)
+        else:
+            self.odom_publisher = rospy.Publisher(other_name + "/nav/odom", ROSOdom, queue_size=1)
         # upper bound of steering update rate, make sure auton sends slower than this
         self.steer_send_rate = rospy.Rate(500)
         self.read_rate = rospy.Rate(1000)
@@ -114,7 +118,7 @@ class Translator:
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("--self_name", type=str, help="name of ego-buggy", required=True)
-    parser.add_argument("--other_name", type=str, help="name of other buggy", required=True)
+    parser.add_argument("--other_name", type=str, help="name of other buggy", required=False, default=None)
     parser.add_argument("--teensy_name", type=str, help="name of teensy port", required=True)
     args, _ = parser.parse_known_args()
     self_name = args.self_name
