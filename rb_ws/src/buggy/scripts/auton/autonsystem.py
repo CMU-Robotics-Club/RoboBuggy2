@@ -135,11 +135,11 @@ class AutonSystem:
         # (from both buggies if relevant)
         # covariance is less than 1 meter
         if (self.self_odom_msg == None):
-            print("WARNING: no available position estimate")
+            rospy.logwarn("WARNING: no available position estimate")
             return False
 
         if (self.self_odom_msg.pose.covariance[0] ** 2 + self.self_odom_msg.pose.covariance[7] ** 2 > 1**2):
-            print("checking position estimate certainty")
+            rospy.logwarn("checking position estimate certainty")
             return False
 
         # waits until covariance is acceptable to check heading
@@ -147,9 +147,8 @@ class AutonSystem:
             self_pose, _ = self.get_world_pose_and_speed(self.self_odom_msg)
             current_heading = self_pose.theta
             closest_heading = self.cur_traj.get_heading_by_index(trajectory.get_closest_index_on_path(self_pose.x, self_pose.y))
-        print("current heading: ", np.rad2deg(current_heading))
+        rospy.loginfo("current heading: ", np.rad2deg(current_heading))
         self.heading_publisher.publish(Float32(np.rad2deg(current_heading)))
-
 
         # headings are originally between -pi and pi
         # if they are negative, convert them to be between 0 and pi
@@ -160,7 +159,7 @@ class AutonSystem:
             closest_heading = 2*np.pi + closest_heading
 
         if (abs(current_heading - closest_heading) >= np.pi/2):
-            print("WARNING: INCORRECT HEADING! restart stack. Current heading [-180, 180]: ", np.rad2deg(self_pose.theta))
+            rospy.logwarn("WARNING: INCORRECT HEADING! restart stack. Current heading [-180, 180]: ", np.rad2deg(self_pose.theta))
             return False
 
         return True
@@ -168,16 +167,13 @@ class AutonSystem:
     def tick_caller(self):
 
 
-        print("start checking initialization status")
+        rospy.loginfo("start checking initialization status")
         while ((not rospy.is_shutdown()) and not self.init_check()):
             self.init_check_publisher.publish(False)
             rospy.sleep(0.001)
-        print("done checking initialization status")
+        rospy.loginfo("done checking initialization status")
         self.init_check_publisher.publish(True)
         # initialize global trajectory index
-
-        with self.lock:
-            _, _ = self.get_world_pose_and_speed(self.self_odom_msg)
 
         t_planner = threading.Thread(target=self.planner_thread)
         t_controller = threading.Thread(target=self.local_controller_thread)
@@ -314,9 +310,9 @@ if __name__ == "__main__":
     profile = args.profile
     left_curb_file = args.left_curb
 
-    print("\n\nStarting Controller: " + str(ctrl) + "\n\n")
-    print("\n\nUsing path: /rb_ws/src/buggy/paths/" + str(traj) + "\n\n")
-    print("\n\nStarting at distance: " + str(start_dist) + "\n\n")
+    rospy.loginfo("\n\nStarting Controller: " + str(ctrl) + "\n\n")
+    rospy.loginfo("\n\nUsing path: /rb_ws/src/buggy/paths/" + str(traj) + "\n\n")
+    rospy.loginfo("\n\nStarting at distance: " + str(start_dist) + "\n\n")
 
     trajectory = Trajectory(json_filepath="/rb_ws/src/buggy/paths/" + traj)
     left_curb = None
