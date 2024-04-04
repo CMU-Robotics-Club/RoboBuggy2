@@ -292,7 +292,7 @@ if __name__ == "__main__":
         type=str,
         help="Path of curb data, relative to /rb_ws/src/buggy/paths/",
         default=""
-,        required=True)
+,        required=False)
 
     parser.add_argument(
         "--other_name",
