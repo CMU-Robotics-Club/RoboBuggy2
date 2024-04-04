@@ -29,7 +29,7 @@ class Translator:
         rospy.Subscriber(self_name + "/debug/sanity_warning", Int8, self.set_alarm)
 
 
-        if other_name is None:
+        if other_name is None and self_name == "NAND":
             self.odom_publisher = rospy.Publisher(self_name + "/nav/odom", ROSOdom, queue_size=1)
         else:
             self.odom_publisher = rospy.Publisher(other_name + "/nav/odom", ROSOdom, queue_size=1)
