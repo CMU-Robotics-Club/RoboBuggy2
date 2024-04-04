@@ -4,6 +4,7 @@ from trajectory import Trajectory
 from pose import Pose
 from sensor_msgs.msg import NavSatFix
 from world import World
+from nav_msgs.msg import Odometry
 
 
 class Controller(ABC):
@@ -47,13 +48,13 @@ class Controller(ABC):
 
     @abstractmethod
     def compute_control(
-        self, current_pose: Pose, trajectory: Trajectory, current_speed: float, yaw_rate: float
+        self, state_msg: Odometry, trajectory: Trajectory,
     ):
         """
         Computes the desired control output given the current state and reference trajectory
 
         Args:
-            state (numpy.ndarray [size: (3,)]): current pose (x, y, theta)
+            state: (Odometry): state of the buggy, including position, attitude and associated twists
             trajectory (Trajectory): reference trajectory
             current_speed (float): current speed of the buggy
 

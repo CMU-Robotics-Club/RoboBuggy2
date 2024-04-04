@@ -3,6 +3,8 @@ import numpy as np
 import rospy
 from sensor_msgs.msg import NavSatFix
 from geometry_msgs.msg import Pose as ROSPose
+from nav_msgs.msg import Odometry
+
 
 from pose import Pose
 from trajectory import Trajectory
@@ -34,15 +36,14 @@ class StanleyController(Controller):
         )
 
     def compute_control(
-        self, current_pose: Pose, trajectory: Trajectory, current_speed: float, yaw_rate: float
+        self, state_msg: Odometry, trajectory: Trajectory
     ):
         """Computes the steering angle necessary for stanley controller.
         Does this by looking at the crosstrack error + heading error
 
         Args:
-            current_pose (Pose): current pose (x, y, theta) (UTM coordinates)
+            state_msg: ros Odometry message
             trajectory (Trajectory): reference trajectory
-            current_speed (float): current speed of the buggy (m/s)
             yaw_rate (float): current yaw rate of the buggy (rad/s)
 
         Returns:
@@ -50,6 +51,13 @@ class StanleyController(Controller):
         """
         if self.current_traj_index >= trajectory.get_num_points() - 1:
             raise Exception("[Stanley]: Ran out of path to follow!")
+
+        current_rospose = state_msg.pose.pose
+        current_pose = World.gps_to_world_pose(Pose.rospose_to_pose(current_rospose))
+        current_speed = np.sqrt(
+            state_msg.twist.twist.linear.x**2 + state_msg.twist.twist.linear.y**2
+        )
+        yaw_rate = state_msg.twist.twist.angular.z
 
         heading = current_pose.theta  # in radians
         x = current_pose.x
