@@ -3,6 +3,8 @@ import numpy as np
 import rospy
 from sensor_msgs.msg import NavSatFix
 from geometry_msgs.msg import Pose as ROSPose
+from nav_msgs.msg import Odometry
+
 
 from pose import Pose
 from trajectory import Trajectory
@@ -16,12 +18,13 @@ class StanleyController(Controller):
     Calculations based off FRONT axle of Buggy
     """
 
-    LOOK_AHEAD_DIST_CONST = 0.1
+    LOOK_AHEAD_DIST_CONST = 0.05 # s
     MIN_LOOK_AHEAD_DIST = 0.1
-    MAX_LOOK_AHEAD_DIST = 2
+    MAX_LOOK_AHEAD_DIST = 2.0
 
-    CROSS_TRACK_GAIN = 1
-    HEADING_GAIN = 0.3
+    CROSS_TRACK_GAIN = 1.3
+    K_SOFT = 1.0 # m/s
+    K_D_YAW = 0.012 # rad / (rad/s)
 
     def __init__(self, buggy_name, start_index=0) -> None:
         super(StanleyController, self).__init__(start_index, buggy_name)
@@ -33,21 +36,28 @@ class StanleyController(Controller):
         )
 
     def compute_control(
-        self, current_pose: Pose, trajectory: Trajectory, current_speed: float
+        self, state_msg: Odometry, trajectory: Trajectory
     ):
         """Computes the steering angle necessary for stanley controller.
         Does this by looking at the crosstrack error + heading error
 
         Args:
-            current_pose (Pose): current pose (x, y, theta) (UTM coordinates)
+            state_msg: ros Odometry message
             trajectory (Trajectory): reference trajectory
-            current_speed (float): current speed of the buggy
+            yaw_rate (float): current yaw rate of the buggy (rad/s)
 
         Returns:
             float (desired steering angle)
         """
         if self.current_traj_index >= trajectory.get_num_points() - 1:
             raise Exception("[Stanley]: Ran out of path to follow!")
+
+        current_rospose = state_msg.pose.pose
+        current_pose = World.gps_to_world_pose(Pose.rospose_to_pose(current_rospose))
+        current_speed = np.sqrt(
+            state_msg.twist.twist.linear.x**2 + state_msg.twist.twist.linear.y**2
+        )
+        yaw_rate = state_msg.twist.twist.angular.z
 
         heading = current_pose.theta  # in radians
         x = current_pose.x
@@ -71,19 +81,15 @@ class StanleyController(Controller):
         lookahead_dist = np.clip(
             self.LOOK_AHEAD_DIST_CONST * current_speed,
             self.MIN_LOOK_AHEAD_DIST,
-            self.MAX_LOOK_AHEAD_DIST,
-        )
-        traj_dist = (
-            trajectory.get_distance_from_index(self.current_traj_index) + lookahead_dist
-        )
+            self.MAX_LOOK_AHEAD_DIST)
+
+        traj_dist = trajectory.get_distance_from_index(self.current_traj_index) + lookahead_dist
+
         ref_heading = trajectory.get_heading_by_index(
-            trajectory.get_index_from_distance(traj_dist)
-        )
+            trajectory.get_index_from_distance(traj_dist))
+
         error_heading = ref_heading - current_pose.theta
-        error_heading = (
-            np.arctan2(np.sin(error_heading), np.cos(error_heading))
-            * StanleyController.HEADING_GAIN
-        )
+        error_heading = np.arctan2(np.sin(error_heading), np.cos(error_heading))
 
         # Calculate cross track error by finding the distance from the buggy to the tangent line of
         # the reference trajectory
@@ -100,14 +106,17 @@ class StanleyController(Controller):
         )
 
         speed = current_speed
-        if current_speed < 1:
-            speed = 1
-
-        cross_track_error = -np.arctan2(
-            StanleyController.CROSS_TRACK_GAIN * error_dist, speed
+        cross_track_component = -np.arctan2(
+            StanleyController.CROSS_TRACK_GAIN * error_dist, speed + StanleyController.K_SOFT
         )
 
-        steering_cmd = error_heading + cross_track_error
+        # Calculate yaw rate error
+        r_meas = yaw_rate
+        r_traj = speed * (trajectory.get_heading_by_index(trajectory.get_index_from_distance(traj_dist) + 0.05)
+        - trajectory.get_heading_by_index(trajectory.get_index_from_distance(traj_dist))) / 0.05
+
+
+        steering_cmd = error_heading + cross_track_component + StanleyController.K_D_YAW * (r_traj - r_meas)
         steering_cmd = np.clip(steering_cmd, -np.pi / 9, np.pi / 9)
 
         reference_position = trajectory.get_position_by_index(self.current_traj_index)

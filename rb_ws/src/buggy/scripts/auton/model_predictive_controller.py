@@ -14,6 +14,8 @@ from std_msgs.msg import Float64, Float64MultiArray, MultiArrayDimension, Bool
 from sensor_msgs.msg import NavSatFix
 from geometry_msgs.msg import Pose as ROSPose
 from geometry_msgs.msg import Pose2D
+from nav_msgs.msg import Odometry
+
 
 from pose import Pose
 from trajectory import Trajectory
@@ -723,7 +725,15 @@ class ModelPredictiveController(Controller):
         return state_trajectory
         # return steer_angle
 
-    def compute_control(self, current_pose: Pose, trajectory: Trajectory, current_speed: float):
+    def compute_control(self,
+        state_msg: Odometry, trajectory: Trajectory):
+
+        current_rospose = state_msg.pose.pose
+        current_pose = World.gps_to_world_pose(Pose.rospose_to_pose(current_rospose))
+        current_speed = np.sqrt(
+            state_msg.twist.twist.linear.x**2 + state_msg.twist.twist.linear.y**2
+        )
+
         state_trajectory = self.compute_trajectory(current_pose, trajectory, current_speed)
         steer_angle = state_trajectory[0, self.N_STATES - 1]
 
