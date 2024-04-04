@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+import argparse
 
 import rospy
 from std_msgs.msg import Float64
@@ -12,9 +13,9 @@ class DebugController():
     Sends oscillating steering command for firmware debug
     """
 
-    def __init__(self) -> None:
+    def __init__(self, self_name) -> None:
         self.steer_publisher = rospy.Publisher(
-        "SC/buggy/input/steering", Float64, queue_size=1)
+        self_name + "/buggy/input/steering", Float64, queue_size=1)
         self.rate = 1000
 
     def sin_steer(self, tick_count):
@@ -42,6 +43,10 @@ class DebugController():
             rate.sleep()
 
 if __name__ == "__main__":
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--self_name", type=str, help="name of ego-buggy", required=True)
+    args, _ = parser.parse_known_args()
+
     rospy.init_node("debug_steer")
-    d = DebugController()
+    d = DebugController(args.self_name)
     d.loop()

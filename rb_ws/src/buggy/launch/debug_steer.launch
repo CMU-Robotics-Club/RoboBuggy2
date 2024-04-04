@@ -1,6 +1,5 @@
 <!-- roslaunch buggy debug_steer.launch -->
 
 <launch>
-    <node name="debug_steer" pkg="buggy" type="debug_steer.py" output="screen"/>
-
+    <node name="debug_steer" pkg="buggy" type="debug_steer.py" output="screen" args="--self_name NAND"/>
 </launch>
