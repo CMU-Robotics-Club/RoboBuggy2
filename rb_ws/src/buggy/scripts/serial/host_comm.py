@@ -63,6 +63,7 @@ MSG_TYPE_ODOMETRY = b'OD'
 MSG_TYPE_STEERING = b'ST'
 MSG_TYPE_BRAKE    = b'BR'
 MSG_TYPE_ALARM    = b'AL'
+MSG_TYPE_BNYATEL  = b'BT'
 
 @dataclass
 class Odometry:
@@ -70,6 +71,15 @@ class Odometry:
     y: float
     radio_seqnum: int
     gps_seqnum: int
+
+@dataclass
+class BnyaTelemetry:
+    x: float
+    y: float
+    velocity: float # In METERS / SECOND
+    steering: float # In DEGREES
+    heading: float  # In RADIANS
+    heading_rate: float  # In RADIANS / SECOND
 
 class IncompletePacket(Exception):
     pass
@@ -183,6 +193,9 @@ class Comms:
             debug = struct.unpack('<fff??B?BBxx', payload)
             # print(debug)
             return debug
+        elif msg_type == MSG_TYPE_BNYATEL:
+            x, y, vel, steering, heading, heading_rate = struct.unpack('<ffffff', payload)
+            return BnyaTelemetry(x, y, vel, steering, heading, heading_rate)
         else:
             return None
             # print(f'Unknown packet type {msg_type}')
