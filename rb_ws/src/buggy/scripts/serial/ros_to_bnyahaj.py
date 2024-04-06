@@ -18,7 +18,6 @@ from host_comm import *
 
 from world import World
 from pose import Pose
-import numpy as np
 
 class Translator:
     def __init__(self, self_name, other_name, teensy_name):
