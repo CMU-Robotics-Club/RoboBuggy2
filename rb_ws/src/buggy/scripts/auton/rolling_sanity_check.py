@@ -70,6 +70,7 @@ class SanityCheck:
 
     def update_gps_location(self, msg : PoseStamped):
         self.gps_location = msg.pose
+        self.calc_locations()
 
     def update_filter_location(self, msg):
         self.filter_location = msg.pose
@@ -92,6 +93,7 @@ class SanityCheck:
 
     def calc_locations(self):
         # currently comparing distance between rear antenna and filtered loc
+        # ONLY CALL UPON ANTENNA TOPIC UPDATE
         if (self.filter_location == None or self.gps_location == None):
             self.filter_gps_status_publisher.publish(False)
         else:
@@ -158,9 +160,8 @@ class SanityCheck:
         self.error_message_publisher.publish(error_message)
 
     def sanity_check(self):
-        self.warning = False
+        self.warning = 0
         self.calc_covariance()
-        self.calc_locations()
         self.is_overrange()
         self.filter_status_warning()
         self.overall_warning_publisher.publish(self.warning)
