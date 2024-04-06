@@ -9,6 +9,7 @@ sys.path.append("/rb_ws/src/buggy/scripts/auton")
 import argparse
 import rospy
 
+
 #Ros Message Imports
 from std_msgs.msg import Float64, Bool, Int8, UInt8
 from nav_msgs.msg import Odometry as ROSOdom
@@ -16,6 +17,8 @@ from nav_msgs.msg import Odometry as ROSOdom
 from host_comm import *
 
 from world import World
+from pose import Pose
+import numpy as np
 
 class Translator:
     def __init__(self, self_name, other_name, teensy_name):
@@ -78,7 +81,7 @@ class Translator:
         while True:
             packet = self.comms.read_packet()
             # print("trying to read odom")
-            if isinstance(packet, Odometry):
+            if isinstance(packet, Odometry) and self_name == "SC":
                 rospy.logdebug("packet", packet)
                 #Publish to odom topic x and y coord
                 odom = ROSOdom()
@@ -90,6 +93,21 @@ class Translator:
                     self.odom_publisher.publish(odom)
                 except Exception as e:
                     rospy.logwarn("Unable to convert other buggy position to lon lat" + e)
+
+            elif isinstance(packet, BnyaTelemetry) and self_name == "NAND":
+                rospy.logdebug("packet", packet)
+                odom = ROSOdom()
+                try:
+                    lat, long = World.utm_to_gps(packet.y, packet.x)
+                    odom.pose.pose.position.x = long
+                    odom.pose.pose.position.y = lat
+                    odom.twist.twist.angular.z = packet.heading_rate
+                    odom.pose.pose.orientation = Pose.heading_to_quaternion(packet.heading + np.pi/2)
+
+                    self.odom_publisher.publish(odom)
+                except Exception as e:
+                    rospy.logwarn("Unable to convert other buggy position to lon lat" + e)
+
 
             elif isinstance(packet, tuple): #Are there any other packet that is a tuple
                 # print(packet)

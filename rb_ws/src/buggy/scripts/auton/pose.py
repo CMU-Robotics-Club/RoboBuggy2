@@ -2,6 +2,7 @@ import numpy as np
 
 from geometry_msgs.msg import Pose as ROSPose
 from tf.transformations import euler_from_quaternion
+from tf.transformations import quaternion_from_euler
 
 
 class Pose:
@@ -37,6 +38,10 @@ class Pose:
 
         p = Pose(rospose.position.x, rospose.position.y, yaw)
         return p
+
+    def heading_to_quaternion(heading):
+        q = quaternion_from_euler(0, 0, heading)
+        return q
 
     def __init__(self, x, y, theta):
         self.x = x
@@ -94,7 +99,7 @@ class Pose:
         Creates a pose from a 3x3 homogeneous transformation matrix
         """
         return Pose(mat[0, 2], mat[1, 2], np.arctan2(mat[1, 0], mat[0, 0]))
-    
+
     def invert(self):
         """
         Inverts the pose
