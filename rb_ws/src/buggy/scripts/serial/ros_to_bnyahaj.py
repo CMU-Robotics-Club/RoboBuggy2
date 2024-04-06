@@ -93,7 +93,7 @@ class Translator:
                     self.odom_publisher.publish(odom)
                 except Exception as e:
                     rospy.logwarn("Unable to convert other buggy position to lon lat" + e)
-            
+
             elif isinstance(packet, BnyaTelemetry) and self_name == "NAND":
                 rospy.logdebug("packet", packet)
                 odom = ROSOdom()
