@@ -5,8 +5,6 @@
     <arg name="start_dist"      default="0.0" />
     <arg name="path"            default="buggycourse_safe_1.json" />
 
-    <remap from="/NAND/nav/odom" to="/nav/odom"/>
-
     <!-- ENABLE AUTON -->
     <!-- autonsystem args: controller start_dist path buggy_name is_sim -->
     <arg name="autonsystem_args" value="--controller $(arg controller) --dist 0.0 --traj $(arg path) --self_name NAND" />
