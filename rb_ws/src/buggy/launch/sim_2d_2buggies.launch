@@ -1,11 +1,11 @@
 <launch>
-    <arg name="sc_controller"     default="mpc" />
+    <arg name="sc_controller"     default="stanley" />
     <arg name="sc_start_pos"    default="Hill1_SC" />
     <arg name="sc_velocity"         default="12.0" />
 
     <arg name="nand_controller"     default="stanley" />
     <arg name="nand_path"           default="buggycourse_safe_1.json" />
-    <arg name="sc_path"           default="buggycourse_raceline.json" />
+    <arg name="sc_path"           default="buggycourse_safe_1.json" />
     <arg name="nand_start_pos"     default="Hill1_NAND" />
     <arg name="nand_velocity"       default="10.0" />
 
@@ -35,11 +35,11 @@
         args="$(arg nand_start_pos) $(arg nand_velocity) NAND"/>
 
     <!-- NAND is not aware of SC -->
-    <arg name="nand_autonsystem_args" default="--controller $(arg nand_controller) --dist 0.0 --traj $(arg nand_path) --self_name NAND" />
+    <arg name="nand_autonsystem_args" default="--controller $(arg nand_controller) --dist 0.0 --traj $(arg nand_path) --self_name NAND --left_curb curb.json" />
     <node name="nand_auton_system" pkg="buggy" type="autonsystem.py" output="screen"
         args="$(arg nand_autonsystem_args)"/>
 
-    <arg name="sc_autonsystem_args" default="--controller $(arg sc_controller) --dist 0.0 --traj $(arg sc_path) --self_name SC --other_name NAND" />
+    <arg name="sc_autonsystem_args" default="--controller $(arg sc_controller) --dist 0.0 --traj $(arg sc_path) --self_name SC --other_name NAND --left_curb curb.json" />
     <node name="sc_auton_system" pkg="buggy" type="autonsystem.py" output="screen"
         args="$(arg sc_autonsystem_args)"/>
 

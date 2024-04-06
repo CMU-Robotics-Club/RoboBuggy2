@@ -5,7 +5,7 @@
         <arg name="params_file" value="/rb_ws/src/buggy/INS_params.yml"/>
     </include>
 
-    <node name="bnyahaj" pkg="buggy" type="ros_to_bnyahaj.py" output="screen" args="--self_name SC --other_name NAND --teensy_name ttyUSB0"/>
+    <node name="bnyahaj" pkg="buggy" type="ros_to_bnyahaj.py" respawn="true" output="screen" args="--self_name SC --other_name NAND --teensy_name ttyUSB0"/>
 
     <node name="serial_node2" pkg="rosserial_python" type="serial_node.py">
         <param name="port" type="string" value="/dev/ttyACM1"/>
