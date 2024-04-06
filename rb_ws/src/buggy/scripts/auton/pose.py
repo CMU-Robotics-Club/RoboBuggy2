@@ -99,7 +99,7 @@ class Pose:
         Creates a pose from a 3x3 homogeneous transformation matrix
         """
         return Pose(mat[0, 2], mat[1, 2], np.arctan2(mat[1, 0], mat[0, 0]))
-    
+
     def invert(self):
         """
         Inverts the pose
