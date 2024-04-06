@@ -103,7 +103,12 @@ class Translator:
                     odom.pose.pose.position.x = long
                     odom.pose.pose.position.y = lat
                     odom.twist.twist.angular.z = packet.heading_rate
-                    odom.pose.pose.orientation = Pose.heading_to_quaternion(packet.heading)
+                    heading = Pose.heading_to_quaternion(packet.heading)
+
+                    odom.pose.pose.orientation.x = heading[0]
+                    odom.pose.pose.orientation.y = heading[1]
+                    odom.pose.pose.orientation.z = heading[2]
+                    odom.pose.pose.orientation.w = heading[3]
 
                     speed = packet.velocity
                     # TODO: fix this
