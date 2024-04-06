@@ -82,7 +82,7 @@ class Translator:
             packet = self.comms.read_packet()
             # print("trying to read odom")
             if isinstance(packet, Odometry) and self_name == "SC":
-                rospy.logdebug("packet", packet)
+                rospy.logdebug("packet" + str(packet))
                 #Publish to odom topic x and y coord
                 odom = ROSOdom()
                 # convert to long lat
@@ -92,10 +92,10 @@ class Translator:
                     odom.pose.pose.position.y = lat
                     self.odom_publisher.publish(odom)
                 except Exception as e:
-                    rospy.logwarn("Unable to convert other buggy position to lon lat" + e)
+                    rospy.logwarn("Unable to convert other buggy position to lon lat" + str(e))
 
             elif isinstance(packet, BnyaTelemetry) and self_name == "NAND":
-                rospy.logdebug("packet", packet)
+                rospy.logdebug("packet" + str(packet))
                 odom = ROSOdom()
                 try:
                     lat, long = World.utm_to_gps(packet.y, packet.x)
@@ -106,7 +106,7 @@ class Translator:
 
                     self.odom_publisher.publish(odom)
                 except Exception as e:
-                    rospy.logwarn("Unable to convert other buggy position to lon lat" + e)
+                    rospy.logwarn("Unable to convert other buggy position to lon lat" + str(e))
 
 
             elif isinstance(packet, tuple): #Are there any other packet that is a tuple

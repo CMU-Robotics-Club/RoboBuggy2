@@ -147,7 +147,7 @@ class AutonSystem:
             self_pose = self.get_world_pose(self.self_odom_msg)
             current_heading = self_pose.theta
             closest_heading = self.cur_traj.get_heading_by_index(trajectory.get_closest_index_on_path(self_pose.x, self_pose.y))
-        rospy.loginfo("current heading: ", np.rad2deg(current_heading))
+        rospy.loginfo("current heading: " + str(np.rad2deg(current_heading)))
         self.heading_publisher.publish(Float32(np.rad2deg(current_heading)))
 
         # headings are originally between -pi and pi
@@ -159,7 +159,7 @@ class AutonSystem:
             closest_heading = 2*np.pi + closest_heading
 
         if (abs(current_heading - closest_heading) >= np.pi/2):
-            rospy.logwarn("WARNING: INCORRECT HEADING! restart stack. Current heading [-180, 180]: ", np.rad2deg(self_pose.theta))
+            rospy.logwarn("WARNING: INCORRECT HEADING! restart stack. Current heading [-180, 180]: " + str(np.rad2deg(self_pose.theta)))
             return False
 
         return True
