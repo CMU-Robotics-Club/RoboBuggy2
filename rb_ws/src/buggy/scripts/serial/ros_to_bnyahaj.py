@@ -103,8 +103,14 @@ class Translator:
                     odom.pose.pose.position.x = long
                     odom.pose.pose.position.y = lat
                     odom.twist.twist.angular.z = packet.heading_rate
-                    odom.pose.pose.orientation = Pose.heading_to_quaternion(packet.heading + np.pi/2)
+                    odom.pose.pose.orientation = Pose.heading_to_quaternion(packet.heading)
 
+                    speed = packet.velocity
+                    # TODO: fix this
+                    # why this works: autonsystem only cares about magnitude of velocity
+                    # so setting an arbitrary axis to the speed and leave other at 0
+                    # works. However, this should be done properly ASAP
+                    odom.twist.twist.linear.x = speed
                     self.odom_publisher.publish(odom)
                 except Exception as e:
                     rospy.logwarn("Unable to convert other buggy position to lon lat" + str(e))
