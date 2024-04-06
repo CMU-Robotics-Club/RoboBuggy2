@@ -194,7 +194,7 @@ class Comms:
             # print(debug)
             return debug
         elif msg_type == MSG_TYPE_BNYATEL:
-            x, y, vel, steering, heading, heading_rate = struct.unpack('<ffffff', payload)
+            x, y, vel, steering, heading, heading_rate = struct.unpack('<dddddd', payload)
             return BnyaTelemetry(x, y, vel, steering, heading, heading_rate)
         else:
             return None
