@@ -3,14 +3,15 @@
 import threading
 from threading import Lock
 
+import rospy
+import argparse
 import sys
+
 #Allows import of world and pose from auton directory
 sys.path.append("/rb_ws/src/buggy/scripts/auton")
 from world import World
 from pose import Pose
 
-import argparse
-import rospy
 
 #Ros Message Imports
 from std_msgs.msg import Float64, Bool, Int8, UInt8
@@ -55,7 +56,7 @@ class Translator:
             self.odom_publisher = rospy.Publisher(self_name + "/nav/odom", ROSOdom, queue_size=1)
         else:
             self.odom_publisher = rospy.Publisher(other_name + "/nav/odom", ROSOdom, queue_size=1)
-        
+
         # upper bound of steering update rate, make sure auton sends slower than 500 Hz or update / 2ms
         self.steer_send_rate = rospy.Rate(500)
         # upper bound of reading data from Bnyahaj Serial, at 1ms
