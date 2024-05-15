@@ -38,6 +38,7 @@ def main():
             continue
         i += 1
 
+        # TODO: Check Orientation
         lat = msg.pose.pose.position.x
         lon = msg.pose.pose.position.y
         orientation_q = msg.pose.pose.orientation
