@@ -3,16 +3,15 @@
 import threading
 from threading import Lock
 
-import rospy
 import argparse
 import sys
-
 #Allows import of world and pose from auton directory
 sys.path.append("/rb_ws/src/buggy/scripts/auton")
 from world import World
 from pose import Pose
 
 
+import rospy
 #Ros Message Imports
 from std_msgs.msg import Float64, Bool, Int8, UInt8
 from nav_msgs.msg import Odometry as ROSOdom
