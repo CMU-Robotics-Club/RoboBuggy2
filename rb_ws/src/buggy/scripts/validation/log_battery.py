@@ -1,11 +1,10 @@
 # A script to log battery data to a .txt file
 
+import csv
 import rospy
 from sensor_msgs.msg import (
     BatteryState,
 )  # Callback function to print the subscribed data on the terminal
-import numpy as np
-import csv
 
 # Should be culled or improved to actually log the battery levels, to a file, when ros bags should contain this if properly published??
 
