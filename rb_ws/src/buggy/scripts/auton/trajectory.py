@@ -82,6 +82,7 @@ class Trajectory:
             self.interpolation = CubicSpline(self.indices, self.positions)
             self.interpolation.extrapolate = True
 
+        # TODO: check units
         # Calculate the distances along the trajectory
         dt = 0.01 #dt is time step (in seconds (?))
         ts = np.arange(len(self.positions) - 1, step=dt)  # times corresponding to each position (?)
@@ -349,6 +350,7 @@ class Trajectory:
 
 if __name__ == "__main__":
     # Example usage
+    # TODO: do we want to keep this example usage? where is it even useful for
     trajectory = Trajectory("/rb_ws/src/buggy/paths/quartermiletrack.json")
 
 

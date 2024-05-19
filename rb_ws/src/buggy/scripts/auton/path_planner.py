@@ -5,14 +5,19 @@ from sensor_msgs.msg import NavSatFix
 from std_msgs.msg import Float64
 from pose import Pose
 
-from occupancy_grid.grid_manager import OccupancyGrid
-from path_projection import Projector
 from trajectory import Trajectory
 from world import World
+
 class PathPlanner():
+    """
+    Class to generate new trajectory splices for SC autonomous system.
+
+    Takes in a default trajectory and an inner curb trajectory.
+
+    """
     # move the curb towards the center of the course by CURB_MARGIN meters
     # for a margin of safety
-    CURB_MARGIN = 1#m
+    CURB_MARGIN = 1 #m
 
     # the offset is calculated as a mirrored sigmoid function of distance
     OFFSET_SCALE_CROSS_TRACK = 2 #m
@@ -30,22 +35,9 @@ class PathPlanner():
     RESOLUTION = 150
 
     def __init__(self, nominal_traj:Trajectory, left_curb:Trajectory) -> None:
-        self.occupancy_grid = OccupancyGrid()
-
-        # TODO: update with NAND wheelbase
-        self.path_projector = Projector(1.3)
 
         self.debug_passing_traj_publisher = rospy.Publisher(
             "/auton/debug/passing_traj", NavSatFix, queue_size=1000
-        )
-
-        self.debug_splice_pt_publisher = rospy.Publisher(
-            "/auton/debug/splice_pts", NavSatFix, queue_size=1000
-        )
-
-
-        self.debug_grid_cost_publisher = rospy.Publisher(
-            "/auton/debug/grid_cost", Float64, queue_size=0
         )
 
         self.other_buggy_xtrack_publisher = rospy.Publisher(
