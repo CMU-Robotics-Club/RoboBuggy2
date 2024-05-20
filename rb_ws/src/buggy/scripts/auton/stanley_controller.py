@@ -15,6 +15,7 @@ from world import World
 class StanleyController(Controller):
     """
     Stanley Controller (front axle used as reference point)
+    Referenced from this paper: https://ai.stanford.edu/~gabeh/papers/hoffmann_stanley_control07.pdf
     """
 
     LOOK_AHEAD_DIST_CONST = 0.05 # s
