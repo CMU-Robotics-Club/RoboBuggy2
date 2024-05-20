@@ -11,6 +11,10 @@ from std_msgs.msg import Int8
 from microstrain_inertial_msgs.msg import GNSSFixInfo
 
 class Telematics:
+    """
+    Converts subscribers and publishers that need to be reformated, so that they are readible.
+    """
+
     def __init__(self):
         """Generate all the subscribers and publishers that need to be reformatted.
         """

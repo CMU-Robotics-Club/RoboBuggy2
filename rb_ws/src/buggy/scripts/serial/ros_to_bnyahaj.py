@@ -239,7 +239,7 @@ if __name__ == "__main__":
 
     rospy.init_node("ros_bnyahaj")
     if self_name == "SC" and other_name is None:
-        rospy.loerr(
+        rospy.logwarn(
             "Not reading NAND Odometry messages, double check roslaunch files for ros_to_bnyahaj"
         )
     elif other_name is None:
