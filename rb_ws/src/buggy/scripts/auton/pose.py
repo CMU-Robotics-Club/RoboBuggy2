@@ -10,6 +10,7 @@ class Pose:
     A data structure for storing 2D poses, as well as a set of
     convenience methods for transforming/manipulating poses
 
+    TODO: All Pose objects are with respect to World coordinates.
     """
 
     __x = None
@@ -204,6 +205,7 @@ class Pose:
 
 
 if __name__ == "__main__":
+    # TODO: again do we want example code in these classes
     rospose = ROSPose()
     rospose.position.x = 1
     rospose.position.y = 2
