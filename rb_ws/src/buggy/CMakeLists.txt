@@ -54,7 +54,6 @@ add_message_files(
   FILES
   EncoderStatus.msg
   LoRaEvent.msg
-  BuggyState.msg
 )
 
 ## Generate services in the 'srv' folder
