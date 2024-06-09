@@ -22,49 +22,21 @@ class BuggyState:
     __yaw_v = None
 
 
-    def __init__(self, east, north, yaw):
+    def __init__(self, east, north, yaw, east_v = 0, north_v = 0, yaw_v = 0):
         self.easting = east
         self.northing = north
         self.yaw = yaw
 
-        self.easting_v = 0
-        self.northing_v = 0
-        self.yaw_v = 0
-
-
-    @staticmethod
-    def rospose_to_pose(rospose: ROSPose):
-        """
-        Converts a geometry_msgs/Pose to a pose3d/Pose
-
-        Args:
-            posestamped (geometry_msgs/Pose): pose to convert
-
-        Returns:
-            Pose: converted pose
-        """
-        (_, _, yaw) = euler_from_quaternion(
-            [
-                rospose.orientation.x,
-                rospose.orientation.y,
-                rospose.orientation.z,
-                rospose.orientation.w,
-            ]
-        )
-
-        p = BuggyState(rospose.position.x, rospose.position.y, yaw)
-        return p
-
-    def heading_to_quaternion(heading):
-        q = quaternion_from_euler(0, 0, heading)
-        return q
+        self.easting_v = east_v
+        self.northing_v = north_v
+        self.yaw_v = yaw_v
 
 
     def __repr__(self) -> str:
-        return f"Pose(x={self.x}, y={self.y}, theta={self.theta})"
+        return f"Pose(easting={self.easting}, northing={self.northing}, yaw={self.yaw}), easting velocity={self.easting_v}, northing velocity={self.northing_v}, yaw velocity={self.yaw_v})"
 
     def copy(self):
-        return BuggyState(self.easting, self.northing, self.yaw)
+        return BuggyState(self.easting, self.northing, self.yaw, self.easting_v, self.northing_v, self.yaw_v)
 
     @property
     def easting(self):
@@ -93,6 +65,31 @@ class BuggyState:
         # normalize theta to [-pi, pi]
         self.__yaw = np.arctan2(np.sin(yaw), np.cos(yaw))
 
+    @property
+    def easting_v(self):
+        return self.easting_v
+
+    @__easting_v.setter
+    def easting_v(self, eastv):
+        self.__easting_v = eastv
+
+    @property
+    def northing_v(self):
+        return self.northing_v
+
+    @__northing_v.setter
+    def easting(self, northv):
+        self.__northing_v = northv
+
+    @property
+    def yaw_v(self):
+        return self.yaw_v
+
+    @__yaw_v.setter
+    def easting(self, yawv):
+        self.__yaw_v = yawv
+
+
     def to_mat(self):
         """
         Returns the pose as a 3x3 homogeneous transformation matrix
@@ -105,18 +102,19 @@ class BuggyState:
             ]
         )
 
+    # TODO: currently creates state with zero velocity
     @staticmethod
     def from_mat(mat):
         """
         Creates a pose from a 3x3 homogeneous transformation matrix
         """
-        return Pose(mat[0, 2], mat[1, 2], np.arctan2(mat[1, 0], mat[0, 0]))
+        return BuggyState(mat[0, 2], mat[1, 2], np.arctan2(mat[1, 0], mat[0, 0]))
 
     def invert(self):
         """
         Inverts the pose
         """
-        return Pose.from_mat(np.linalg.inv(self.to_mat()))
+        return BuggyState.from_mat(np.linalg.inv(self.to_mat()))
 
     def convert_pose_from_global_to_local_frame(self, pose):
         """
@@ -184,7 +182,7 @@ class BuggyState:
         """
         Rotates the pose by the given angle
         """
-        self.theta += angle
+        self.yaw += angle
 
     def translate(self, x, y):
         """
@@ -194,37 +192,22 @@ class BuggyState:
         self.y += y
 
     def __add__(self, other):
-        return Pose(self.x + other.x, self.y + other.y, self.theta + other.theta)
+        return BuggyState(self.easting + other.easting, self.northing + other.northing, self.yaw + other.yaw)
 
     def __sub__(self, other):
-        return Pose(self.x - other.x, self.y - other.y, self.theta - other.theta)
+        return BuggyState(self.easting - other.easting, self.northing - other.northing, self.yaw - other.yaw)
 
     def __neg__(self):
-        return Pose(-self.x, -self.y, -self.theta)
+        return BuggyState(-self.easting, -self.northing, -self.yaw)
 
     def __mul__(self, other):
         p1_mat = self.to_mat()
         p2_mat = other.to_mat()
 
-        return Pose.from_mat(p1_mat @ p2_mat)
+        return BuggyState.from_mat(p1_mat @ p2_mat)
 
     def __truediv__(self, other):
         p1_mat = self.to_mat()
         p2_mat = other.to_mat()
 
-        return Pose.from_mat(np.linalg.inv(p2_mat) @ p1_mat)
-
-
-if __name__ == "__main__":
-    # TODO: again do we want example code in these classes
-    rospose = ROSPose()
-    rospose.position.x = 1
-    rospose.position.y = 2
-    rospose.position.z = 3
-    rospose.orientation.x = 0
-    rospose.orientation.y = 0
-    rospose.orientation.z = -0.061461
-    rospose.orientation.w = 0.9981095
-
-    pose = Pose.rospose_to_pose(rospose)
-    print(pose)  # Pose(x=1, y=2, theta=-0.123)
+        return BuggyState.from_mat(np.linalg.inv(p2_mat) @ p1_mat)
