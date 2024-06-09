@@ -54,6 +54,7 @@ add_message_files(
   FILES
   EncoderStatus.msg
   LoRaEvent.msg
+  TrajectoryMsg.msg
 )
 
 ## Generate services in the 'srv' folder

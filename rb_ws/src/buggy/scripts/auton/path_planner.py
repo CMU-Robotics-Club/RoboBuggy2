@@ -3,6 +3,7 @@ import numpy as np
 import rospy
 from sensor_msgs.msg import NavSatFix
 from std_msgs.msg import Float64
+from buggy.msg import TrajectoryMsg
 from pose import Pose
 
 from trajectory import Trajectory
@@ -43,6 +44,8 @@ class PathPlanner():
         self.other_buggy_xtrack_publisher = rospy.Publisher(
             "/auton/debug/other_buggy_xtrack", Float64, queue_size=1
         )
+
+        self.traj_publisher = rospy.Publisher("SC/nav/traj", TrajectoryMsg, queue_size=1)
 
         self.nominal_traj = nominal_traj
         self.left_curb = left_curb
@@ -202,7 +205,8 @@ class PathPlanner():
             self.debug_passing_traj_publisher.publish(reference_navsat)
 
         local_traj = Trajectory(json_filepath=None, positions=positions)
-
+        self.traj_publisher.publish(local_traj.pack())
+        print("published???")
         return local_traj, \
                 local_traj.get_closest_index_on_path(
                 self_pose.x,
