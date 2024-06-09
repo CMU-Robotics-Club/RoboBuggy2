@@ -116,6 +116,7 @@ class BuggyState:
         """
         return BuggyState.from_mat(np.linalg.inv(self.to_mat()))
 
+    # TODO: do we want all these conversion methods? where are they even used?
     def convert_pose_from_global_to_local_frame(self, pose):
         """
         Converts the inputted pose from the global frame to the local frame
