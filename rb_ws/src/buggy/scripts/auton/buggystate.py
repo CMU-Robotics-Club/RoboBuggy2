@@ -1,4 +1,5 @@
 import numpy as np
+import utm
 from nav_msgs.msg import Odometry as ROSOdom
 from tf.transformations import euler_from_quaternion
 from tf.transformations import quaternion_from_euler
@@ -17,18 +18,41 @@ class BuggyState:
     """
     def __init__(self):
         self.rosodom : ROSOdom = None
-        rospy.Subscriber("/nav/odom", ROSOdom, self.get_odom)
+        rospy.Subscriber("/nav/odom", ROSOdom, self.update_odom)
 
-    def get_odom(self, msg):
+    def update_odom(self, msg):
         self.rosodom = msg
 
-    """
-    FUNCTIONALITY TO ADD:
-        get pose (in utm)
-        get velocity (in utm)
-        get covariance (in whatever units)
-        create a new rosodom message using some (maybe not all) information (by default set missing info to garbage vals)
+    def get_pose(self):
+        if self.rosodom == None:
+            return None
 
-        how does this interact with gps coords and all
-        can we just make this combine with that
-    """
+        rospose = self.rosodom.pose.pose
+        yaw = (_, _, yaw) = euler_from_quaternion(
+            [
+                rospose.orientation.x,
+                rospose.orientation.y,
+                rospose.orientation.z,
+                rospose.orientation.w,
+            ]
+        )
+
+        easting, northing = utm.from_latlon(rospose.position.x, rospose.position.y)
+
+        return (easting, northing, yaw)
+
+
+    def get_pos_covariance(self):
+        if self.rosodom == None:
+            return None
+        return self.rosodom.pose.covariance
+
+    # TODO: finish this!
+    def get_velocity(self):
+        if self.rosodom == None:
+            return None
+        return None
+
+    # TODO: finish this!
+    def create_odom(self):
+        return None
