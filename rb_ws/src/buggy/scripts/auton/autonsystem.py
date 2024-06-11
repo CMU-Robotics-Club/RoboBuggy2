@@ -4,6 +4,7 @@ import argparse
 from threading import Lock
 
 import threading
+from rb_ws.src.buggy.scripts.auton.buggystate import BuggyState
 import rospy
 
 # ROS Message Imports
@@ -63,11 +64,16 @@ class AutonSystem:
         self.lock = Lock()
         self.ticks = 0
         self.self_odom_msg = None
-        self.gps_odom_msg = None
+        # self.gps_odom_msg = None
         self.other_odom_msg = None
-        self.use_gps_pos = False
+        # self.use_gps_pos = False
 
-        rospy.Subscriber(self_name + "/nav/odom", Odometry, self.update_self_odom)
+        # TODO: will need to be updated when we add namespaces
+        self.sc_state = BuggyState("sc")
+        self.nand_state = BuggyState("sc")
+
+        # rospy.Subscriber(self_name + "/nav/odom", Odometry, self.update_self_odom)
+
         rospy.Subscriber(self_name + "/gnss1/odom", Odometry, self.update_self_odom_backup)
 
         # to report if the filter position has separated (so we need to use the antenna position)
@@ -103,13 +109,13 @@ class AutonSystem:
 
 
     # functions to read data from ROS nodes
-    def update_use_gps(self, msg):
-        with self.lock:
-            self.use_gps_pos = msg.data
+    # def update_use_gps(self, msg):
+    #     with self.lock:
+    #         self.use_gps_pos = msg.data
 
-    def update_self_odom_backup(self, msg):
-        with self.lock:
-            self.gps_odom_msg = msg
+    # def update_self_odom_backup(self, msg):
+    #     with self.lock:
+    #         self.gps_odom_msg = msg
 
     def update_self_odom(self, msg):
         with self.lock:
@@ -136,19 +142,20 @@ class AutonSystem:
            A boolean describing the status of the buggy (safe for auton or unsafe for auton)
         """
         # TODO: should we check if we're recieving messages from NAND?
-        if (self.self_odom_msg == None):
+        if (self.sc_state.get_pose() == None):
             rospy.logwarn("WARNING: no available position estimate")
             return False
 
-        if (self.self_odom_msg.pose.covariance[0] ** 2 + self.self_odom_msg.pose.covariance[7] ** 2 > 1**2):
+        if (self.sc_state.get_pos_covariance[0] ** 2 + self.sc_state.get_pos_covariance[7] ** 2 > 1**2):
             rospy.logwarn("checking position estimate certainty")
             return False
 
         # waits until covariance is acceptable to check heading
         with self.lock:
-            self_pose = self.get_world_pose(self.self_odom_msg)
-            current_heading = self_pose.theta
-            closest_heading = self.cur_traj.get_heading_by_index(trajectory.get_closest_index_on_path(self_pose.x, self_pose.y))
+            self_easting, self_northing, self_yaw = self.sc_state.get_pose()
+            current_heading = self_yaw
+            # TODO: make get_closest_index_on_path work with UTM, not world!
+            closest_heading = self.cur_traj.get_heading_by_index(trajectory.get_closest_index_on_path(self_easting, self_northing))
         rospy.loginfo("current heading: " + str(np.rad2deg(current_heading)))
         self.heading_publisher.publish(Float32(np.rad2deg(current_heading)))
 
@@ -161,7 +168,7 @@ class AutonSystem:
             closest_heading = 2*np.pi + closest_heading
 
         if (abs(current_heading - closest_heading) >= np.pi/2):
-            rospy.logwarn("WARNING: INCORRECT HEADING! restart stack. Current heading [-180, 180]: " + str(np.rad2deg(self_pose.theta)))
+            rospy.logwarn("WARNING: INCORRECT HEADING! restart stack. Current heading [-180, 180]: " + str(np.rad2deg(self_yaw)))
             return False
 
         return True
@@ -195,12 +202,12 @@ class AutonSystem:
         if self.has_other_buggy:
             t_planner.join()
 
-    def get_world_pose(self, msg):
-        #TODO: this should be redundant - converting rospose to pose should automatically handle world conversions
-        current_rospose = msg.pose.pose
-        # Get data from message
-        pose_gps = Pose.rospose_to_pose(current_rospose)
-        return World.gps_to_world_pose(pose_gps)
+    # def get_world_pose(self, msg):
+    #     #TODO: this should be redundant - converting rospose to pose should automatically handle world conversions
+    #     current_rospose = msg.pose.pose
+    #     # Get data from message
+    #     pose_gps = Pose.rospose_to_pose(current_rospose)
+    #     return World.gps_to_world_pose(pose_gps)
 
     def local_controller_thread(self):
         while (not rospy.is_shutdown()):
@@ -208,20 +215,15 @@ class AutonSystem:
             self.rosrate_controller.sleep()
 
     def local_controller_tick(self):
-        if not self.use_gps_pos:
-            with self.lock:
-                state_msg = self.self_odom_msg
-        else:
-            with self.lock:
-                state_msg = self.gps_odom_msg
 
         # For viz and debugging
-        pose = self.get_world_pose(state_msg)
-        self.heading_publisher.publish(Float32(np.rad2deg(pose.theta)))
+        sc_easting, sc_northing, sc_yaw,  = self.sc_state.get_pose()
+        self.heading_publisher.publish(Float32(np.rad2deg(sc_yaw)))
 
         # Compute control output
+        # TODO: rewrite compute_control to use buggy state, NOT the entire odom object. (why were we passing around an odom object anyway? instead of just subscribing to it?)
         steering_angle = self.local_controller.compute_control(
-            state_msg, self.cur_traj)
+            self.sc_state, self.cur_traj)
         steering_angle_deg = np.rad2deg(steering_angle)
         self.steer_publisher.publish(Float64(steering_angle_deg))
 
@@ -229,32 +231,31 @@ class AutonSystem:
     def planner_thread(self):
         while (not rospy.is_shutdown()):
             self.rosrate_planner.sleep()
-            if not self.other_odom_msg is None:
+            if not self.nand_state.get_pose is None:
                 with self.lock:
-                    self_pose = self.get_world_pose(self.self_odom_msg)
-                    other_pose = self.get_world_pose(self.other_odom_msg)
+                    sc_easting, sc_northing, sc_yaw = self.sc_state.get_pose()
+                    nand_easting, nand_northing, nand_yaw = self.nand_state.get_pose()
 
-                distance = (self_pose.x - other_pose.x) ** 2 + (self_pose.y - other_pose.y) ** 2
+                distance = (sc_easting - nand_easting) ** 2 + (sc_northing - nand_northing) ** 2
                 distance = np.sqrt(distance)
                 self.distance_publisher.publish(Float64(distance))
 
                 self.planner_tick()
 
     def planner_tick(self):
-        if not self.use_gps_pos:
-            with self.lock:
-                self_pose = self.get_world_pose(self.self_odom_msg)
-        else:
-            with self.lock:
-                self_pose = self.get_world_pose(self.gps_odom_msg)
+        # NOTE: do we want to check for None?
+        with self.lock:
+            # NOTE: these are in UTM (used to be in world)
+            sc_easting, sc_northing, sc_yaw = self.sc_state.get_pose()
 
         with self.lock:
-            other_pose = self.get_world_pose(self.other_odom_msg)
+            nand_easting, nand_northing, nand_yaw = self.nand_state.get_pose()
 
         # update local trajectory via path planner
+        # TODO: have compute_traj take in a buggy state instead of poses
         self.cur_traj, cur_idx = self.path_planner.compute_traj(
-                                            self_pose,
-                                            other_pose)
+                                            self.sc_state,
+                                            self.nand_state)
         self.local_controller.current_traj_index = cur_idx
 
 def init_parser ():

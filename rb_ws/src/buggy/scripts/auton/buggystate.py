@@ -16,9 +16,9 @@ class BuggyState:
     (functionally: this should replace pose and world)
 
     """
-    def __init__(self):
+    def __init__(self, name = "sc"):
         self.rosodom : ROSOdom = None
-        rospy.Subscriber("/nav/odom", ROSOdom, self.update_odom)
+        rospy.Subscriber(name + "/nav/odom", ROSOdom, self.update_odom)
 
     def update_odom(self, msg):
         self.rosodom = msg
@@ -56,3 +56,5 @@ class BuggyState:
     # TODO: finish this!
     def create_odom(self):
         return None
+
+    # TODO: update the odometry data with GPS data to keep as accurate as possible (see old autonsystem) - this should always return the most accurate estimate of the buggy's position
