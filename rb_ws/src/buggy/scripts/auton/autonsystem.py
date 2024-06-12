@@ -74,7 +74,7 @@ class AutonSystem:
 
         # rospy.Subscriber(self_name + "/nav/odom", Odometry, self.update_self_odom)
 
-        rospy.Subscriber(self_name + "/gnss1/odom", Odometry, self.update_self_odom_backup)
+        # rospy.Subscriber(self_name + "/gnss1/odom", Odometry, self.update_self_odom_backup)
 
         # to report if the filter position has separated (so we need to use the antenna position)
         rospy.Subscriber(self_name + "/debug/filter_gps_seperation_status", Bool, self.update_use_gps)
