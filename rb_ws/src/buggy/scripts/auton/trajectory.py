@@ -349,14 +349,14 @@ class Trajectory:
             + start_index
         )
 
-    def pack(self):
+    def pack(self) -> TrajectoryMsg:
         traj = TrajectoryMsg()
         traj.easting = self.positions[:, 0]
         traj.northing = self.positions[:, 1]
         traj.time = time.time()
         return traj
     
-    def unpack(trajMsg : TrajectoryMsg):
+    def unpack(trajMsg : TrajectoryMsg) -> Trajectory:
         pos = np.array([trajMsg.easting, trajMsg.northing]).transpose(1, 0)
         return Trajectory(positions=pos)
 
