@@ -1,11 +1,12 @@
 import json
+import time
 import uuid
 import matplotlib.pyplot as plt
-import numpy as np
 
-from scipy.interpolate import Akima1DInterpolator, CubicSpline
 from buggy.msg import TrajectoryMsg
-import time
+
+import numpy as np
+from scipy.interpolate import Akima1DInterpolator, CubicSpline
 
 from world import World
 
@@ -355,7 +356,7 @@ class Trajectory:
         traj.northing = self.positions[:, 1]
         traj.time = time.time()
         return traj
-    
+
     def unpack(trajMsg : TrajectoryMsg) -> Trajectory:
         pos = np.array([trajMsg.easting, trajMsg.northing]).transpose(1, 0)
         return Trajectory(positions=pos)

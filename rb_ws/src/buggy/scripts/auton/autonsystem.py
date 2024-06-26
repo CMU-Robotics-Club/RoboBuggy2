@@ -124,7 +124,7 @@ class AutonSystem:
     def update_other_steering_angle(self, msg):
         with self.lock:
             self.other_steering = msg.data
-        
+
     def update_traj(self, msg):
         with self.lock:
             # print("New Trajectory:")
