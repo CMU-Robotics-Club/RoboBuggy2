@@ -206,7 +206,6 @@ class PathPlanner():
 
         local_traj = Trajectory(json_filepath=None, positions=positions)
         self.traj_publisher.publish(local_traj.pack())
-        print("published???")
         return local_traj, \
                 local_traj.get_closest_index_on_path(
                 self_pose.x,

@@ -5,6 +5,7 @@ import numpy as np
 
 from scipy.interpolate import Akima1DInterpolator, CubicSpline
 from buggy.msg import TrajectoryMsg
+import time
 
 from world import World
 
@@ -352,10 +353,11 @@ class Trajectory:
         traj = TrajectoryMsg()
         traj.easting = self.positions[:, 0]
         traj.northing = self.positions[:, 1]
+        traj.time = time.time()
         return traj
     
     def unpack(trajMsg : TrajectoryMsg):
-        pos = np.array([trajMsg.easting, trajMsg.northing])
+        pos = np.array([trajMsg.easting, trajMsg.northing]).transpose(1, 0)
         return Trajectory(positions=pos)
 
 
