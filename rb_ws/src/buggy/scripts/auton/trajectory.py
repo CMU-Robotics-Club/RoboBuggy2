@@ -357,7 +357,7 @@ class Trajectory:
         traj.time = time.time()
         return traj
 
-    def unpack(trajMsg : TrajectoryMsg) -> Trajectory:
+    def unpack(trajMsg : TrajectoryMsg):
         pos = np.array([trajMsg.easting, trajMsg.northing]).transpose(1, 0)
         return Trajectory(positions=pos)
 
