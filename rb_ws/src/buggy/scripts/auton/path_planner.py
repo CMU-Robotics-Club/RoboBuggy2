@@ -205,7 +205,7 @@ class PathPlanner():
             self.debug_passing_traj_publisher.publish(reference_navsat)
 
         local_traj = Trajectory(json_filepath=None, positions=positions)
-        self.traj_publisher.publish(local_traj.pack())
+        self.traj_publisher.publish(local_traj.pack(self_pose.x, self_pose.y))
         return local_traj, \
                 local_traj.get_closest_index_on_path(
                 self_pose.x,

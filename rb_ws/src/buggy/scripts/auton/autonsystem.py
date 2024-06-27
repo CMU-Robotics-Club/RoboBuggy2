@@ -127,10 +127,8 @@ class AutonSystem:
 
     def update_traj(self, msg):
         with self.lock:
-            # print("New Trajectory:")
-            # print(msg.easting)
-            # print(msg.northing)
-            self.cur_traj = Trajectory.unpack(msg)
+            self.cur_traj, self.local_controller.current_traj_index = Trajectory.unpack(msg)
+            
 
 
     def init_check(self):
@@ -261,10 +259,7 @@ class AutonSystem:
             other_pose = self.get_world_pose(self.other_odom_msg)
 
         # update local trajectory via path planner
-        _, cur_idx = self.path_planner.compute_traj(
-                                            self_pose,
-                                            other_pose)
-        self.local_controller.current_traj_index = cur_idx
+        self.path_planner.compute_traj(self_pose, other_pose)
 
 def init_parser ():
     """
