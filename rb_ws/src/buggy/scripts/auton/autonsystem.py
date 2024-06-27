@@ -70,7 +70,7 @@ class AutonSystem:
 
         # TODO: will need to be updated when we add namespaces
         self.sc_state = BuggyState("sc")
-        self.nand_state = BuggyState("sc")
+        self.nand_state = BuggyState("nand")
 
         # rospy.Subscriber(self_name + "/nav/odom", Odometry, self.update_self_odom)
 
