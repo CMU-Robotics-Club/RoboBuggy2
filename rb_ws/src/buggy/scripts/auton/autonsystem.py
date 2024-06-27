@@ -4,7 +4,6 @@ import argparse
 from threading import Lock
 
 import threading
-from rb_ws.src.buggy.scripts.auton.buggystate import BuggyState
 import rospy
 
 # ROS Message Imports
@@ -16,11 +15,8 @@ import numpy as np
 from trajectory import Trajectory
 from world import World
 from controller import Controller
-from pure_pursuit_controller import PurePursuitController
 from stanley_controller import StanleyController
-from brake_controller import BrakeController
 from model_predictive_controller import ModelPredictiveController
-# from model_predictive_interpolation import ModelPredictiveController
 from path_planner import PathPlanner
 from pose import Pose
 
@@ -38,7 +34,6 @@ class AutonSystem:
 
     global_trajectory: Trajectory = None
     local_controller: Controller = None
-    brake_controller: BrakeController = None
     lock = None
     steer_publisher = None
     ticks = 0
@@ -46,7 +41,6 @@ class AutonSystem:
     def __init__(self,
             global_trajectory,
             local_controller,
-            brake_controller,
             self_name,
             other_name,
             curb_traj,
@@ -58,10 +52,9 @@ class AutonSystem:
         # local trajectory is initialized as global trajectory. If there is no other buggy,
         # the local trajectory is never updated.
 
-        self.has_other_buggy = not other_name is None
+        self.has_other_buggy = not (other_name is None)
         self.cur_traj = global_trajectory
         self.local_controller = local_controller
-        self.brake_controller = brake_controller
 
         left_curb = curb_traj
         self.path_planner = PathPlanner(global_trajectory, left_curb)
@@ -70,13 +63,14 @@ class AutonSystem:
         self.lock = Lock()
         self.ticks = 0
         self.self_odom_msg = None
-        # self.gps_odom_msg = None
+        self.gps_odom_msg = None
         self.other_odom_msg = None
-        # self.use_gps_pos = False
+        self.use_gps_pos = False
 
         rospy.Subscriber(self_name + "/nav/odom", Odometry, self.update_self_odom)
         rospy.Subscriber(self_name + "/gnss1/odom", Odometry, self.update_self_odom_backup)
-        # only if the filtered position has separated do we use the antenna position
+
+        # to report if the filter position has separated (so we need to use the antenna position)
         rospy.Subscriber(self_name + "/debug/filter_gps_seperation_status", Bool, self.update_use_gps)
 
         if self.has_other_buggy:
@@ -91,16 +85,12 @@ class AutonSystem:
         self.steer_publisher = rospy.Publisher(
             self_name + "/buggy/input/steering", Float64, queue_size=1
         )
-        self.brake_debug_publisher = rospy.Publisher(
-            self_name + "/auton/debug/brake", Float64, queue_size=1
-        )
         self.heading_publisher = rospy.Publisher(
             self_name + "/auton/debug/heading", Float32, queue_size=1
         )
         self.distance_publisher = rospy.Publisher(
             self_name + "/auton/debug/distance", Float64, queue_size=1
         )
-
 
         self.controller_rate = 100
         self.rosrate_controller = rospy.Rate(self.controller_rate)
@@ -111,13 +101,15 @@ class AutonSystem:
         self.profile = profile
         self.tick_caller()
 
+
+    # functions to read data from ROS nodes
     def update_use_gps(self, msg):
         with self.lock:
             self.use_gps_pos = msg.data
 
-    # def update_self_odom_backup(self, msg):
-    #     with self.lock:
-    #         self.gps_odom_msg = msg
+    def update_self_odom_backup(self, msg):
+        with self.lock:
+            self.gps_odom_msg = msg
 
     def update_self_odom(self, msg):
         with self.lock:
@@ -131,24 +123,32 @@ class AutonSystem:
         with self.lock:
             self.other_steering = msg.data
 
+
     def init_check(self):
-        # checks that messages are being receieved
-        # (from both buggies if relevant)
-        # covariance is less than 1 meter
+        """
+        Checks if it's safe to switch the buggy into autonomous driving mode.
+        Specifically, it checks:
+            if we can recieve odometry messages from the buggy
+            if the covariance is acceptable (less than 1 meter)
+            if the buggy thinks it is facing in the correct direction wrt the local trajectory (not 180 degrees flipped)
+
+        Returns:
+           A boolean describing the status of the buggy (safe for auton or unsafe for auton)
+        """
+        # TODO: should we check if we're recieving messages from NAND?
         if (self.self_odom_msg == None):
             rospy.logwarn("WARNING: no available position estimate")
             return False
 
-        if (self.sc_state.get_pos_covariance[0] ** 2 + self.sc_state.get_pos_covariance[7] ** 2 > 1**2):
+        if (self.self_odom_msg.pose.covariance[0] ** 2 + self.self_odom_msg.pose.covariance[7] ** 2 > 1**2):
             rospy.logwarn("checking position estimate certainty")
             return False
 
         # waits until covariance is acceptable to check heading
         with self.lock:
-            self_easting, self_northing, self_yaw = self.sc_state.get_pose()
-            current_heading = self_yaw
-            # TODO: make get_closest_index_on_path work with UTM, not world!
-            closest_heading = self.cur_traj.get_heading_by_index(trajectory.get_closest_index_on_path(self_easting, self_northing))
+            self_pose = self.get_world_pose(self.self_odom_msg)
+            current_heading = self_pose.theta
+            closest_heading = self.cur_traj.get_heading_by_index(trajectory.get_closest_index_on_path(self_pose.x, self_pose.y))
         rospy.loginfo("current heading: " + str(np.rad2deg(current_heading)))
         self.heading_publisher.publish(Float32(np.rad2deg(current_heading)))
 
@@ -161,14 +161,15 @@ class AutonSystem:
             closest_heading = 2*np.pi + closest_heading
 
         if (abs(current_heading - closest_heading) >= np.pi/2):
-            rospy.logwarn("WARNING: INCORRECT HEADING! restart stack. Current heading [-180, 180]: " + str(np.rad2deg(self_yaw)))
+            rospy.logwarn("WARNING: INCORRECT HEADING! restart stack. Current heading [-180, 180]: " + str(np.rad2deg(self_pose.theta)))
             return False
 
         return True
 
     def tick_caller(self):
-
-
+        """
+        The main scheduler - starts threads for the pathplanner and the controller.
+        """
         rospy.loginfo("start checking initialization status")
         while ((not rospy.is_shutdown()) and not self.init_check()):
             self.init_check_publisher.publish(False)
@@ -195,8 +196,8 @@ class AutonSystem:
             t_planner.join()
 
     def get_world_pose(self, msg):
+        #TODO: this should be redundant - converting rospose to pose should automatically handle world conversions
         current_rospose = msg.pose.pose
-
         # Get data from message
         pose_gps = Pose.rospose_to_pose(current_rospose)
         return World.gps_to_world_pose(pose_gps)
@@ -207,15 +208,20 @@ class AutonSystem:
             self.rosrate_controller.sleep()
 
     def local_controller_tick(self):
+        if not self.use_gps_pos:
+            with self.lock:
+                state_msg = self.self_odom_msg
+        else:
+            with self.lock:
+                state_msg = self.gps_odom_msg
 
         # For viz and debugging
-        sc_easting, sc_northing, sc_yaw,  = self.sc_state.get_pose()
-        self.heading_publisher.publish(Float32(np.rad2deg(sc_yaw)))
+        pose = self.get_world_pose(state_msg)
+        self.heading_publisher.publish(Float32(np.rad2deg(pose.theta)))
 
         # Compute control output
-        # TODO: rewrite compute_control to use buggy state, NOT the entire odom object. (why were we passing around an odom object anyway? instead of just subscribing to it?)
         steering_angle = self.local_controller.compute_control(
-            self.sc_state, self.cur_traj)
+            state_msg, self.cur_traj)
         steering_angle_deg = np.rad2deg(steering_angle)
         self.steer_publisher.publish(Float64(steering_angle_deg))
 
@@ -223,35 +229,38 @@ class AutonSystem:
     def planner_thread(self):
         while (not rospy.is_shutdown()):
             self.rosrate_planner.sleep()
-            if not self.nand_state.get_pose is None:
+            if not self.other_odom_msg is None:
                 with self.lock:
-                    sc_easting, sc_northing, sc_yaw = self.sc_state.get_pose()
-                    nand_easting, nand_northing, nand_yaw = self.nand_state.get_pose()
+                    self_pose = self.get_world_pose(self.self_odom_msg)
+                    other_pose = self.get_world_pose(self.other_odom_msg)
 
-                distance = (sc_easting - nand_easting) ** 2 + (sc_northing - nand_northing) ** 2
+                distance = (self_pose.x - other_pose.x) ** 2 + (self_pose.y - other_pose.y) ** 2
                 distance = np.sqrt(distance)
                 self.distance_publisher.publish(Float64(distance))
 
                 self.planner_tick()
 
     def planner_tick(self):
-        # NOTE: do we want to check for None?
-        with self.lock:
-            # NOTE: these are in UTM (used to be in world)
-            sc_easting, sc_northing, sc_yaw = self.sc_state.get_pose()
+        if not self.use_gps_pos:
+            with self.lock:
+                self_pose = self.get_world_pose(self.self_odom_msg)
+        else:
+            with self.lock:
+                self_pose = self.get_world_pose(self.gps_odom_msg)
 
         with self.lock:
-            nand_easting, nand_northing, nand_yaw = self.nand_state.get_pose()
+            other_pose = self.get_world_pose(self.other_odom_msg)
 
         # update local trajectory via path planner
-        # TODO: have compute_traj take in a buggy state instead of poses
         self.cur_traj, cur_idx = self.path_planner.compute_traj(
-                                            self.sc_state,
-                                            self.nand_state)
+                                            self_pose,
+                                            other_pose)
         self.local_controller.current_traj_index = cur_idx
 
-if __name__ == "__main__":
-    rospy.init_node("auton_system")
+def init_parser ():
+    """
+        Returns a parser to read launch file arguments to AutonSystem.
+    """
     parser = argparse.ArgumentParser()
     parser.add_argument("--controller",
         type=str,
@@ -293,6 +302,11 @@ if __name__ == "__main__":
         "--profile",
         action='store_true',
         help="turn on profiling for the path planner")
+    return parser
+
+if __name__ == "__main__":
+    rospy.init_node("auton_system")
+    parser = init_parser()
 
     args, _ = parser.parse_known_args()
     ctrl = args.controller
@@ -321,12 +335,6 @@ if __name__ == "__main__":
         local_ctrller = StanleyController(
             self_name,
             start_index=start_index)
-
-    elif (ctrl == "pure_pursuit"):
-        local_ctrller = PurePursuitController(
-            self_name,
-            start_index=start_index)
-
     elif (ctrl == "mpc"):
         local_ctrller = ModelPredictiveController(
             self_name,
@@ -334,10 +342,10 @@ if __name__ == "__main__":
 
     if (local_ctrller == None):
         raise Exception("Invalid Controller Argument")
+
     auton_system = AutonSystem(
         trajectory,
         local_ctrller,
-        BrakeController(),
         self_name,
         other_name,
         left_curb,
