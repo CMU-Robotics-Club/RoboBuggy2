@@ -1,13 +1,10 @@
-import numpy as np
 import utm
 from nav_msgs.msg import Odometry as ROSOdom
 from sensor_msgs.msg import NavSatFix
 
 from tf.transformations import euler_from_quaternion
-from tf.transformations import quaternion_from_euler
 
-from geometry_msgs.msg import PoseStamped
-from std_msgs.msg import Float32, Float64, Bool
+from std_msgs.msg import Bool
 
 from microstrain_inertial_msgs.msg import GNSSFixInfo
 
