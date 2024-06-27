@@ -128,7 +128,7 @@ class AutonSystem:
     def update_traj(self, msg):
         with self.lock:
             self.cur_traj, self.local_controller.current_traj_index = Trajectory.unpack(msg)
-            
+
 
 
     def init_check(self):
