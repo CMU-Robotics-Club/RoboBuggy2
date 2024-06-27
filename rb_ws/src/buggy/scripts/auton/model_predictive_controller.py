@@ -36,7 +36,6 @@ class ModelPredictiveController(Controller):
     TIME = False
     ROS = True
 
-    # TODO: constants class
     # MPC Params
     WHEELBASE = 1.17 #m
     MASS = 62 #kg
@@ -86,7 +85,7 @@ class ModelPredictiveController(Controller):
     state_cost_diag = np.diag(state_cost)
     control_cost_diag = np.diag(control_cost)
 
-    def __init__(self, buggy_name : str, start_index=0, ref_trajectory=None, ROS=False) -> None:
+    def __init__(self, buggy_name, start_index=0, ref_trajectory=None, ROS=False) -> None:
         # instantiate parent
         super(ModelPredictiveController, self).__init__(start_index, buggy_name)
 

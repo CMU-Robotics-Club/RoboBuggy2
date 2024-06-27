@@ -14,8 +14,8 @@ from world import World
 
 class StanleyController(Controller):
     """
-    Stanley Controller (front axle used as reference point)
-    Referenced from this paper: https://ai.stanford.edu/~gabeh/papers/hoffmann_stanley_control07.pdf
+    Stanley Controller
+    Calculations based off FRONT axle of Buggy
     """
 
     LOOK_AHEAD_DIST_CONST = 0.05 # s
@@ -38,7 +38,7 @@ class StanleyController(Controller):
     def compute_control(
         self, state_msg: Odometry, trajectory: Trajectory
     ):
-        """Computes the steering angle determined by Stanley controller.
+        """Computes the steering angle necessary for stanley controller.
         Does this by looking at the crosstrack error + heading error
 
         Args:
@@ -64,10 +64,10 @@ class StanleyController(Controller):
         y = current_pose.y
 
         # Assume current pose is rear of buggy, project it to center of front axle
+        # 10 is a good number to search forward along the index
         front_x = x + StanleyController.WHEELBASE * np.cos(heading)
         front_y = y + StanleyController.WHEELBASE * np.sin(heading)
 
-        # setting range of indices to search so we don't have to search the entire path
         traj_index = trajectory.get_closest_index_on_path(
             front_x,
             front_y,

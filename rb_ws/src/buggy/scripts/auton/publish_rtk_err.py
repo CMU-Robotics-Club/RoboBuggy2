@@ -13,9 +13,8 @@ from world import World
 class RTKErrPublisher():
 
     """
-    Publish distance between front antenna and filtered output. Literally just a file to publish data via ROS for other classes to use.
+    Publish distance between front antenna and filtered output
     """
-    # TODO: pretty sure this isn't used anymore (we publish odom data for each buggy independently in autonsystem anyway, this node is only launched in debug) but wanted a second opinion since basically the entire stack is based on this data getting published correctly
 
     def __init__(self) -> None:
         self.odom_subscriber = rospy.Subscriber("/nav/odom", Odometry, self.update_odom)

@@ -13,12 +13,7 @@ from world import World
 from pose import Pose
 
 class SanityCheck:
-    """
-        Wrapper to publish a lot of error and debug data regarding the estimated position of the specified buggy and INS output
-    """
-
     FILTER_WARN_THRES = 1 #m
-
     def __init__(self,
             self_name,
             ) -> None:
@@ -32,19 +27,15 @@ class SanityCheck:
 
         self.status_flag_val : int = 0
         self.flags = []
-
-        # string list corresponds to INS warning flags as specified by the microstrain API below
-        # https://s3.amazonaws.com/files.microstrain.com/GQ7+User+Manual/external_content/dcp/Data/0x82/data/0x10.htm
-        # the indices correspond to the relevant bits (the last 5 bits all correspond to solution error, hence why there are repeats)
+        # string list where indices match the meaning of relevant bits
         self.error_messages : list = ["filter unstable", "filter converging", "roll/pitch warning", "heading warning", "position warning", "velocity warning", "IMU bias warning", "gnss clock warning", "antenna lever arm warning", "mounting transform warning", "solution error", "solution error", "solution error", "solution error", "solution error"]
 
         # filter seperation = 2, other error = 1, nothing wrong = 0
         self.warning = 0
 
-        self.warning_buffer_time = 1000 # warning flags need to be active >1 second before human driver alerted
+        self.warning_buffer_time = 1000 # warning flags active >1 second before human driver alerted
 
         self.warning_durations = [0] * 18 # keeps track of how long covariance, overrange warning, any of the filter status flags are active
-
 
         rospy.Subscriber(self_name + "/imu/overrange_status", ImuOverrangeStatus, self.update_overrange_status)
         rospy.Subscriber(self_name + "/nav/status.status_flags", FilterStatus, self.update_status_flags)
@@ -53,27 +44,20 @@ class SanityCheck:
 
 
         # these publishers are all bools as quick sanity checks (can display as indicators on foxglove for colors)
-
-        # publishes IMU overrange status (checks if any warnings are tripped)
         self.overrange_status_publisher = rospy.Publisher(self_name + "/debug/imu_overrange_status", Bool, queue_size=1)
 
-        # publishes if the filter and gps data have diverged significantly
         self.filter_gps_status_publisher = rospy.Publisher(self_name + "/debug/filter_gps_seperation_status", Bool, queue_size=1)
 
-        # publishes if the covariance is too high
         self.covariance_status_publisher = rospy.Publisher(self_name + "/debug/covariance_status", Bool, queue_size=1)
 
-        # TODO WHAT DOES THIS MEAN
         self.error_message_publisher = rospy.Publisher(
             self_name + "/nav/status/error_messages", String, queue_size=1
         )
 
-        # publishes the IMU filter status messages
         self.status_flags_publisher = rospy.Publisher(
             self_name + "/nav/status/tripped_status_flags", Int8MultiArray, queue_size=1
         )
 
-        # a compiled warning flag - outputs if any of the above have tripped
         self.overall_warning_publisher = rospy.Publisher(
             self_name + "/debug/sanity_warning", Int8, queue_size=1
         )
@@ -86,7 +70,6 @@ class SanityCheck:
 
     def update_gps_location(self, msg : PoseStamped):
         self.gps_location = msg.pose
-        # only updates the filter-gps seperation when we recieve new gps info
         self.calc_locations()
 
     def update_filter_location(self, msg):
@@ -98,9 +81,6 @@ class SanityCheck:
             self.warning = 1
 
     def calc_covariance(self):
-        """
-        Checks if the filter has any output, and if so, checks if total covariance is less than 100 cm.
-        """
         if (self.filter_location == None):
             self.covariance_status_publisher.publish(False)
         else:
@@ -112,11 +92,8 @@ class SanityCheck:
             self.covariance_status_publisher.publish(good_covariance)
 
     def calc_locations(self):
-        """
-        Compares distance between GPS location of rear antenna and filtered location output.
-        Only called upon antenna topic update since otherwise, comparing old data will cause the difference in location to appear larger than it may be.
-        """
-
+        # currently comparing distance between rear antenna and filtered loc
+        # ONLY CALL UPON ANTENNA TOPIC UPDATE
         if (self.filter_location == None or self.gps_location == None):
             self.filter_gps_status_publisher.publish(False)
         else:
@@ -135,9 +112,6 @@ class SanityCheck:
             self.filter_gps_status_publisher.publish(Bool(not filter_diverge))
 
     def is_overrange (self):
-        """
-        Checks all possible overrange warnings (gryo, magnetometer, accelerometer) reported by the IMU.
-        """
         s = self.imu_overrange_status
         if (s == None):
             self.overrange_status_publisher.publish(False)
@@ -154,9 +128,6 @@ class SanityCheck:
             self.imu_overrange_status.publish(not is_overrange)
 
     def filter_status_warning (self):
-        """
-        Checks if there are any error messages reported by the IMU and displays them in plain english.
-        """
         b = bin(self.status_flag_val)
         self.flags = Int8MultiArray()
         self.flags.data = []
@@ -189,9 +160,6 @@ class SanityCheck:
         self.error_message_publisher.publish(error_message)
 
     def sanity_check(self):
-        """
-        Just calls the other functions which update thier respective publishers, and publishes the overall warning
-        """
         self.warning = 0
         self.calc_covariance()
         self.is_overrange()
