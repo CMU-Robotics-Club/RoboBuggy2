@@ -1,8 +1,11 @@
 import json
+import time
 import uuid
 import matplotlib.pyplot as plt
-import numpy as np
 
+from buggy.msg import TrajectoryMsg
+
+import numpy as np
 from scipy.interpolate import Akima1DInterpolator, CubicSpline
 
 from world import World
@@ -346,6 +349,19 @@ class Trajectory:
             np.argmin(distances) / subsample_resolution * (end_index - start_index)
             + start_index
         )
+
+    def pack(self, x, y) -> TrajectoryMsg:
+        traj = TrajectoryMsg()
+        traj.easting = self.positions[:, 0]
+        traj.northing = self.positions[:, 1]
+        traj.time = time.time()
+        traj.cur_idx = self.get_closest_index_on_path(x,y)
+        return traj
+
+    def unpack(trajMsg : TrajectoryMsg):
+        pos = np.array([trajMsg.easting, trajMsg.northing]).transpose(1, 0)
+        cur_idx = trajMsg.cur_idx
+        return Trajectory(positions=pos), cur_idx
 
 
 if __name__ == "__main__":

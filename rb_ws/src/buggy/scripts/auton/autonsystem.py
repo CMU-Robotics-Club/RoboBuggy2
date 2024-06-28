@@ -9,6 +9,7 @@ import rospy
 # ROS Message Imports
 from std_msgs.msg import Float32, Float64, Bool
 from nav_msgs.msg import Odometry
+from buggy.msg import TrajectoryMsg
 
 import numpy as np
 
@@ -69,6 +70,7 @@ class AutonSystem:
 
         rospy.Subscriber(self_name + "/nav/odom", Odometry, self.update_self_odom)
         rospy.Subscriber(self_name + "/gnss1/odom", Odometry, self.update_self_odom_backup)
+        rospy.Subscriber(self_name + "/nav/traj", TrajectoryMsg, self.update_traj)
 
         # to report if the filter position has separated (so we need to use the antenna position)
         rospy.Subscriber(self_name + "/debug/filter_gps_seperation_status", Bool, self.update_use_gps)
@@ -122,6 +124,11 @@ class AutonSystem:
     def update_other_steering_angle(self, msg):
         with self.lock:
             self.other_steering = msg.data
+
+    def update_traj(self, msg):
+        with self.lock:
+            self.cur_traj, self.local_controller.current_traj_index = Trajectory.unpack(msg)
+
 
 
     def init_check(self):
@@ -252,10 +259,7 @@ class AutonSystem:
             other_pose = self.get_world_pose(self.other_odom_msg)
 
         # update local trajectory via path planner
-        self.cur_traj, cur_idx = self.path_planner.compute_traj(
-                                            self_pose,
-                                            other_pose)
-        self.local_controller.current_traj_index = cur_idx
+        self.path_planner.compute_traj(self_pose, other_pose)
 
 def init_parser ():
     """

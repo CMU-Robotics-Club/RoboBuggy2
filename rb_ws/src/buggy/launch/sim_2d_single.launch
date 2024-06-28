@@ -1,6 +1,6 @@
 <launch>
     <arg name="start_pos"        default="Hill1_SC" />
-    <arg name="autonsystem_args" default="--controller mpc --dist 0.0 --traj frew_test.json --self_name SC" />
+    <arg name="autonsystem_args" default="--controller stanley --dist 0.0 --traj buggycourse_safe.json --self_name SC" />
     <arg name="velocity"         default="15.0" />
     <arg name="buggy_name"       default="SC" />
 
