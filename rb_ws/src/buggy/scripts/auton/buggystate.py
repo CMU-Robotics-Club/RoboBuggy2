@@ -88,7 +88,7 @@ class BuggyState:
             return None
 
         rospose = self.filter_odom.pose.pose
-        yaw = (_, _, yaw) = euler_from_quaternion(
+        (_, _, yaw) = euler_from_quaternion(
             [
                 rospose.orientation.x,
                 rospose.orientation.y,
@@ -97,7 +97,7 @@ class BuggyState:
             ]
         )
 
-        easting, northing = utm.from_latlon(rospose.position.x, rospose.position.y)
+        (easting, northing, _, _) = utm.from_latlon(rospose.position.y, rospose.position.x)
 
         return (easting, northing, yaw)
 
