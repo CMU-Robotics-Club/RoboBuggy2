@@ -1,0 +1,12 @@
+digraph G {
+"sensor_wgs84" -> "sensor"[label="Broadcaster: /play_1720129361011058709\nAverage rate: 50.202 Hz\nMost recent transform: 1708774690.235 ( 11354792.209 sec old)\nBuffer length: 4.960 sec\n"];
+"base_footprint" -> "base_link"[label="Broadcaster: /static_transform\nAverage rate: 10.046 Hz\nMost recent transform: 1720129482.522 ( -0.078 sec old)\nBuffer length: 4.878 sec\n"];
+edge [style=invis];
+ subgraph cluster_legend { style=bold; color=black; label ="view_frames Result";
+"Recorded at time: 1720129482.444"[ shape=plaintext ] ;
+ }->"sensor_wgs84";
+edge [style=invis];
+ subgraph cluster_legend { style=bold; color=black; label ="view_frames Result";
+"Recorded at time: 1720129482.444"[ shape=plaintext ] ;
+ }->"base_footprint";
+}

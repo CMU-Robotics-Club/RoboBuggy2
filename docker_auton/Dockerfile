@@ -17,6 +17,7 @@ RUN apt-get install -y -qq \
   ros-noetic-microstrain-inertial-driver \
   ros-noetic-realsense2-camera \
   ros-noetic-realsense2-description \
+  ros-noetic-robot-pose-ekf \
   ros-${ROS_DISTRO}-mavros ros-${ROS_DISTRO}-mavros-extras ros-${ROS_DISTRO}-mavros-msgs
 
 # Run this now to cache it separately from other requirements
