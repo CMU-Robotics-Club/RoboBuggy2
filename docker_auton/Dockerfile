@@ -16,7 +16,8 @@ RUN apt-get install -y -qq \
   ros-noetic-foxglove-bridge \
   ros-noetic-microstrain-inertial-driver \
   ros-noetic-realsense2-camera \
-  ros-noetic-realsense2-description
+  ros-noetic-realsense2-description \
+  ros-noetic-robot-pose-ekf
 
 # Run this now to cache it separately from other requirements
 COPY cuda-requirements_TEMP_DO_NOT_EDIT.txt cuda-requirements.txt
