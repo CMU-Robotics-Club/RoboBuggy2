@@ -6,7 +6,7 @@ from tf.transformations import euler_from_quaternion
 
 from std_msgs.msg import Bool
 
-from microstrain_inertial_msgs.msg import GNSSFixInfo
+# from microstrain_inertial_msgs.msg import GNSSFixInfo
 
 
 
@@ -51,21 +51,6 @@ class BuggyState:
         self.gnss_2 = msg
     def update_gnss1_fix(self, msg):
         self.gps_fix = msg.fix_type
-
-    def odom_to_navsatfix(self, odom):
-        """Convert Odometry-type to NavSatFix-type for plotting on Foxglove
-        Args:
-            odom (Odometry): odometry object to convert
-        """
-        lat = odom.pose.pose.position.y
-        long = odom.pose.pose.position.x
-        down = odom.pose.pose.position.z
-        new_odom = NavSatFix()
-        new_odom.header = odom.header
-        new_odom.latitude = lat
-        new_odom.longitude = long
-        new_odom.altitude = down
-        return new_odom
 
     def get_gps_fix(self):
         fix_string = "fix type: "
@@ -113,3 +98,18 @@ class BuggyState:
             return None
         return self.filter_odom.twist.twist.linear
 
+
+    def odom_to_navsatfix(odom):
+        """Convert Odometry-type to NavSatFix-type for plotting on Foxglove
+        Args:
+            odom (Odometry): odometry object to convert
+        """
+        lat = odom.pose.pose.position.y
+        long = odom.pose.pose.position.x
+        down = odom.pose.pose.position.z
+        new_odom = NavSatFix()
+        new_odom.header = odom.header
+        new_odom.latitude = lat
+        new_odom.longitude = long
+        new_odom.altitude = down
+        return new_odom

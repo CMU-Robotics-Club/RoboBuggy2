@@ -9,7 +9,8 @@ RUN apt update
 RUN apt-get install -y -qq \
   python3-pip \
   python3-tk \
-  vim git tmux tree sl htop x11-apps
+  vim git tmux tree sl htop x11-apps \
+  python-is-python3
 
 RUN apt-get install -y -qq \
   ros-noetic-rosserial \
