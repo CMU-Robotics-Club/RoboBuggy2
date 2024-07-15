@@ -64,8 +64,8 @@ class VelocityUpdater:
 if __name__ == "__main__":
     rospy.init_node("vel_updater")
 
-    init_vel = float(sys.argv[1])
-    buggy_name = sys.argv[2]
+    init_vel = float(rospy.get_param("/velocity"))
+    buggy_name = rospy.get_param("/SC")
     vel = VelocityUpdater(init_vel, buggy_name)
     rate = rospy.Rate(vel.RATE)
 

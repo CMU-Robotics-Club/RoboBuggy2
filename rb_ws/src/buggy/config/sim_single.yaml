@@ -1,0 +1,15 @@
+start_pos: "Hill1_SC"
+velocity: 15.0
+buggy_name: "SC"
+
+manual_vel: false
+auto_vel: false
+
+
+# Auton Arguments
+controller: "stanley"
+dist: 0.0
+traj: "buggycourse_safe.json"
+self_name: "SC"
+other_name: NONE
+

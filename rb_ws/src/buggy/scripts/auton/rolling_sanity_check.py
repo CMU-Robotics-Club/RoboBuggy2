@@ -200,7 +200,7 @@ class SanityCheck:
 
 if __name__ == "__main__":
     rospy.init_node("rolling_sanity_check")
-    check = SanityCheck(sys.argv[1])
+    check = SanityCheck(rospy.get_param("/buggy_name"))
     rate = rospy.Rate(100)
 
     while not rospy.is_shutdown():

@@ -1,8 +1,5 @@
 <launch>
-    <arg name="start_pos"        default="Hill1_SC" />
-    <arg name="autonsystem_args" default="--controller stanley --dist 0.0 --traj buggycourse_safe.json --self_name SC" />
-    <arg name="velocity"         default="15.0" />
-    <arg name="buggy_name"       default="SC" />
+    <rosparam file="src/buggy/config/sim_single.yaml" />
 
     <node name="foxglove" pkg="foxglove_bridge" type="foxglove_bridge" />
 
@@ -12,21 +9,19 @@
     <group if="$(arg auto_vel)">
         <!-- Run the auto velocity updater -->
         <node name="sc_vel_updater" pkg="buggy" type="velocity_updater.py"
-            output="screen" args="$(arg velocity) SC"/>
+            output="screen"/>
     </group>
 
     <group if="$(arg manual_vel)">
         <!-- Run the manual velocity updater -->
         <node name="sc_velocity_ui" pkg="buggy" type="velocity_ui.py"
-            output="screen" args="$(arg velocity) SC"/>
+            output="screen"/>
     </group>
 
-    <node name="sim_2d_engine" pkg="buggy" type="engine.py" output="screen"
-        args="$(arg start_pos) $(arg velocity) $(arg buggy_name)"/>
+    <node name="sim_2d_engine" pkg="buggy" type="engine.py" output="screen"/>
 
-    <node name="auton_system" pkg="buggy" type="autonsystem.py" output="screen"
-        args="$(arg autonsystem_args)"/>
+    <node name="auton_system" pkg="buggy" type="autonsystem.py" output="screen"/>
 
-    <node name="rolling_sanity_check" pkg="buggy" type="rolling_sanity_check.py" output="screen" args="$(arg buggy_name)"/>
+    <node name="rolling_sanity_check" pkg="buggy" type="rolling_sanity_check.py" output="screen" args=""/>
 
 </launch>

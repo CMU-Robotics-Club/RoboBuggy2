@@ -332,9 +332,9 @@ if __name__ == "__main__":
     print("sim 2d eng args:")
     print(sys.argv)
 
-    start_pos = sys.argv[1]
-    velocity = float(sys.argv[2])
-    buggy_name = sys.argv[3]
+    start_pos = rospy.get_param("/start_pos")
+    velocity = float(rospy.get_param("/velocity"))
+    buggy_name = rospy.get_param("/buggy_name")
 
     sim = Simulator(start_pos, velocity, buggy_name)
     for i in range(100):

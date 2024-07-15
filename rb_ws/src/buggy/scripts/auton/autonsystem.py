@@ -261,65 +261,28 @@ class AutonSystem:
         # update local trajectory via path planner
         self.path_planner.compute_traj(self_pose, other_pose)
 
-def init_parser ():
-    """
-        Returns a parser to read launch file arguments to AutonSystem.
-    """
-    parser = argparse.ArgumentParser()
-    parser.add_argument("--controller",
-        type=str,
-        help="set controller type",
-        required=True)
-
-    parser.add_argument(
-        "--dist",
-        type=float,
-        help="start buggy at meters distance along the path",
-        required=True)
-
-    parser.add_argument(
-        "--traj",
-        type=str,
-        help="path to the trajectory file, relative to /rb_ws/src/buggy/paths/",
-        required=True)
-
-    parser.add_argument(
-        "--self_name",
-        type=str,
-        help="name of ego-buggy",
-        required=True)
-
-    parser.add_argument(
-        "--left_curb",
-        type=str,
-        help="Path of curb data, relative to /rb_ws/src/buggy/paths/",
-        default=""
-,        required=False)
-
-    parser.add_argument(
-        "--other_name",
-        type=str,
-        help="name of other buggy, if left unspecified, the autonsystem assumes it is the only buggy on the course",
-        required=False)
-
-    parser.add_argument(
-        "--profile",
-        action='store_true',
-        help="turn on profiling for the path planner")
-    return parser
-
 if __name__ == "__main__":
     rospy.init_node("auton_system")
-    parser = init_parser()
 
-    args, _ = parser.parse_known_args()
-    ctrl = args.controller
-    start_dist = args.dist
-    traj = args.traj
-    self_name = args.self_name
-    other_name = args.other_name
-    profile = args.profile
-    left_curb_file = args.left_curb
+    ctrl = rospy.get_param("/controller")
+    start_dist = rospy.get_param("/dist")
+    traj = rospy.get_param("/traj")
+    self_name = rospy.get_param("/self_name")
+
+    if rospy.has_param("/other_name"):
+        other_name = rospy.get_param("/other_name")
+    else:
+        other_name = None
+
+    if rospy.has_param("/profile"):
+        profile = rospy.get_param("/profile")
+    else:
+        profile = None
+    
+    if rospy.has_param("/left_curb"):
+        left_curb_file = rospy.get_param("/left_curb")
+    else:
+        left_curb_file = ""
 
     rospy.loginfo("\n\nStarting Controller: " + str(ctrl) + "\n\n")
     rospy.loginfo("\n\nUsing path: /rb_ws/src/buggy/paths/" + str(traj) + "\n\n")
