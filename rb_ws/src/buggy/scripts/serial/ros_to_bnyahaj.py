@@ -3,12 +3,12 @@
 import sys
 
 # Allows import of world and pose from auton directory
+# NOTE: what do we use pose for in here??
 sys.path.append("/rb_ws/src/buggy/scripts/auton")
 
 import argparse
 from threading import Lock
 import threading
-from world import World
 from pose import Pose
 import rospy
 
@@ -21,8 +21,17 @@ from host_comm import *
 class Translator:
     """
     Translates the output from bnyahaj serial (interpreted from host_comm) to ros topics and vice versa.
+
+    Can interpret three kinds of packet data:
+    Odometry: SC's representation of NAND's odometry. Very reduced, only contains necessary data. Info is sent from NAND's ROS -> SC's ROS
+
+    BnyaTelemetry: NAND's representation of NAND's odometry. Much more complete, used to translate between NAND's UKF implementation to NAND's ROS
+
+    Tuple
+
     Performs reading (from Bnya Serial) and writing (from Ros Topics) on different python threads, so
     be careful of multithreading synchronizaiton issues.
+
     SC:
     (ROS) Self Steering topic --> (Bnyahaj) Stepper Motor
     (Bnyahaj) NAND Odom --> (ROS) NAND Odom topic
@@ -40,6 +49,9 @@ class Translator:
 
         Initializes the subscribers, rates, and ros topics (including debug topics)
         """
+        self_name = self_name.upper()
+
+
         self.comms = Comms("/dev/" + teensy_name)
         self.steer_angle = 0
         self.alarm = 0
@@ -49,15 +61,16 @@ class Translator:
         rospy.Subscriber(
             self_name + "/buggy/input/steering", Float64, self.set_steering
         )
-        rospy.Subscriber(self_name + "/debug/sanity_warning", Int8, self.set_alarm)
+        rospy.Subscriber(self_name.lower() + "/debug/sanity_warning", Int8, self.set_alarm)
 
+        # just creates the ROS Topic NAND/nav/odom to publish odometry to
         # ISSUE: https://github.com/CMU-Robotics-Club/RoboBuggy2/issues/83
         if other_name is None and self_name == "NAND":
             self.odom_publisher = rospy.Publisher(
                 self_name + "/nav/odom", ROSOdom, queue_size=1
             )
         else:
-            self.odom_publisher = rospy.Publisher(
+            self.odom_publisher = rospy.Pubslisher(
                 other_name + "/nav/odom", ROSOdom, queue_size=1
             )
 
@@ -106,7 +119,7 @@ class Translator:
         """
         Steering Angle Updater, updates the steering angle locally if updated on ros stopic
         """
-        rospy.loginfo(f"Read steeering angle of: {msg.data}")
+        rospy.loginfo(f"Read steering angle of: {msg.data}")
         # print("Steering angle: " + str(msg.data))
         # print("SET STEERING: " + str(msg.data))
         with self.lock:
@@ -136,6 +149,7 @@ class Translator:
         Reads three different types of packets, that should have better ways of differntiating
         Odometry -> (SC) NAND Odomotery
         BnyaTelemetry -> (NAND) Self Odom
+        # also what if we want to send multiple tuples
         tuple -> (SC, maybe NAND?) Debug Info
         """
         rospy.loginfo("Starting reading odom from teensy!")
@@ -233,7 +247,7 @@ if __name__ == "__main__":
         "--teensy_name", type=str, help="name of teensy port", required=True
     )
     args, _ = parser.parse_known_args()
-    self_name = args.self_name
+    self_name = (args.self_name).upper
     other_name = args.other_name
     teensy_name = args.teensy_name
 
