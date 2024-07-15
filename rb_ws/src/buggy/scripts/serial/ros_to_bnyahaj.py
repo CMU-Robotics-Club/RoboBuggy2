@@ -27,10 +27,9 @@ class Translator:
 
     BnyaTelemetry: NAND's representation of NAND's odometry. Much more complete, used to translate between NAND's UKF implementation to NAND's ROS
 
-    Tuple
+    Tuple: sends other debug data
 
-    Performs reading (from Bnya Serial) and writing (from Ros Topics) on different python threads, so
-    be careful of multithreading synchronizaiton issues.
+    Performs reading (from Bnya Serial) and writing (from Ros Topics) on different python threads, so be careful of multithreading synchronizaiton issues.
 
     SC:
     (ROS) Self Steering topic --> (Bnyahaj) Stepper Motor
@@ -50,7 +49,8 @@ class Translator:
         Initializes the subscribers, rates, and ros topics (including debug topics)
         """
         self_name = self_name.upper()
-
+        if (other_name != None):
+            other_name = other_name.upper()
 
         self.comms = Comms("/dev/" + teensy_name)
         self.steer_angle = 0
@@ -117,7 +117,7 @@ class Translator:
 
     def set_steering(self, msg):
         """
-        Steering Angle Updater, updates the steering angle locally if updated on ros stopic
+        Steering Angle Updater, updates the steering angle locally if updated on ros topic
         """
         rospy.loginfo(f"Read steering angle of: {msg.data}")
         # print("Steering angle: " + str(msg.data))
@@ -128,7 +128,7 @@ class Translator:
 
     def writer_thread(self):
         """
-        Sends ROS Topics to bnayhaj serial, only sends a steering angle when we receive a fresh one
+        Sends ROS Topics to bnyahaj serial, only sends a steering angle when we receive a fresh one
         Will send steering and alarm node.
         TODO: Does alarm node exist for NAND?
         """
@@ -149,7 +149,6 @@ class Translator:
         Reads three different types of packets, that should have better ways of differntiating
         Odometry -> (SC) NAND Odomotery
         BnyaTelemetry -> (NAND) Self Odom
-        # also what if we want to send multiple tuples
         tuple -> (SC, maybe NAND?) Debug Info
         """
         rospy.loginfo("Starting reading odom from teensy!")
