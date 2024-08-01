@@ -98,10 +98,10 @@ class ModelPredictiveController(Controller):
         self.solver: osqp.OSQP = None
 
         self.debug_reference_pos_publisher = rospy.Publisher(
-            buggy_name + "/auton/debug/reference_navsat", NavSatFix, queue_size=1
+            "/auton/debug/reference_navsat", NavSatFix, queue_size=1
         )
         self.debug_error_publisher = rospy.Publisher(
-            buggy_name + "/auton/debug/error", ROSPose, queue_size=1
+            "/auton/debug/error", ROSPose, queue_size=1
         )
 
         self.solver = osqp.OSQP()
@@ -116,6 +116,7 @@ class ModelPredictiveController(Controller):
         self.lock = Lock()
         self.ref_trajectory = ref_trajectory
 
+        # QUESTION: what do these topics do, and are they affected by namespace changes?
         if self.ROS:
             rospy.Subscriber('mpc/speed', Float64, self.update_speed)
             rospy.Subscriber('mpc/current_pose', Pose2D, self.update_trajectory)

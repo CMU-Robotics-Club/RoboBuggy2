@@ -1,15 +1,11 @@
-start_pos: "Hill1_SC"
-velocity: 15.0
-buggy_name: "SC"
+# SHORT CIRCUIT
+SC_start_pos: "Hill1_SC"
+SC_velocity: 7.0
 
-manual_vel: false
-auto_vel: false
-
-
-# Auton Arguments
-controller: "stanley"
-dist: 0.0
-traj: "buggycourse_safe.json"
-self_name: "SC"
-other_name: NONE
+## Auton Arguments
+SC_controller: "stanley"
+SC_dist: 0.0
+SC_traj: "buggycourse_safe.json"
+SC_self_name: "SC"
+SC_other_name: NONE
 

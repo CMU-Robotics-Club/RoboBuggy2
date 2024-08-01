@@ -1,0 +1,22 @@
+# SHORT CIRCUIT
+SC_start_pos: "Hill1_SC"
+SC_velocity: 15.0
+
+
+## Auton Arguments
+SC_controller: "stanley"
+SC_dist: 0.0
+SC_traj: "buggycourse_safe.json"
+SC_self_name: "SC"
+SC_other_name: "NAND"
+
+# NAND
+NAND_start_pos: "Hill1_NAND"
+NAND_velocity: 7.0
+
+## Auton Arguments
+NAND_controller: "stanley"
+NAND_dist: 0.0
+NAND_traj: "buggycourse_safe.json"
+NAND_self_name: "NAND"
+NAND_other_name: NONE

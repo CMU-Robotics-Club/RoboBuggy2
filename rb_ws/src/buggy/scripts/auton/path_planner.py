@@ -45,7 +45,7 @@ class PathPlanner():
             "/auton/debug/other_buggy_xtrack", Float64, queue_size=1
         )
 
-        self.traj_publisher = rospy.Publisher("SC/nav/traj", TrajectoryMsg, queue_size=1)
+        self.traj_publisher = rospy.Publisher("nav/traj", TrajectoryMsg, queue_size=1)
 
         self.nominal_traj = nominal_traj
         self.left_curb = left_curb

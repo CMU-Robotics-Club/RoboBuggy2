@@ -29,10 +29,10 @@ class StanleyController(Controller):
     def __init__(self, buggy_name, start_index=0) -> None:
         super(StanleyController, self).__init__(start_index, buggy_name)
         self.debug_reference_pos_publisher = rospy.Publisher(
-            buggy_name + "/auton/debug/reference_navsat", NavSatFix, queue_size=1
+            "/auton/debug/reference_navsat", NavSatFix, queue_size=1
         )
         self.debug_error_publisher = rospy.Publisher(
-            buggy_name + "/auton/debug/error", ROSPose, queue_size=1
+            "/auton/debug/error", ROSPose, queue_size=1
         )
 
     def compute_control(

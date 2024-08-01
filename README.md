@@ -69,13 +69,13 @@ A complete re-write of the old RoboBuggy.
 
 ## 2D Simulation
 - Boot up the docker container
-- Run `roslaunch buggy sim_2d_single.launch` to simulate 1 buggy
-- See `rb_ws/src/buggy/launch/sim_2d_single.launch` to view all available launch options
-- Run `roslaunch buggy sim_2d_2buggies.launch` to simulate 2 buggies
+- Run `roslaunch buggy sim_single.launch` to simulate 1 buggy
+- See `rb_ws/src/buggy/launch/sim_single.launch` to view all available launch options
+- Run `roslaunch buggy sim_2buggies.launch` to simulate 2 buggies
 
 <img width="612" alt="Screenshot 2023-11-13 at 3 18 30 PM" src="https://github.com/CMU-Robotics-Club/RoboBuggy2/assets/45720415/b204aa05-8792-414e-a868-6fbc0d11ab9d">
 
-- See `rb_ws/src/buggy/launch/sim_2d_2buggies.launch` to view all available launch options
+- See `rb_ws/src/buggy/launch/sim_2buggies.launch` to view all available launch options
     - The buggy starting positions can be changed using the `sc_start_pos` and `nand_start_pos` arguments (can pass as a key to a dictionary of preset start positions in engine.py, a single float for starting distance along planned trajectory, or 3 comma-separated floats (utm east, utm north, and heading))
 - To prevent topic name collision, a topic named `t` associated with buggy named `x` have format `x/t`. The names are `SC` and `Nand` in the 2 buggy simulator. In the one buggy simulator, the name can be defined as a launch arg.
 - See [**Foxglove Visualization**](#foxglove-visualization) for visualizing the simulation. Beware that since topic names are user-defined, you will need to adjust the topic names in each panel.

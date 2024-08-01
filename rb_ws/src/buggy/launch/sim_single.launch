@@ -3,25 +3,29 @@
 
     <node name="foxglove" pkg="foxglove_bridge" type="foxglove_bridge" />
 
-    <arg name="manual_vel"          default="false" />
-    <arg name="auto_vel"            default="false" />
+    <arg name="manual_vel"          default="true" />
+    <arg name="auto_vel"            default="true" />
 
-    <group if="$(arg auto_vel)">
-        <!-- Run the auto velocity updater -->
-        <node name="sc_vel_updater" pkg="buggy" type="velocity_updater.py"
-            output="screen"/>
+
+    <group ns = "SC">
+         <group if="$(arg auto_vel)">
+            <!-- Run the auto velocity updater -->
+            <node name="sc_vel_updater" pkg="buggy" type="velocity_updater.py"
+                output="screen" args="SC"/>
+        </group>
+
+        <!-- Might be broken, I am geting a docker issue as of now. -->
+        <group if="$(arg manual_vel)">
+            <!-- Run the manual velocity updater -->
+            <node name="sc_velocity_ui" pkg="buggy" type="velocity_ui.py"
+                output="screen" args = "SC"/> 
+        </group>
+
+        <node name="sim_2d_engine" pkg="buggy" type="engine.py" output="screen" args="SC"/>
+
+        <node name="auton_system" pkg="buggy" type="autonsystem.py" output="screen" args="SC"/>
+
+        <node name="rolling_sanity_check" pkg="buggy" type="rolling_sanity_check.py" output="screen" args="SC"/>
     </group>
-
-    <group if="$(arg manual_vel)">
-        <!-- Run the manual velocity updater -->
-        <node name="sc_velocity_ui" pkg="buggy" type="velocity_ui.py"
-            output="screen"/>
-    </group>
-
-    <node name="sim_2d_engine" pkg="buggy" type="engine.py" output="screen"/>
-
-    <node name="auton_system" pkg="buggy" type="autonsystem.py" output="screen"/>
-
-    <node name="rolling_sanity_check" pkg="buggy" type="rolling_sanity_check.py" output="screen" args=""/>
 
 </launch>

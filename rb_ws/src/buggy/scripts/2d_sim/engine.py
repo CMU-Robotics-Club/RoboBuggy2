@@ -32,27 +32,27 @@ class Simulator:
             heading (float): degrees start heading of buggy
         """
         # for X11 matplotlib (direction included)
-        self.plot_publisher = rospy.Publisher(buggy_name + "/sim_2d/utm", Pose, queue_size=1)
+        self.plot_publisher = rospy.Publisher("/sim_2d/utm", Pose, queue_size=1)
 
         # simulate the INS's outputs (noise included)
-        self.pose_publisher = rospy.Publisher(buggy_name + "/nav/odom", Odometry, queue_size=1)
+        self.pose_publisher = rospy.Publisher("/nav/odom", Odometry, queue_size=1)
 
         self.steering_subscriber = rospy.Subscriber(
-            buggy_name + "/buggy/input/steering", Float64, self.update_steering_angle
+            "/buggy/input/steering", Float64, self.update_steering_angle
         )
         # To read from velocity
         self.velocity_subscriber = rospy.Subscriber(
-            buggy_name + "/velocity", Float64, self.update_velocity
+            "/velocity", Float64, self.update_velocity
         )
         # to plot on Foxglove (no noise)
         self.navsatfix_publisher = rospy.Publisher(
-            buggy_name + "/state/pose_navsat", NavSatFix, queue_size=1
+            "/state/pose_navsat", NavSatFix, queue_size=1
         )
 
         if Simulator.NOISE:
             # to plot on Foxglove (with noise)
             self.navsatfix_noisy_publisher = rospy.Publisher(
-                buggy_name + "/state/pose_navsat_noisy", NavSatFix, queue_size=1
+                "/state/pose_navsat_noisy", NavSatFix, queue_size=1
             )
 
         # (UTM east, UTM north, HEADING(degs))
@@ -329,14 +329,13 @@ class Simulator:
 
 if __name__ == "__main__":
     rospy.init_node("sim_2d_engine")
-    print("sim 2d eng args:")
-    print(sys.argv)
+    print("sim 2d eng args: ", sys.argv)
+    self_name = sys.argv[1]
 
-    start_pos = rospy.get_param("/start_pos")
-    velocity = float(rospy.get_param("/velocity"))
-    buggy_name = rospy.get_param("/buggy_name")
+    start_pos = rospy.get_param("/" + self_name + "_start_pos")
+    velocity = float(rospy.get_param("/" + self_name + "_velocity"))
 
-    sim = Simulator(start_pos, velocity, buggy_name)
+    sim = Simulator(start_pos, velocity, self_name)
     for i in range(100):
         sim.publish()
         rospy.sleep(0.01)
@@ -345,7 +344,7 @@ if __name__ == "__main__":
     # so that auton stack has time to initialize
     # before buggy moves
     print("SIM PUBLISHED", rospy.get_time())
-    if buggy_name == "SC":
+    if self_name == "SC":
         rospy.sleep(15.0)
     print("SIM STARTED STEPPING", rospy.get_time())
     sim.loop()

@@ -18,7 +18,7 @@ class Telematics:
     def __init__(self):
         """Generate all the subscribers and publishers that need to be reformatted.
         """
-
+        # Should this be in a specific namespace? Simply because it doesn't make sense, as this seems to be a msg type translator
         self.odom_subscriber = rospy.Subscriber("/NAND/nav/odom", Odometry, self.convert_odometry_to_navsatfix)
         self.odom_publisher = rospy.Publisher("/NAND/nav/odom_NavSatFix", NavSatFix, queue_size=10)
 

@@ -23,7 +23,7 @@ class BuggyState:
 
     """
 
-    def __init__(self, name = "sc"):
+    def __init__(self, name = "SC"):
         self.filter_odom : ROSOdom = None
         self.gnss_1 : ROSOdom = None
         self.gnss_2 : ROSOdom = None
@@ -31,9 +31,9 @@ class BuggyState:
 
 
         # to report if the filter position has separated (so we need to break)
-        rospy.Subscriber(name + "/debug/filter_gps_seperation_status", Bool, self.update_use_gps)
+        rospy.Subscriber("/debug/filter_gps_seperation_status", Bool, self.update_use_gps)
 
-        rospy.Subscriber(name + "/nav/odom", ROSOdom, self.update_odom)
+        rospy.Subscriber("/nav/odom", ROSOdom, self.update_odom)
         rospy.Subscriber("/gnss1/odom", ROSOdom, self.update_gnss1)
         rospy.Subscriber("/gnss2/odom", ROSOdom, self.update_gnss2)
         rospy.Subscriber("/gnss1/fix_info", GNSSFixInfo, self.update_gnss1_fix)

@@ -46,36 +46,36 @@ class SanityCheck:
         self.warning_durations = [0] * 18 # keeps track of how long covariance, overrange warning, any of the filter status flags are active
 
 
-        rospy.Subscriber(self_name + "/imu/overrange_status", ImuOverrangeStatus, self.update_overrange_status)
-        rospy.Subscriber(self_name + "/nav/status.status_flags", FilterStatus, self.update_status_flags)
-        rospy.Subscriber(self_name + "/gnss1/fix_Pose/", PoseStamped, self.update_gps_location)
-        rospy.Subscriber(self_name + "/nav/odom", Odometry, self.update_filter_location)
+        rospy.Subscriber("/imu/overrange_status", ImuOverrangeStatus, self.update_overrange_status)
+        rospy.Subscriber("/nav/status.status_flags", FilterStatus, self.update_status_flags)
+        rospy.Subscriber("/gnss1/fix_Pose/", PoseStamped, self.update_gps_location)
+        rospy.Subscriber("/nav/odom", Odometry, self.update_filter_location)
 
 
         # these publishers are all bools as quick sanity checks (can display as indicators on foxglove for colors)
 
         # publishes IMU overrange status (checks if any warnings are tripped)
-        self.overrange_status_publisher = rospy.Publisher(self_name + "/debug/imu_overrange_status", Bool, queue_size=1)
+        self.overrange_status_publisher = rospy.Publisher("/debug/imu_overrange_status", Bool, queue_size=1)
 
         # publishes if the filter and gps data have diverged significantly
-        self.filter_gps_status_publisher = rospy.Publisher(self_name + "/debug/filter_gps_seperation_status", Bool, queue_size=1)
+        self.filter_gps_status_publisher = rospy.Publisher("/debug/filter_gps_seperation_status", Bool, queue_size=1)
 
         # publishes if the covariance is too high
-        self.covariance_status_publisher = rospy.Publisher(self_name + "/debug/covariance_status", Bool, queue_size=1)
+        self.covariance_status_publisher = rospy.Publisher("/debug/covariance_status", Bool, queue_size=1)
 
         # TODO WHAT DOES THIS MEAN
         self.error_message_publisher = rospy.Publisher(
-            self_name + "/nav/status/error_messages", String, queue_size=1
+            "/nav/status/error_messages", String, queue_size=1
         )
 
         # publishes the IMU filter status messages
         self.status_flags_publisher = rospy.Publisher(
-            self_name + "/nav/status/tripped_status_flags", Int8MultiArray, queue_size=1
+            "/nav/status/tripped_status_flags", Int8MultiArray, queue_size=1
         )
 
         # a compiled warning flag - outputs if any of the above have tripped
         self.overall_warning_publisher = rospy.Publisher(
-            self_name + "/debug/sanity_warning", Int8, queue_size=1
+            "/debug/sanity_warning", Int8, queue_size=1
         )
 
     def update_overrange_status(self, msg : ImuOverrangeStatus):

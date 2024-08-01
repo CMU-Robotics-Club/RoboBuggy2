@@ -35,9 +35,9 @@ class VelocityUI:
 
 if __name__ == "__main__":
     rospy.init_node("velocity_ui")
-    init_vel = float(rospy.get_param("/velocity"))
-    buggy_name = rospy.get_param("/SC")
-    vel = VelocityUI(init_vel, buggy_name)
+    self_name = sys.argv[1]
+    init_vel = float(rospy.get_param("/" + self_name + "_velocity"))
+    vel = VelocityUI(init_vel, self_name)
     rate = rospy.Rate(100)
     while not rospy.is_shutdown():
         vel.step()

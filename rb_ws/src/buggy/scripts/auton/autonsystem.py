@@ -2,6 +2,7 @@
 
 import argparse
 from threading import Lock
+import sys
 
 import threading
 import rospy
@@ -68,12 +69,12 @@ class AutonSystem:
         self.other_odom_msg = None
         self.use_gps_pos = False
 
-        rospy.Subscriber(self_name + "/nav/odom", Odometry, self.update_self_odom)
-        rospy.Subscriber(self_name + "/gnss1/odom", Odometry, self.update_self_odom_backup)
-        rospy.Subscriber(self_name + "/nav/traj", TrajectoryMsg, self.update_traj)
+        rospy.Subscriber("/nav/odom", Odometry, self.update_self_odom)
+        rospy.Subscriber("/gnss1/odom", Odometry, self.update_self_odom_backup)
+        rospy.Subscriber("/nav/traj", TrajectoryMsg, self.update_traj)
 
         # to report if the filter position has separated (so we need to use the antenna position)
-        rospy.Subscriber(self_name + "/debug/filter_gps_seperation_status", Bool, self.update_use_gps)
+        rospy.Subscriber("/debug/filter_gps_seperation_status", Bool, self.update_use_gps)
 
         if self.has_other_buggy:
             rospy.Subscriber(other_name + "/nav/odom", Odometry, self.update_other_odom)
@@ -82,16 +83,16 @@ class AutonSystem:
             )
 
         self.init_check_publisher = rospy.Publisher(
-            self_name + "/debug/init_safety_check", Bool, queue_size=1
+            "/debug/init_safety_check", Bool, queue_size=1
         )
         self.steer_publisher = rospy.Publisher(
-            self_name + "/buggy/input/steering", Float64, queue_size=1
+            "/buggy/input/steering", Float64, queue_size=1
         )
         self.heading_publisher = rospy.Publisher(
-            self_name + "/auton/debug/heading", Float32, queue_size=1
+            "/auton/debug/heading", Float32, queue_size=1
         )
         self.distance_publisher = rospy.Publisher(
-            self_name + "/auton/debug/distance", Float64, queue_size=1
+            "/auton/debug/distance", Float64, queue_size=1
         )
 
         self.controller_rate = 100
@@ -264,23 +265,23 @@ class AutonSystem:
 if __name__ == "__main__":
     rospy.init_node("auton_system")
 
-    ctrl = rospy.get_param("/controller")
-    start_dist = rospy.get_param("/dist")
-    traj = rospy.get_param("/traj")
-    self_name = rospy.get_param("/self_name")
+    self_name = sys.argv[1]
+    ctrl = rospy.get_param("/" + self_name + "_controller")
+    start_dist = rospy.get_param("/" + self_name + "_dist")
+    traj = rospy.get_param("/" + self_name + "_traj")
 
-    if rospy.has_param("/other_name"):
-        other_name = rospy.get_param("/other_name")
+    if rospy.has_param("/" + self_name + "_other_name"):
+        other_name = rospy.get_param("/" + self_name + "_other_name")
     else:
         other_name = None
 
-    if rospy.has_param("/profile"):
-        profile = rospy.get_param("/profile")
+    if rospy.has_param("/" + self_name + "_profile"):
+        profile = rospy.get_param("/" + self_name + "_profile")
     else:
         profile = None
     
-    if rospy.has_param("/left_curb"):
-        left_curb_file = rospy.get_param("/left_curb")
+    if rospy.has_param("/" + self_name + "_left_curb"):
+        left_curb_file = rospy.get_param("/" + self_name + "_left_curb")
     else:
         left_curb_file = ""
 

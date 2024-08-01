@@ -47,18 +47,18 @@ class Translator:
         self.lock = Lock()
 
         rospy.Subscriber(
-            self_name + "/buggy/input/steering", Float64, self.set_steering
+            "/buggy/input/steering", Float64, self.set_steering
         )
-        rospy.Subscriber(self_name + "/debug/sanity_warning", Int8, self.set_alarm)
+        rospy.Subscriber("/debug/sanity_warning", Int8, self.set_alarm)
 
         # ISSUE: https://github.com/CMU-Robotics-Club/RoboBuggy2/issues/83
         if other_name is None and self_name == "NAND":
             self.odom_publisher = rospy.Publisher(
-                self_name + "/nav/odom", ROSOdom, queue_size=1
+                "/nav/odom", ROSOdom, queue_size=1
             )
         else:
             self.odom_publisher = rospy.Publisher(
-                other_name + "/nav/odom", ROSOdom, queue_size=1
+                "/nav/odom", ROSOdom, queue_size=1
             )
 
         # upper bound of steering update rate, make sure auton sends slower than 500 Hz or update / 2ms
@@ -68,31 +68,31 @@ class Translator:
 
         # ISSUE: https://github.com/CMU-Robotics-Club/RoboBuggy2/issues/90
         self.rc_steering_angle_publisher = rospy.Publisher(
-            self_name + "/buggy/debug/rc_steering_angle", Float64, queue_size=1
+            "/buggy/debug/rc_steering_angle", Float64, queue_size=1
         )
         self.steering_angle_publisher = rospy.Publisher(
-            self_name + "/buggy/debug/steering_angle", Float64, queue_size=1
+            "/buggy/debug/steering_angle", Float64, queue_size=1
         )
         self.battery_voltage_publisher = rospy.Publisher(
-            self_name + "/buggy/debug/battery_voltage", Float64, queue_size=1
+            "/buggy/debug/battery_voltage", Float64, queue_size=1
         )
         self.operator_ready_publisher = rospy.Publisher(
-            self_name + "/buggy/debug/operator_ready", Bool, queue_size=1
+            "/buggy/debug/operator_ready", Bool, queue_size=1
         )
         self.steering_alarm_publisher = rospy.Publisher(
-            self_name + "/buggy/debug/steering_alarm", Bool, queue_size=1
+            "/buggy/debug/steering_alarm", Bool, queue_size=1
         )
         self.brake_status_publisher = rospy.Publisher(
-            self_name + "/buggy/debug/brake_status", Bool, queue_size=1
+            "/buggy/debug/brake_status", Bool, queue_size=1
         )
         self.use_auton_steer_publisher = rospy.Publisher(
-            self_name + "/buggy/debug/use_auton_steer", Bool, queue_size=1
+            "/buggy/debug/use_auton_steer", Bool, queue_size=1
         )
         self.rc_uplink_qual_publisher = rospy.Publisher(
-            self_name + "/buggy/debug/rc_uplink_quality", UInt8, queue_size=1
+            "/buggy/debug/rc_uplink_quality", UInt8, queue_size=1
         )
         self.nand_fix_publisher = rospy.Publisher(
-            self_name + "/buggy/debug/nand_fix", UInt8, queue_size=1
+            "/buggy/debug/nand_fix", UInt8, queue_size=1
         )
 
     def set_alarm(self, msg):

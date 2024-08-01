@@ -19,7 +19,7 @@ class DebugController():
     """
     def __init__(self, self_name) -> None:
         self.steer_publisher = rospy.Publisher(
-        self_name + "/buggy/input/steering", Float64, queue_size=1)
+        "/buggy/input/steering", Float64, queue_size=1)
         self.rate = 1000
 
     # Outputs a continuous sine wave ranging from -50 to 50, with a period of 500 ticks
