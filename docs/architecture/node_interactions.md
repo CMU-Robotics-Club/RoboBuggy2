@@ -11,7 +11,8 @@ Install `bierner.markdown-mermaid` from the extension marketplace to render the 
 | ego/state  | BuggyState              | yes |
 | other_buggy/state | BuggyState       | yes |
 | ego/trajectory | BuggyTrajectory     | yes |
-| ego/steering_cmd | [Float64](https://docs.ros.org/en/melodic/api/std_msgs/html/msg/Float64.html)     | no |
+| ego/steering_cmd | [Float64](https://docs.ros.org/en/melodic/api/std_msgs/html/msg/Float64.html) | no |
+| add new topic here | | |
 
 ## ROS Nodes Graph
 Auton Loop [Sequence Diagram](https://en.wikipedia.org/wiki/Sequence_diagram#:~:text=A%20sequence%20diagram%20shows%2C%20as,order%20in%20which%20they%20occur.)
