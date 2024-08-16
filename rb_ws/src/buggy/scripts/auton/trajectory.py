@@ -1,8 +1,11 @@
 import json
+import time
 import uuid
 import matplotlib.pyplot as plt
-import numpy as np
 
+from buggy.msg import TrajectoryMsg
+
+import numpy as np
 from scipy.interpolate import Akima1DInterpolator, CubicSpline
 
 from world import World
@@ -82,6 +85,7 @@ class Trajectory:
             self.interpolation = CubicSpline(self.indices, self.positions)
             self.interpolation.extrapolate = True
 
+        # TODO: check units
         # Calculate the distances along the trajectory
         dt = 0.01 #dt is time step (in seconds (?))
         ts = np.arange(len(self.positions) - 1, step=dt)  # times corresponding to each position (?)
@@ -346,9 +350,23 @@ class Trajectory:
             + start_index
         )
 
+    def pack(self, x, y) -> TrajectoryMsg:
+        traj = TrajectoryMsg()
+        traj.easting = self.positions[:, 0]
+        traj.northing = self.positions[:, 1]
+        traj.time = time.time()
+        traj.cur_idx = self.get_closest_index_on_path(x,y)
+        return traj
+
+    def unpack(trajMsg : TrajectoryMsg):
+        pos = np.array([trajMsg.easting, trajMsg.northing]).transpose(1, 0)
+        cur_idx = trajMsg.cur_idx
+        return Trajectory(positions=pos), cur_idx
+
 
 if __name__ == "__main__":
     # Example usage
+    # TODO: do we want to keep this example usage? where is it even useful for
     trajectory = Trajectory("/rb_ws/src/buggy/paths/quartermiletrack.json")
 
 

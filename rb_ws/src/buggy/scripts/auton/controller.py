@@ -18,38 +18,24 @@ class Controller(ABC):
     Example schemes include Pure Pursuit, Stanley, and LQR.
     """
 
+    # TODO: move this to a constants class
     NAND_WHEELBASE = 1.3
     SC_WHEELBASE = 1.104
     current_traj_index = 0
 
-    def __init__(self, start_index, buggy_name) -> None:
+    def __init__(self, start_index: int, buggy_name: str) -> None:
         self.buggy_name = buggy_name
         if buggy_name.upper() == 'NAND':
             Controller.WHEELBASE = self.NAND_WHEELBASE
         else:
             Controller.WHEELBASE = self.SC_WHEELBASE
 
-        # self.trajectory_forward_1 = rospy.Publisher(
-        #     buggy_name + "/auton/debug/forward1_navsat", NavSatFix, queue_size=1
-        # )
-        # self.trajectory_forward_2 = rospy.Publisher(
-        #     buggy_name + "/auton/debug/forward2_navsat", NavSatFix, queue_size=1
-        # )
-        # self.trajectory_forward_3 = rospy.Publisher(
-        #     buggy_name + "/auton/debug/forward3_navsat", NavSatFix, queue_size=1
-        # )
-        # self.trajectory_backward_1 = rospy.Publisher(
-        #     buggy_name + "/auton/debug/backward1_navsat", NavSatFix, queue_size=1
-        # )
-        # # Make lists of publishers for easy iteration
-        # self.forward_publishers = [self.trajectory_forward_1, self.trajectory_forward_2, self.trajectory_forward_3]
-        # self.backward_publishers = [self.trajectory_backward_1]
         self.current_traj_index = start_index
 
     @abstractmethod
     def compute_control(
         self, state_msg: Odometry, trajectory: Trajectory,
-    ):
+    ) -> float:
         """
         Computes the desired control output given the current state and reference trajectory
 
@@ -96,7 +82,6 @@ class Controller(ABC):
             navsat.longitude = backward_gps[1]
             self.backward_publishers[i-1].publish(navsat)
 
-
-
+    # TODO: do we want logging methods to be required (update_speed, update_trajectory)
 
 

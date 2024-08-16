@@ -3,16 +3,22 @@ import numpy as np
 import rospy
 from sensor_msgs.msg import NavSatFix
 from std_msgs.msg import Float64
+from buggy.msg import TrajectoryMsg
 from pose import Pose
 
-from occupancy_grid.grid_manager import OccupancyGrid
-from path_projection import Projector
 from trajectory import Trajectory
 from world import World
+
 class PathPlanner():
+    """
+    Class to generate new trajectory splices for SC autonomous system.
+
+    Takes in a default trajectory and an inner curb trajectory.
+
+    """
     # move the curb towards the center of the course by CURB_MARGIN meters
     # for a margin of safety
-    CURB_MARGIN = 1#m
+    CURB_MARGIN = 1 #m
 
     # the offset is calculated as a mirrored sigmoid function of distance
     OFFSET_SCALE_CROSS_TRACK = 2 #m
@@ -30,27 +36,16 @@ class PathPlanner():
     RESOLUTION = 150
 
     def __init__(self, nominal_traj:Trajectory, left_curb:Trajectory) -> None:
-        self.occupancy_grid = OccupancyGrid()
-
-        # TODO: update with NAND wheelbase
-        self.path_projector = Projector(1.3)
 
         self.debug_passing_traj_publisher = rospy.Publisher(
             "/auton/debug/passing_traj", NavSatFix, queue_size=1000
         )
 
-        self.debug_splice_pt_publisher = rospy.Publisher(
-            "/auton/debug/splice_pts", NavSatFix, queue_size=1000
-        )
-
-
-        self.debug_grid_cost_publisher = rospy.Publisher(
-            "/auton/debug/grid_cost", Float64, queue_size=0
-        )
-
         self.other_buggy_xtrack_publisher = rospy.Publisher(
             "/auton/debug/other_buggy_xtrack", Float64, queue_size=1
         )
+
+        self.traj_publisher = rospy.Publisher("SC/nav/traj", TrajectoryMsg, queue_size=1)
 
         self.nominal_traj = nominal_traj
         self.left_curb = left_curb
@@ -210,7 +205,7 @@ class PathPlanner():
             self.debug_passing_traj_publisher.publish(reference_navsat)
 
         local_traj = Trajectory(json_filepath=None, positions=positions)
-
+        self.traj_publisher.publish(local_traj.pack(self_pose.x, self_pose.y))
         return local_traj, \
                 local_traj.get_closest_index_on_path(
                 self_pose.x,
