@@ -1,5 +1,4 @@
 #!/usr/bin/env python3
-import rospy
 import numpy as np
 from controller import Controller
 
@@ -24,7 +23,6 @@ class BrakeController:
         """
         if (steering_angle == 0.0):
             return 0.0
-        
         radius_front_wheel = Controller.WHEELBASE / np.sin(np.deg2rad(steering_angle))
         radius_rear_wheel = Controller.WHEELBASE / np.tan(np.deg2rad(steering_angle))
 
@@ -49,7 +47,7 @@ class BrakeController:
             return self._compute_binary_braking(speed, steering_angle)
         else:
             return self._compute_modulated_braking(speed, steering_angle)
-    
+
     def _compute_binary_braking(self, speed: float, steering_angle: float) -> float:
         """Binary braking - using lateral acceleration
 
@@ -65,7 +63,7 @@ class BrakeController:
             return 1.0
         else:
             return 0.0
-    
+
     def _compute_modulated_braking(self, speed: float, steering_angle: float) -> float:
         """Using P controller for braking based on lateral acceleration of buggy. Modulated values
         from 0-1

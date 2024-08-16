@@ -1,4 +1,4 @@
-# Script 
+# Script
 import rospy
 from sensor_msgs.msg import BatteryState # Callback function to print the subscribed data on the terminal
 import numpy as np
