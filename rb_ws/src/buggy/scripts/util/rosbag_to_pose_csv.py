@@ -1,7 +1,6 @@
 #! /usr/bin/env python3
 import argparse
 import csv
-
 import rosbag
 from tf.transformations import euler_from_quaternion
 
@@ -43,13 +42,9 @@ def main():
         lon = msg.pose.pose.position.y
         orientation_q = msg.pose.pose.orientation
 
-        orientation_list = [
-            orientation_q.x,
-            orientation_q.y,
-            orientation_q.z,
-            orientation_q.w,
-        ]
-        (_, _, yaw) = euler_from_quaternion(orientation_list)
+        orientation_list = [orientation_q.x, orientation_q.y, orientation_q.z, orientation_q.w]
+        (_, _, yaw) = euler_from_quaternion (orientation_list)
+
 
         waypoints.append([str(lat), str(lon), str(yaw)])
 
