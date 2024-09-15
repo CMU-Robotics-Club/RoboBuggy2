@@ -3,7 +3,7 @@
 <launch>
     <arg name="controller"      default="stanley" />
     <arg name="start_dist"      default="0.0" />
-    <arg name="path"      default="truckweekend_raceline.json" />
+    <arg name="path"      default="buggycourse_raceline.json" />
 
     <!-- run a sim with name = NAND at velocity ~= 0 -->
     <arg name="starting_pose"    default="RACELINE_PASS" />
