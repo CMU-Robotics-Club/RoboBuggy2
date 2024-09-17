@@ -34,7 +34,6 @@ A complete re-write of the old RoboBuggy.
 
         catkin_make
         source /rb_ws/devel/setup.bash  # sets variables so that our package is visible to ROS commands
-- To learn ROS on your own, follow the guide on https://wiki.ros.org/ROS/Tutorials. Start from the first and install Ros using a Virtual Machine.
 
 ## Installation (for MacOS - M2)
 ### Install Softwares: Docker, Foxglove
@@ -58,7 +57,6 @@ A complete re-write of the old RoboBuggy.
 
         catkin_make
         source /rb_ws/devel/setup.bash  # sets variables so that our package is visible to ROS commands
-- To learn ROS on your own, follow the guide on https://wiki.ros.org/ROS/Tutorials. Start from the first and install Ros using a Virtual Machine.
 
 ---
 ## Open Docker
