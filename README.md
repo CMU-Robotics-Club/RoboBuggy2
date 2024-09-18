@@ -35,10 +35,13 @@ A complete re-write of the old RoboBuggy.
         catkin_make
         source /rb_ws/devel/setup.bash  # sets variables so that our package is visible to ROS commands
 
-## Installation (for MacOS - M2)
+## Installation (for MacOS)
 ### Install Softwares: Docker, Foxglove
 - Go install Foxglove https://foxglove.dev/.
 - You will need [Docker](https://docs.docker.com/get-docker/) installed.
+
+### Apple Silicon Mac Only:
+- In Docker Desktop App: go to settings -> general and turn on "Use Rosetta for x86/amd64 emulation on Apple Silicon" 
 
 ### Set up repository
 - To set up ssh key, follow this link: [Connecting to GitHub with SSH](https://docs.github.com/en/authentication/connecting-to-github-with-ssh).
