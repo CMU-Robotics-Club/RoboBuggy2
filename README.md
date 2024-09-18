@@ -42,7 +42,7 @@ A complete re-write of the old RoboBuggy.
 
 ### Set up repository
 - To set up ssh key, follow this link: [Connecting to GitHub with SSH](https://docs.github.com/en/authentication/connecting-to-github-with-ssh).
-- Note: Ensure that the SSH keys are generated while in the WSL terminal
+- Note: Ensure that the SSH keys are generated while in the terminal
 - In the website above, see these two pages: [Generating a new SSH key and adding it to the ssh-agent](https://docs.github.com/en/authentication/connecting-to-github-with-ssh/generating-a-new-ssh-key-and-adding-it-to-the-ssh-agent) and ["Adding a new SSH key to your GitHub account"](https://docs.github.com/en/authentication/connecting-to-github-with-ssh/adding-a-new-ssh-key-to-your-github-account).
 
 ### Clone
