@@ -46,7 +46,7 @@ A complete re-write of the old RoboBuggy.
 - In the website above, see these two pages: [Generating a new SSH key and adding it to the ssh-agent](https://docs.github.com/en/authentication/connecting-to-github-with-ssh/generating-a-new-ssh-key-and-adding-it-to-the-ssh-agent) and ["Adding a new SSH key to your GitHub account"](https://docs.github.com/en/authentication/connecting-to-github-with-ssh/adding-a-new-ssh-key-to-your-github-account).
 
 ### Clone
-- In your terminal type: `$ git clone git@github.com:CMU-Robotics-Club/RoboBuggy.git`.
+- In your terminal type: `$ git clone git@github.com:CMU-Robotics-Club/RoboBuggy2.git`.
 - The clone link above is find in github: code -> local -> Clone SSH.
 - ![image](https://github.com/CMU-Robotics-Club/RoboBuggy2/assets/116482510/8ea809f7-35f9-4517-b98d-42e2e869d233)
 
