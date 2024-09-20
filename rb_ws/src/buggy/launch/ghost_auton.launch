@@ -14,7 +14,7 @@
         args="$(arg starting_pose) $(arg velocity) $(arg buggy_name)"/>
 
 
-    <remap from="/SC/nav/odom" to="/nav/odom"/>
+    <remap from="/SC/nav/odom" to="/ekf/odometry_earth"/>
 
     <!-- Run the simulation with NAND -->
     <arg name="autonsystem_args" default="--controller $(arg controller) --dist 0.0 --traj $(arg path) --self_name SC --other_name NAND" />

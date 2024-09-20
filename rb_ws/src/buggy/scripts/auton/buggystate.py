@@ -13,6 +13,8 @@ from microstrain_inertial_msgs.msg import GNSSFixInfo
 import rospy
 
 
+#BROKEN TOPIC PATHS, INCREDIBLY BROKEN
+
 class BuggyState:
     """
     Basically a translator from ROSOdom to ensure everything is in the correct units.

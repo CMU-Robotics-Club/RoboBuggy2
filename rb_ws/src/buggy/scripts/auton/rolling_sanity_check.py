@@ -12,6 +12,8 @@ from geometry_msgs.msg import PoseStamped
 from world import World
 from pose import Pose
 
+#BROKEN BROKEN BROKEN
+
 class SanityCheck:
     """
         Wrapper to publish a lot of error and debug data regarding the estimated position of the specified buggy and INS output
