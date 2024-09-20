@@ -8,7 +8,7 @@ from std_msgs.msg import Float64MultiArray
 from std_msgs.msg import String
 from std_msgs.msg import Int8
 
-from microstrain_inertial_msgs.msg import GNSSFixInfo
+from microstrain_inertial_msgs.msg import MipGnssFixInfo
 
 class Telematics:
     """
@@ -32,11 +32,11 @@ class Telematics:
 
         self.gnss1_fixinfo_publisher = rospy.Publisher("/gnss1/fix_info_republished", String, queue_size=10)
         self.gnss1_fixinfo_int_publisher = rospy.Publisher("/gnss1/fix_info_republished_int", Int8, queue_size=10)
-        self.gnss1_fixinfo_subscriber = rospy.Subscriber("/gnss1/fix_info", GNSSFixInfo, self.republish_fixinfo, (self.gnss1_fixinfo_publisher, self.gnss1_fixinfo_int_publisher))
+        self.gnss1_fixinfo_subscriber = rospy.Subscriber("/gnss1/fix_info", MipGnssFixInfo, self.republish_fixinfo, (self.gnss1_fixinfo_publisher, self.gnss1_fixinfo_int_publisher))
 
         self.gnss2_fixinfo_publisher = rospy.Publisher("/gnss2/fix_info_republished", String, queue_size=10)
         self.gnss2_fixinfo_int_publisher = rospy.Publisher("/gnss2/fix_info_republished_int", Int8, queue_size=10)
-        self.gnss2_fixinfo_subscriber = rospy.Subscriber("/gnss2/fix_info", GNSSFixInfo, self.republish_fixinfo, (self.gnss2_fixinfo_publisher, self.gnss2_fixinfo_int_publisher))
+        self.gnss2_fixinfo_subscriber = rospy.Subscriber("/gnss2/fix_info", MipGnssFixInfo, self.republish_fixinfo, (self.gnss2_fixinfo_publisher, self.gnss2_fixinfo_int_publisher))
 
     def convert_odometry_to_navsatfix(self, msg):
         """Convert Odometry-type to NavSatFix-type for plotting on Foxglove
