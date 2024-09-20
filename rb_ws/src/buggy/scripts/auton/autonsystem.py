@@ -21,6 +21,8 @@ from model_predictive_controller import ModelPredictiveController
 from path_planner import PathPlanner
 from pose import Pose
 
+import navpy
+
 class AutonSystem:
     """
     Top-level class for the RoboBuggy autonomous system
@@ -68,6 +70,10 @@ class AutonSystem:
         self.other_odom_msg = None
         self.use_gps_pos = False
 
+        #TODO: DOUBLE CONVERTING HERE, NOT A GOOD IDEA
+        rospy.Subscriber("/ekf/odometry_earth", Odometry, self.change_utm_latlon)
+        self.latlonodom = rospy.Publisher(self_name + "/nav/odom", Odometry, queue_size=1)
+
         rospy.Subscriber(self_name + "/nav/odom", Odometry, self.update_self_odom)
         rospy.Subscriber(self_name + "/gnss1/odom", Odometry, self.update_self_odom_backup)
         rospy.Subscriber(self_name + "/nav/traj", TrajectoryMsg, self.update_traj)
@@ -102,6 +108,14 @@ class AutonSystem:
 
         self.profile = profile
         self.tick_caller()
+
+    def change_utm_latlon(self, msg):
+        new_msg = msg
+        northing = msg.pose.pose.position.x
+        easting = msg.pose.pose.position.y
+        lat, lon, alt = navpy.ecef2lla([msg.pose.pose.position.x, msg.pose.pose.position.y, msg.pose.pose.position.z])
+        new_msg.pose.pose.position.x, new_msg.pose.pose.position.y = lon, lat
+        self.latlonodom.publish(new_msg)
 
 
     # functions to read data from ROS nodes
