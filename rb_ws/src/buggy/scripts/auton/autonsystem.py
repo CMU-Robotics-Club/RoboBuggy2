@@ -111,9 +111,7 @@ class AutonSystem:
 
     def change_utm_latlon(self, msg):
         new_msg = msg
-        northing = msg.pose.pose.position.x
-        easting = msg.pose.pose.position.y
-        lat, lon, alt = navpy.ecef2lla([msg.pose.pose.position.x, msg.pose.pose.position.y, msg.pose.pose.position.z])
+        lat, lon, _ = navpy.ecef2lla([msg.pose.pose.position.x, msg.pose.pose.position.y, msg.pose.pose.position.z])
         new_msg.pose.pose.position.x, new_msg.pose.pose.position.y = lon, lat
         self.latlonodom.publish(new_msg)
 
