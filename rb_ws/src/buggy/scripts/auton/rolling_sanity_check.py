@@ -6,11 +6,13 @@ import numpy as np
 
 from nav_msgs.msg import Odometry
 from std_msgs.msg import Bool, String, Int8MultiArray, Int8
-from microstrain_inertial_msgs.msg import FilterStatus, ImuOverrangeStatus
+from microstrain_inertial_msgs.msg import MipFilterStatus, ImuOverrangeStatus
 from geometry_msgs.msg import PoseStamped
 
 from world import World
 from pose import Pose
+
+#BROKEN BROKEN BROKEN
 
 class SanityCheck:
     """
@@ -47,7 +49,7 @@ class SanityCheck:
 
 
         rospy.Subscriber(self_name + "/imu/overrange_status", ImuOverrangeStatus, self.update_overrange_status)
-        rospy.Subscriber(self_name + "/nav/status.status_flags", FilterStatus, self.update_status_flags)
+        rospy.Subscriber(self_name + "/nav/status.status_flags", MipFilterStatus, self.update_status_flags)
         rospy.Subscriber(self_name + "/gnss1/fix_Pose/", PoseStamped, self.update_gps_location)
         rospy.Subscriber(self_name + "/nav/odom", Odometry, self.update_filter_location)
 
@@ -81,7 +83,7 @@ class SanityCheck:
     def update_overrange_status(self, msg : ImuOverrangeStatus):
         self.imu_overrange_status = msg.status
 
-    def update_status_flags(self, msg : FilterStatus):
+    def update_status_flags(self, msg : MipFilterStatus):
         self.status_flag_val = msg.gq7_status_flags
 
     def update_gps_location(self, msg : PoseStamped):

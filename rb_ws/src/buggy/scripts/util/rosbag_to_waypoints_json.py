@@ -5,6 +5,8 @@ import json
 
 import rosbag
 
+#BROKEN BROKEN BROKEN
+
 def main():
     # Read in bag path from command line
     parser = argparse.ArgumentParser()
