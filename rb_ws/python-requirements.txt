@@ -1,0 +1,13 @@
+matplotlib==3.1.2
+NavPy==1.0
+numba==0.58.0
+numpy<1.21.0
+osqp==0.6.3
+pandas==2.0.3
+pymap3d==3.0.1
+scipy==1.10.1
+trimesh==3.23.5
+utm==0.7.0
+keyboard==0.13.5
+tk==0.1.0
+pyembree

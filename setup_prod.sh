@@ -87,10 +87,10 @@ cp cuda-requirements.txt docker_auton
 mv docker_auton/cuda-requirements.txt docker_auton/cuda-requirements_TEMP_DO_NOT_EDIT.txt
 
 echo "Building containers..."
-docker compose -f $dockerfile build
+docker-compose -f $dockerfile build
 
 echo "Starting containers..."
-docker compose -f $dockerfile --env-file .env.prod up -d
+docker-compose -f $dockerfile --env-file .env.prod up -d
 
 sleep 0.5
 

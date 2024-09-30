@@ -2,7 +2,7 @@
 
 <launch>
 
-    <node name="bnyahaj" pkg="buggy" type="ros_to_bnyahaj.py" respawn="true" output="screen" args="--self_name NAND --teensy_name nand-teensy"/>
+    <node name="bnyahaj" pkg="buggy" type="ros_to_bnyahaj.py" respawn="true" output="screen" args="--self_name NAND --teensy_name ttyUSB0"/>
 
     <node name="foxglove" pkg="foxglove_bridge" type="foxglove_bridge" />
     <node name="telematics" pkg="buggy" type="telematics.py" />

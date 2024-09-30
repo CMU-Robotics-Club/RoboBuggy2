@@ -2,4 +2,5 @@
 
 <launch>
     <node name="debug_steer" pkg="buggy" type="debug_steer.py" output="screen" args="--self_name NAND"/>
+    <node name="bnyahaj" pkg="buggy" type="ros_to_bnyahaj.py" respawn="true" output="screen" args="--self_name NAND --teensy_name ttyUSB0"/>
 </launch>

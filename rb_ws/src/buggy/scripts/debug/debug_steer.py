@@ -24,7 +24,7 @@ class DebugController():
 
     # Outputs a continuous sine wave ranging from -50 to 50, with a period of 500 ticks
     def sin_steer(self, tick_count):
-        return 50 * np.sin((2 * np.pi) * tick_count/500)
+        return 20 * np.sin((2 * np.pi) * tick_count/1000)
 
     #returns a constant steering angle of 42 degrees
     def constant_steer(self, _):
@@ -42,6 +42,7 @@ class DebugController():
 
             tick_count += 1
             steer_cmd = self.sin_steer(tick_count)
+            # print(steer_cmd)
             rate.sleep()
 
 
