@@ -5,13 +5,13 @@ A complete re-write of the old RoboBuggy. This code was run for RD23, RD24 and R
 ## Table of Contents
  - Installation and Initial Setup
  - Launching Code
+ - Infrastructure Documentation
  - Code Structure and Documentation
 
 
 ---
 ## Installation and Initial Setup
 ### Necessary + Recommended Software
-TODO: add explanations for what each software is for
 - Docker
 - Foxglove
 - VSCode (recommended)
@@ -29,12 +29,10 @@ TODO: add explanations for what each software is for
 ### Git
 
 
-
-## TODO: other docs which i don't know if they're necessary
 ### Install Softwares: WSL, Ubuntu
 - Go to Microsoft Store to install "Ubuntu 20.04.6 LTS". TODO: is this actually necessary?
 
-### Set up repo in WSL TODO: again, do we actually need wsl?
+### Set up repo in WSL
 - To set up ssh key, follow this link: [Connecting to GitHub with SSH](https://docs.github.com/en/authentication/connecting-to-github-with-ssh).
 - Note: Ensure that the SSH keys are generated while in the WSL terminal
 - In the website above, see these two pages: [Generating a new SSH key and adding it to the ssh-agent](https://docs.github.com/en/authentication/connecting-to-github-with-ssh/generating-a-new-ssh-key-and-adding-it-to-the-ssh-agent) and ["Adding a new SSH key to your GitHub account"](https://docs.github.com/en/authentication/connecting-to-github-with-ssh/adding-a-new-ssh-key-to-your-github-account).
@@ -46,23 +44,10 @@ TODO: add explanations for what each software is for
 - In the website above, see these two pages: [Generating a new SSH key and adding it to the ssh-agent](https://docs.github.com/en/authentication/connecting-to-github-with-ssh/generating-a-new-ssh-key-and-adding-it-to-the-ssh-agent) and ["Adding a new SSH key to your GitHub account"](https://docs.github.com/en/authentication/connecting-to-github-with-ssh/adding-a-new-ssh-key-to-your-github-account).
 
 
-## Initial Setup
-
 ### Clone the Repository
 This is so you can edit our codebase locally, and sync your changes with the rest of the team through Git.
 - In your terminal type: `$ git clone https://github.com/CMU-Robotics-Club/RoboBuggy2.git`.
-- The clone link above is find in github: code -> local -> Clone SSH.
-- ![image](https://github.com/CMU-Robotics-Club/RoboBuggy2/assets/116482510/8ea809f7-35f9-4517-b98d-42e2e869d233)
-
-
-### ROS
-TODO: what is this actually doing? explain what these lines of code do
-- Navigate to `/rb_ws`. This is the catkin workspace where we will be doing all our ROS stuff.
-- To build the ROS workspace and source it, run:
-
-        catkin_make
-        source /rb_ws/devel/setup.bash  # sets variables so that our package is visible to ROS commands
-- To learn ROS on your own, follow the guide on https://wiki.ros.org/ROS/Tutorials. TODO: add recommendations on which aspects of ROS we use most
+- The clone link above is the URL or can be found above: code -> local -> Clone HTTPS.
 
 
 ### Foxglove Visualization
@@ -93,6 +78,13 @@ TODO: explain what X11 is for (i think it's only for the manual velocity updater
 - Then you can go in the docker container using the `docker exec -it robobuggy2-main-1 bash`.
 - When you are done, type Ctrl+C and use `$exit` to exit.
 
+### ROS
+- Navigate to `/rb_ws`. This is the catkin workspace where we will be doing all our ROS stuff.
+- (This should only need to be run the first time you set up the repository) - to build the ROS workspace and source it, run:
+        catkin_make
+        source /rb_ws/devel/setup.bash  # sets variables so that our package is visible to ROS commands
+- To learn ROS on your own, follow the guide on https://wiki.ros.org/ROS/Tutorials. TODO: add recommendations on which aspects of ROS we use most
+
 ### 2D Simulation
 - Boot up the docker container
 - Run `roslaunch buggy sim_2d_single.launch` to simulate 1 buggy
@@ -106,8 +98,8 @@ TODO: explain what X11 is for (i think it's only for the manual velocity updater
 - To prevent topic name collision, a topic named `t` associated with buggy named `x` have format `x/t`. The names are `SC` and `Nand` in the 2 buggy simulator. In the one buggy simulator, the name can be defined as a launch arg.
 - See [**Foxglove Visualization**](#foxglove-visualization) for visualizing the simulation. Beware that since topic names are user-defined, you will need to adjust the topic names in each panel.
 
-### Connecting to and Launching the RoboBuggy
-When launching the buggy:
+### Connecting to and Launching the RoboBuggies
+When launching Short Circuit:
 - Connect to the Wi-Fi named ShortCircuit.
 -	In the command line window:
 SSH to the computer on ShortCircuit and go to folder
@@ -118,8 +110,11 @@ Then `$ cd RoboBuggy2`
 -	Go to docker container
 `$ docker_exec`
 -	Open foxglove and do local connection to “ws://192.168.1.217/8765”
--	Roslauch in docker container by `$ roslaunch buggy sc-main.launch` (or `$ roslaunch buggy nand-main.launch` for NAND)
+-	Roslauch in docker container by `$ roslaunch buggy sc-main.launch`
 (wait until no longer prints “waiting for covariance to be better”)
+
+When launching NAND:
+- WORK IN PROGRESS
 
 When shutting down the buggy:
 -	Stop roslauch
@@ -130,11 +125,16 @@ When shutting down the buggy:
 `$ sudo shutdown now`
 
 ## Documentation
+### Infrastructure Documentation
+WORK IN PROGRESS
+
 ### Simulator notes
 - Longitude + Latitude for Foxglove visualization on map: `/state/pose_navsat` (sensor_msgs/NavSatFix)
-- UTM coordinates (assume we're in Zone 17T): `/sim_2d/utm` (geometry_msgs/Pose - position.x = Easting meters , position.y = Northing meters, position.z = heading in degrees from East axis + is CCW)
+- UTM coordinates (assume we're in Zone 17N): `/sim_2d/utm` (geometry_msgs/Pose - position.x = Easting meters , position.y = Northing meters, position.z = heading in degrees from East axis + is CCW)
 - INS Simulation: `/nav/odom` (nsg_msgs/Odometry) (**Noise** is implemented to vary ~1cm)
 Commands:
 - Steering angle: `/buggy/steering` in degrees (std_msgs/Float64)
 - Velocity: `/buggy/velocity` in m/s (std_msgs/Float64)
 
+### Auton Logic
+WORK IN PROGRESS
