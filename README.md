@@ -30,8 +30,8 @@ A complete re-write of the old RoboBuggy. This code was run for RD23, RD24 and R
 ### Git
 - https://git-scm.com/downloads
 
-### Install Softwares: WSL, Ubuntu
-- Go to Microsoft Store to install "Ubuntu 20.04.6 LTS". TODO: is this actually necessary?
+### Install Softwares: WSL, Ubuntu (Windows only)
+- Go to Microsoft Store to install "Ubuntu 20.04.6 LTS".
 
 ### Set up repo in WSL
 - To set up ssh key, follow this link: [Connecting to GitHub with SSH](https://docs.github.com/en/authentication/connecting-to-github-with-ssh).
@@ -39,13 +39,8 @@ A complete re-write of the old RoboBuggy. This code was run for RD23, RD24 and R
 - In the website above, see these two pages: [Generating a new SSH key and adding it to the ssh-agent](https://docs.github.com/en/authentication/connecting-to-github-with-ssh/generating-a-new-ssh-key-and-adding-it-to-the-ssh-agent) and ["Adding a new SSH key to your GitHub account"](https://docs.github.com/en/authentication/connecting-to-github-with-ssh/adding-a-new-ssh-key-to-your-github-account).
 
 
-## Installation (for MacOS)
-### Install Softwares: Docker, Foxglove
-- Go install Foxglove https://foxglove.dev/.
-- You will need [Docker](https://docs.docker.com/get-docker/) installed.
-
 ### Apple Silicon Mac Only:
-- In Docker Desktop App: go to settings -> general and turn on "Use Rosetta for x86/amd64 emulation on Apple Silicon" 
+- In Docker Desktop App: go to settings -> general and turn on "Use Rosetta for x86/amd64 emulation on Apple Silicon"
 
 ### Set up repository
 - To set up ssh key, follow this link: [Connecting to GitHub with SSH](https://docs.github.com/en/authentication/connecting-to-github-with-ssh).
@@ -72,7 +67,6 @@ This is so you can edit our codebase locally, and sync your changes with the res
 
 
 ### X11 Setup (recommended)
-TODO: explain what X11 is for (i think it's only for the manual velocity updater in the sim?)
 - Install the appropriate X11 server on your computer for your respective operating systems (Xming for Windows, XQuartz for Mac, etc.).
 - Mac: In XQuartz settings, ensure that the "Allow connections from network clients" under "Security" is checked.
 - Windows: Make sure that you're using WSL 2 Ubuntu and NOT command prompt.
@@ -93,7 +87,7 @@ TODO: explain what X11 is for (i think it's only for the manual velocity updater
 - (This should only need to be run the first time you set up the repository) - to build the ROS workspace and source it, run:
         catkin_make
         source /rb_ws/devel/setup.bash  # sets variables so that our package is visible to ROS commands
-- To learn ROS on your own, follow the guide on https://wiki.ros.org/ROS/Tutorials. TODO: add recommendations on which aspects of ROS we use most
+- To learn ROS on your own, follow the guide on https://wiki.ros.org/ROS/Tutorials.
 
 ### 2D Simulation
 - Boot up the docker container
