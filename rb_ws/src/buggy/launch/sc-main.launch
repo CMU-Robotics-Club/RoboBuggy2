@@ -3,9 +3,9 @@
 <launch>
     <arg name="controller"      default="stanley" />
     <arg name="start_dist"      default="0.0" />
-    <arg name="path"      default="buggycourse_safe_1.json" />
+    <arg name="path"      default="buggycourse_raceline.json" />
 
-    <remap from="/SC/nav/odom" to="/nav/odom"/>
+    <!-- <remap from="/SC/nav/odom" to="/ekf/odometry_earth"/> -->
     <node name="sc_rolling_sanity_check" pkg="buggy" type="rolling_sanity_check.py" output="screen" args="SC"/>
 
     <!-- ENABLE AUTON -->
@@ -14,11 +14,11 @@
     <arg name="NAND_exist" default="true"/>
     <group if="$(arg NAND_exist)">
         <!-- Run the simulation with NAND -->
-        <arg name="autonsystem_args" value="--controller $(arg controller) --dist 0.0 --traj $(arg path) --self_name SC --other_name NAND --left_curb curb.json" />
+        <arg name="autonsystem_args" value="--controller $(arg controller) --dist 0.0 --traj $(arg path) --self_name SC --other_name NAND  --left_curb buggycourse_curb.json" />
         <node name="auton_system" pkg="buggy" type="autonsystem.py" output="screen" args="$(arg autonsystem_args)"/>
     </group>
     <group unless="$(arg NAND_exist)">
-        <arg name="autonsystem_args" value="--controller $(arg controller) --dist 0.0 --traj $(arg path) --self_name SC --left_curb curb.json" />
+        <arg name="autonsystem_args" value="--controller $(arg controller) --dist 0.0 --traj $(arg path) --self_name SC  --left_curb buggycourse_curb.json" />
         <node name="auton_system" pkg="buggy" type="autonsystem.py" output="screen" args="$(arg autonsystem_args)"/>
     </group>
 </launch>

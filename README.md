@@ -25,9 +25,10 @@ A complete re-write of the old RoboBuggy. This code was run for RD23, RD24 and R
 - Installation instructions here: https://foxglove.dev/
 
 ### VSCode
+- https://code.visualstudio.com/download
 
 ### Git
-
+- https://git-scm.com/downloads
 
 ### Install Softwares: WSL, Ubuntu
 - Go to Microsoft Store to install "Ubuntu 20.04.6 LTS". TODO: is this actually necessary?
@@ -37,10 +38,18 @@ A complete re-write of the old RoboBuggy. This code was run for RD23, RD24 and R
 - Note: Ensure that the SSH keys are generated while in the WSL terminal
 - In the website above, see these two pages: [Generating a new SSH key and adding it to the ssh-agent](https://docs.github.com/en/authentication/connecting-to-github-with-ssh/generating-a-new-ssh-key-and-adding-it-to-the-ssh-agent) and ["Adding a new SSH key to your GitHub account"](https://docs.github.com/en/authentication/connecting-to-github-with-ssh/adding-a-new-ssh-key-to-your-github-account).
 
-### TODO: this is setup for MacOS
+
+## Installation (for MacOS)
+### Install Softwares: Docker, Foxglove
+- Go install Foxglove https://foxglove.dev/.
+- You will need [Docker](https://docs.docker.com/get-docker/) installed.
+
+### Apple Silicon Mac Only:
+- In Docker Desktop App: go to settings -> general and turn on "Use Rosetta for x86/amd64 emulation on Apple Silicon" 
+
 ### Set up repository
 - To set up ssh key, follow this link: [Connecting to GitHub with SSH](https://docs.github.com/en/authentication/connecting-to-github-with-ssh).
-- Note: Ensure that the SSH keys are generated while in the WSL terminal
+- Note: Ensure that the SSH keys are generated while in the terminal
 - In the website above, see these two pages: [Generating a new SSH key and adding it to the ssh-agent](https://docs.github.com/en/authentication/connecting-to-github-with-ssh/generating-a-new-ssh-key-and-adding-it-to-the-ssh-agent) and ["Adding a new SSH key to your GitHub account"](https://docs.github.com/en/authentication/connecting-to-github-with-ssh/adding-a-new-ssh-key-to-your-github-account).
 
 
@@ -59,6 +68,7 @@ This is so you can edit our codebase locally, and sync your changes with the res
 - Use this address `ws://localhost:8765` for Foxglove Websocket
 - Open Foxglove, choose the third option "start link".
 - ![image](https://github.com/CMU-Robotics-Club/RoboBuggy2/assets/116482510/66965d34-502b-4130-976e-1419c0ac5f69)
+
 
 
 ### X11 Setup (recommended)
@@ -114,7 +124,7 @@ Then `$ cd RoboBuggy2`
 (wait until no longer prints “waiting for covariance to be better”)
 
 When launching NAND:
-- WORK IN PROGRESS
+- Ask software lead (WIP)
 
 When shutting down the buggy:
 -	Stop roslauch
@@ -126,7 +136,7 @@ When shutting down the buggy:
 
 ## Documentation
 ### Infrastructure Documentation
-WORK IN PROGRESS
+Ask Software Lead (WIP)
 
 ### Simulator notes
 - Longitude + Latitude for Foxglove visualization on map: `/state/pose_navsat` (sensor_msgs/NavSatFix)
@@ -137,4 +147,4 @@ Commands:
 - Velocity: `/buggy/velocity` in m/s (std_msgs/Float64)
 
 ### Auton Logic
-WORK IN PROGRESS
+Ask someone with experience (WIP)

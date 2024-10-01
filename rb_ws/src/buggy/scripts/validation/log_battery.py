@@ -2,9 +2,7 @@
 
 import csv
 import rospy
-from sensor_msgs.msg import (
-    BatteryState,
-)  # Callback function to print the subscribed data on the terminal
+from sensor_msgs.msg import BatteryState # Callback function to print the subscribed data on the terminal
 
 # Should be culled or improved to actually log the battery levels, to a file, when ros bags should contain this if properly published??
 

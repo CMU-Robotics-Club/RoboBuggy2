@@ -5,7 +5,7 @@
       "diffMethod": "custom",
       "diffTopicPath": "",
       "showFullMessageForDiff": false,
-      "topicPath": "/nav/dual_antenna_status"
+      "topicPath": "/mip/ekf/gnss_dual_antenna_status"
     },
     "RawMessages!3xary91": {
       "diffEnabled": false,
@@ -94,8 +94,8 @@
       "followTopic": "",
       "layer": "map",
       "topicColors": {
-        "/gnss1/fix": "#e34f4f",
-        "/gnss2/fix": "#4fd5e3"
+        "/gnss1/llh_position": "#e34f4f",
+        "/gnss2/llh_position": "#4fd5e3"
       },
       "zoomLevel": 16,
       "maxNativeZoom": 20
@@ -152,7 +152,7 @@
       "diffMethod": "custom",
       "diffTopicPath": "",
       "showFullMessageForDiff": false,
-      "topicPath": "/gnss2/fix_info",
+      "topicPath": "/mip/gnss2/fix_info",
       "expansion": "none"
     }
   },

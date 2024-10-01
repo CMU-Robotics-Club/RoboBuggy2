@@ -1,8 +1,8 @@
-FROM nvidia/cuda:11.6.2-base-ubuntu20.04 as CUDA
+# FROM nvidia/cuda:11.6.2-base-ubuntu20.04 as CUDA
 
 FROM osrf/ros:noetic-desktop-full-focal
 
-COPY --from=CUDA /usr/local/cuda /usr/local/
+# COPY --from=CUDA /usr/local/cuda /usr/local/
 
 
 RUN apt update
@@ -16,10 +16,11 @@ RUN apt-get install -y -qq \
   ros-noetic-foxglove-bridge \
   ros-noetic-microstrain-inertial-driver \
   ros-noetic-realsense2-camera \
-  ros-noetic-realsense2-description
+  ros-noetic-realsense2-description \
+  ros-${ROS_DISTRO}-mavros ros-${ROS_DISTRO}-mavros-extras ros-${ROS_DISTRO}-mavros-msgs
 
 # Run this now to cache it separately from other requirements
-COPY cuda-requirements_TEMP_DO_NOT_EDIT.txt cuda-requirements.txt
+# COPY cuda-requirements_TEMP_DO_NOT_EDIT.txt cuda-requirements.txt
 # RUN pip3 install -r cuda-requirements.txt
 
 
