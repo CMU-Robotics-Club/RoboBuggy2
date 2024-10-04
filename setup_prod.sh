@@ -79,12 +79,12 @@ docker kill $(docker ps -q)
 
 
 # copy python-requirements + cuda-requirements into appropriate folders for docker compose
-cp python-requirements.txt docker_auton
-mv docker_auton/python-requirements.txt docker_auton/python-requirements_TEMP_DO_NOT_EDIT.txt
-cp python-requirements.txt docker_tester
-mv docker_tester/python-requirements.txt docker_tester/python-requirements_TEMP_DO_NOT_EDIT.txt
-cp cuda-requirements.txt docker_auton
-mv docker_auton/cuda-requirements.txt docker_auton/cuda-requirements_TEMP_DO_NOT_EDIT.txt
+# cp python-requirements.txt docker_auton
+# mv docker_auton/python-requirements.txt docker_auton/python-requirements_TEMP_DO_NOT_EDIT.txt
+# cp python-requirements.txt docker_tester
+# mv docker_tester/python-requirements.txt docker_tester/python-requirements_TEMP_DO_NOT_EDIT.txt
+# cp cuda-requirements.txt docker_auton
+# mv docker_auton/cuda-requirements.txt docker_auton/cuda-requirements_TEMP_DO_NOT_EDIT.txt
 
 echo "Building containers..."
 docker-compose -f $dockerfile build

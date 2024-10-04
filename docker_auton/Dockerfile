@@ -6,42 +6,37 @@
 #FROM arm64v8/ros:noetic-ros-base-focal
 
 
-FROM ubuntu:focal@sha256:420b6f4cc783dc199667eae3316d9e066bd6e19931448c1e4b6f9a3759e52106
+FROM --platform=linux/aarch64 ubuntu:focal
 
 ENV DEBIAN_FRONTEND noninteractive
-RUN apt update
-RUN apt-get install -y -qq \
-  python3-pip \
-  python3-tk \
-  vim git tmux tree sl htop x11-apps curl
+RUN apt-get update && apt-get install -y \
+  vim git tmux tree sl htop x11-apps curl lsb-release apt-utils && \
+  apt-get install -y python3-pip python3-tk && \
+  apt-get clean all -y
 
-RUN apt-get update && apt-get install -y lsb-release && apt-get clean all
+RUN echo "deb http://packages.ros.org/ros/ubuntu $(lsb_release -sc) main" > /etc/apt/sources.list.d/ros-latest.list && \
+	curl -s https://raw.githubusercontent.com/ros/rosdistro/master/ros.asc | apt-key add - && \
+	apt-get update && \
+	apt-get install -y \
+		ros-noetic-desktop-full\
+		ros-noetic-rosserial \
+		ros-noetic-foxglove-bridge \
+		ros-noetic-microstrain-inertial-driver \
+		ros-noetic-realsense2-camera \
+		ros-noetic-realsense2-description \
+		ros-noetic-mavros ros-noetic-mavros-extras ros-noetic-mavros-msgs
+		
 
 # RUN curl -s https://raw.githubusercontent.com/ros/rosdistro/master/ros.asc
-# RUN apt-key add -
+#   RUN apt-key add -
 
-# https://wiki.ros.org/noetic/Installation/Ubuntu
-
-# RUN apt-get install -y -qq \
-#   ros-noetic-desktop-full \ 
-  ros-noetic-rosserial \
-  ros-noetic-foxglove-bridge \
-  ros-noetic-microstrain-inertial-driver \
-  ros-noetic-realsense2-camera \
-  ros-noetic-realsense2-description \
-  ros-noetic-mavros ros-noetic-mavros-extras ros-noetic-mavros-msgs
-
-# Run this now to cache it separately from other requirements
-# COPY cuda-requirements_TEMP_DO_NOT_EDIT.txt cuda-requirements.txt
-# RUN pip3 install -r cuda-requirements.txt
-
-# COPY ./python-requirements_TEMP_DO_NOT_EDIT.txt python-requirements.txt
-# RUN pip3 install -r python-requirements.txt
 
 # RUN echo 'source "/opt/ros/$ROS_DISTRO/setup.bash" --' >> ~/.bashrc
-RUN echo 'cd rb_ws' >> ~/.bashrc
-RUN echo 'catkin_make >/dev/null' >> ~/.bashrc
-RUN echo 'source devel/setup.bash' >> ~/.bashrc
+RUN 	echo 'source "/opt/ros/noetic/setup.bash" --' >> ~/.bashrc && \
+	echo 'cd rb_ws' >> ~/.bashrc && \
+	echo 'pip3 install -r python-requirements.txt' >> ~/.bashrc && \
+	echo 'catkin_make >/dev/null' >> ~/.bashrc && \
+	echo 'source devel/setup.bash' >> ~/.bashrc
 
 # shoestring fix since installing numba from pythonrequirements 
 # smh breaks
