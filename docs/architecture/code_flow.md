@@ -11,7 +11,7 @@ flowchart LR
 
     subgraph I/O Translation Node
         Serial
-        BuggyState_Republisher
+        BuggyState_Converter
     end
 
     subgraph Controller Node
@@ -26,22 +26,24 @@ flowchart LR
 
     subgraph Telemetry Node
         Sanity_Check
+        Visualizer
     end
 
 
-    Serial --> BuggyState_Republisher
-    BuggyState_Republisher --> Sanity_Check
-    Controller --> Serial
-
-    BuggyState_Republisher --> Pathplanner
-    BuggyState_Republisher --> Controller
-
-
-    Controller --> Pathplanner
+    BuggyState_Converter --> |"(unit conversions)"|Serial
+    Serial --> |"all the data"| Sanity_Check
+    Pathplanner --> |"traj/follow_path"| Controller
+    Controller --> |"SC/state"| Pathplanner
     Simulator --> Pathplanner
     Controller --> Simulator
+    Controller --> |"self/steering_angle"| Serial
+
+    Serial --> |"NAND/state"| Pathplanner
+    Serial --> |"self/state"| Controller
 
 
-    JSON_to_Trajectory --> Pathplanner
+
+
+    JSON_to_Trajectory --> |"get_init_traj()"|Pathplanner
 
 ```
