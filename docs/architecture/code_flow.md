@@ -8,25 +8,40 @@ Install `bierner.markdown-mermaid` from the extension marketplace to render the 
 ## Chart!
 ```mermaid
 flowchart LR
-    Serial --> Sanity_Check
 
-    subgraph Control Loop
-        Controller --> Pathplanner
+    subgraph I/O Translation Node
+        Serial
+        BuggyState_Republisher
     end
 
-    Simulator --> Pathplanner
-    Controller --> Simulator
+    subgraph Controller Node
+        Controller
+    end
 
+    subgraph Pathplanner Node
+        JSON_to_Trajectory
+        Pathplanner
+        Trajectory
+    end
 
+    subgraph Telemetry Node
+        Sanity_Check
+    end
 
 
     Serial --> BuggyState_Republisher
+    BuggyState_Republisher --> Sanity_Check
+    Controller --> Serial
 
     BuggyState_Republisher --> Pathplanner
     BuggyState_Republisher --> Controller
 
 
+    Controller --> Pathplanner
+    Simulator --> Pathplanner
+    Controller --> Simulator
 
-    Controller --> Serial
+
+    JSON_to_Trajectory --> Pathplanner
 
 ```
