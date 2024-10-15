@@ -80,10 +80,10 @@ flowchart LR
     INS --> |"100 Hz"| self/ins_topics
     INS --> |"10 Hz"| self/gnss1
     INS --> |"10 Hz"| self/gnss2
+    INS --> |"10 Hz - SC"| self/gps
 
     ROS_serial_translator --> |"10 Hz - SC"| self/encoder_speed
     ROS_serial_translator --> |"10 Hz - SC"| self/stepper_steering
-    ROS_serial_translator --> |"10 Hz - SC"| self/gps
     ROS_serial_translator --> |"10 Hz - SC"| other/raw_state
     ROS_serial_translator --> |"100 Hz - NAND"| self/raw_state
     ROS_serial_translator --> |"100 Hz"| self/firmware_debug
