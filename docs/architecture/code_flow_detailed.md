@@ -54,7 +54,7 @@ flowchart TB
     end
 
     subgraph RN-UKF["UKF Node"]
-        UKF
+        UKF - SC ONLY
     end
 
     subgraph RN-STATE["Buggy State Node"]
