@@ -54,7 +54,7 @@ flowchart TB
     end
 
     subgraph RN-UKF["UKF Node"]
-        UKF - SC ONLY
+        UKF_SC_ONLY
     end
 
     subgraph RN-STATE["Buggy State Node"]
@@ -131,5 +131,4 @@ flowchart TB
     classDef RT color:#000,fill:#74a57f;
     classDef RN color:#000,fill:#ee5622;
     linkStyle default stroke-width:3px;
-    
 ```
