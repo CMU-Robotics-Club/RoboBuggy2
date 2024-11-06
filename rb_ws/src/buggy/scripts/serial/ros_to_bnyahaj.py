@@ -42,14 +42,27 @@ class Translator:
         """
         self.comms = Comms("/dev/" + teensy_name)
         self.steer_angle = 0
+        self.debug_steer = 0
+
         self.alarm = 0
+        self.alarm_counter = 0
+
         self.fresh_steer = False
+        self.fresh_debug_steer = False
+
         self.lock = Lock()
+
+        self.SANITY_THRESHOLD = 2  # Threshold for deviation in steering
+        self.ALARM_THRESHOLD = 3  # Threshold for the number of consecutive alarms
+        self.DEVIATION_ALARM_STATUS_CODE = 501  # Deviation alarm status code
 
         rospy.Subscriber(
             self_name + "/buggy/input/steering", Float64, self.set_steering
         )
         rospy.Subscriber(self_name + "/debug/sanity_warning", Int8, self.set_alarm)
+        rospy.Subscriber(
+            self_name + "/buggy/debug/steering", Float64, self.set_debug_steering
+        )
 
         # ISSUE: https://github.com/CMU-Robotics-Club/RoboBuggy2/issues/83
         if other_name is None and self_name == "NAND":
@@ -104,7 +117,7 @@ class Translator:
 
     def set_steering(self, msg):
         """
-        Steering Angle Updater, updates the steering angle locally if updated on ros stopic
+        Steering Angle Updater, updates the steering angle locally if updated on ros topic
         """
         rospy.loginfo(f"Read steeering angle of: {msg.data}")
         # print("Steering angle: " + str(msg.data))
@@ -112,6 +125,14 @@ class Translator:
         with self.lock:
             self.steer_angle = msg.data
             self.fresh_steer = True
+
+    def set_debug_steering(self, msg):
+        """
+        Debug Steering Angle Updater, updates debug steering angle locally if updated on ros topic
+        """
+        with self.lock:
+            self.debug_steer = msg.data
+            self.fresh_debug_steer = True
 
     def writer_thread(self):
         """
@@ -125,6 +146,37 @@ class Translator:
                 with self.lock:
                     self.comms.send_steering(self.steer_angle)
                     self.fresh_steer = False
+
+            # Sanity check between debug steering and input steering
+            if self.fresh_debug_steer:
+                with self.lock:
+                    # Check for deviation between input and debug steering
+                    deviation = abs(self.steer_angle - self.debug_steer)
+                    if deviation > self.SANITY_THRESHOLD:
+                        # Increment the alarm counter if deviation exceeds threshold
+                        self.alarm_counter += 1
+                        rospy.logwarn(
+                            "Sanity check failed. Deviation between input and debug steering is: "
+                            + str(deviation)
+                            + ". Incrementing alarm counter to: "
+                            + str(self.alarm_counter)
+                            + "."
+                        )
+                    else:
+                        # Reset alarm counter if steering is within threshold
+                        self.alarm_counter = 0
+
+                    # Check if alarm counter exceeds the maximum allowed
+                    if self.alarm_counter > self.ALARM_THRESHOLD:
+                        self.alarm = self.ALARM_STATUS_CODE
+                        rospy.logerr(
+                            "Alarm status set to "
+                            + str(self.DEVIATION_ALARM_STATUS_CODE)
+                            + "due to repeated sanity check failures."
+                        )
+
+                    # Reset the flag to avoid reprocessing until a new message arrives
+                    self.fresh_debug_steer = False
 
             with self.lock:
                 self.comms.send_alarm(self.alarm)
