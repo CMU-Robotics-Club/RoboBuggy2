@@ -17,7 +17,7 @@ class Watchdog:
         1 - WARNING
         2 - ERROR        
         """
-        
+
         self.commanded_steering = 0
         self.inAutonSteer = False
 
@@ -33,12 +33,12 @@ class Watchdog:
 
         self.alarm_publisher = rospy.Publisher(self_name + "/debug/sanity_warning", Int8, queue_size=1)
         self.alarm_publish_rate = rospy.Rate(100) #10ms per alarm
-        
+
     def set_input_steering(self, msg):
         rospy.logdebug("Got input steering of: "  + str(msg.data))
         self.commanded_steering = msg.data
-    
-    def set_auton_steer(self, msg):     
+
+    def set_auton_steer(self, msg):
         if (msg.data and not self.inAutonSteer):
             rospy.loginfo("ENTERED AUTON")
         if (not msg.data and self.inAutonSteer):
@@ -54,7 +54,7 @@ class Watchdog:
                 rospy.logerr("STEPPER DEVIANCE (DEGREES OFF): " +  str(abs(stepper_steer - self.commanded_steering)))
             else:
                 rospy.logdebug("(Non Auton) Stepper Deviance of: " + str(abs(stepper_steer - self.commanded_steering)))
-                
+
         elif abs(stepper_steer - self.commanded_steering) > Watchdog.STEERING_DEVIANCE//2:
             if self.inAutonSteer:
                 rospy.logwarn("STEPPER POSSIBILY DEVIATING (DEGREES OFF):  " + str(abs(stepper_steer - self.commanded_steering)))
@@ -68,7 +68,7 @@ class Watchdog:
             ros_alarm = Int8()
             ros_alarm.data = self.alarm
             self.alarm_publisher.publish(ros_alarm)
-            
+
             self.alarm_publish_rate.sleep()
 
 if __name__ == "__main__":
@@ -82,7 +82,3 @@ if __name__ == "__main__":
     rospy.loginfo("INITIALIZED WATCHDOG NODE")
     watchdog = Watchdog(self_name=self_name)
     watchdog.loop()
-
-
-    
-
