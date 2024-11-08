@@ -100,13 +100,14 @@ class Translator:
         alarm ros topic reader, locked so that only one of the setters runs at once
         """
         with self.lock:
+            rospy.logdebug(f"Reading alarm of {msg.data}")
             self.alarm = msg.data
 
     def set_steering(self, msg):
         """
         Steering Angle Updater, updates the steering angle locally if updated on ros stopic
         """
-        rospy.loginfo(f"Read steeering angle of: {msg.data}")
+        rospy.logdebug(f"Read steeering angle of: {msg.data}")
         # print("Steering angle: " + str(msg.data))
         # print("SET STEERING: " + str(msg.data))
         with self.lock:
@@ -120,7 +121,7 @@ class Translator:
         TODO: Does alarm node exist for NAND?
         """
         rospy.loginfo("Starting sending alarm and steering to teensy!")
-        while True:
+        while not rospy.is_shutdown():
             if self.fresh_steer:
                 with self.lock:
                     self.comms.send_steering(self.steer_angle)
@@ -139,7 +140,7 @@ class Translator:
         tuple -> (SC, maybe NAND?) Debug Info
         """
         rospy.loginfo("Starting reading odom from teensy!")
-        while True:
+        while not rospy.is_shutdown():
             packet = self.comms.read_packet()
 
             if isinstance(packet, Odometry):

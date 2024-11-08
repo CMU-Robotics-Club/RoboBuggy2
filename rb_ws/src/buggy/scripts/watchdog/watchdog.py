@@ -43,27 +43,30 @@ class Watchdog:
             rospy.loginfo("ENTERED AUTON")
         if (not msg.data and self.inAutonSteer):
             rospy.logwarn("EXITED AUTON")
+            self.alarm = 0 #No alarm if not in auton
         self.inAutonSteer = msg.data
 
     def check_stepper_steering(self, msg):
         stepper_steer = msg.data
         rospy.logdebug("Firmware's reported stepper degree: " + str(stepper_steer))
+        if (self.alarm < 2):
+            self.alarm = 0
         if abs(stepper_steer - self.commanded_steering) > Watchdog.STEERING_DEVIANCE:
-            self.alarm = 2 # ERROR
             if self.inAutonSteer:
+                self.alarm = 2 # ERROR
                 rospy.logerr("STEPPER DEVIANCE (DEGREES OFF): " +  str(abs(stepper_steer - self.commanded_steering)))
             else:
                 rospy.logdebug("(Non Auton) Stepper Deviance of: " + str(abs(stepper_steer - self.commanded_steering)))
 
         elif abs(stepper_steer - self.commanded_steering) > Watchdog.STEERING_DEVIANCE//2:
             if self.inAutonSteer:
-                rospy.logwarn("STEPPER POSSIBILY DEVIATING (DEGREES OFF):  " + str(abs(stepper_steer - self.commanded_steering)))
                 self.alarm = max(self.alarm, 1)
+                rospy.logwarn("STEPPER POSSIBILY DEVIATING (DEGREES OFF):  " + str(abs(stepper_steer - self.commanded_steering)))
             else:
                 rospy.logdebug("(Non Auton) Stepper possibly deviating: " + str(abs(stepper_steer - self.commanded_steering)))
 
     def loop(self):
-        while True:
+        while not rospy.is_shutdown():
             #publish alarm
             ros_alarm = Int8()
             ros_alarm.data = self.alarm
