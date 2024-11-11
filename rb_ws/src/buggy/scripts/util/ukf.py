@@ -1,5 +1,7 @@
 #!/usr/bin/env python3
 
+from threading import Lock
+
 import sys
 import numpy as np
 import scipy
@@ -8,6 +10,7 @@ import rospy
 import time
 
 from nav_msgs.msg import Odometry as ROSOdom
+from std_msgs.msg import Float64
 
 STATE_SPACE_DIM = 3
 MEASUREMENT_SPACE_DIM = 2
@@ -120,3 +123,49 @@ class UKF:
         self.updated_state_cov = curr_state_cov - (kalman_gain * (innovation_cov * kalman_gain.T))
 
 
+class SC_UKF_NODE:
+    def __init__(self, self_name, wheelbase : float, zeroth_sigma_point_weight : float, process_noise : np.ndarray, gps_noise : np.ndarray):
+        self.ukf = UKF(wheelbase, zeroth_sigma_point_weight, process_noise, gps_noise);
+        
+        self.lock = Lock()
+        # TODO Is this needed?
+        self.input_write_flags = 0b000
+
+        self.self_encoder_speed_msg = None
+        self.self_stepper_steering_msg = None
+        self.self_gps_msg = None
+
+        # TODO replace these with actual message types
+        rospy.Subscriber(f"{self_name}/encoder_speed", Float64, self.update_self_encoder_speed)
+        rospy.Subscriber(f"{self_name}/stepper_steering", Float64, self.update_self_stepper_steering)
+        rospy.Subscriber(f"{self_name}/gps", Float64, self.update_self_gps)
+
+    def update_self_encoder_speed(self, msg):
+        with self.lock:
+            self.input_write_flags |= 0b001
+            self.self_encoder_speed_msg = msg
+
+    def update_self_stepper_steering(self, msg):
+        with self.lock:
+            self.input_write_flags |= 0b010
+            self.self_stepper_steering_msg = msg
+
+    def update_self_gps(self, msg):
+        with self.lock:
+            self.input_write_flags |= 0b100
+            self.self_gps_msg = msg
+
+    def ukf_loop(self):
+        update_ukf = False
+        with self.lock:
+            if self.input_write_flags == 0b111:
+                update_ukf = True
+                self.input_write_flags = 0b000
+
+        # TODO UKF Math and publish
+
+        if update_ukf:
+            # Update/Predict ...
+            pass
+
+        # Publish
