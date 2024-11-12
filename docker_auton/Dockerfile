@@ -1,6 +1,6 @@
 # FROM nvidia/cuda:11.6.2-base-ubuntu20.04 as CUDA
 
-FROM osrf/ros:noetic-desktop-full-focal
+FROM osrf/ros:noetic-desktop-full-focal@sha256:d574528a3ec7b047362b75d192b86baa49675be36bfee510adae82e2db29507d
 
 # COPY --from=CUDA /usr/local/cuda /usr/local/
 
