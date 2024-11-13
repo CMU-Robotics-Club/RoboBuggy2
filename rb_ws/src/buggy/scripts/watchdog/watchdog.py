@@ -57,13 +57,15 @@ class Watchdog:
         if self.alarm < 2:
             self.alarm = 0
 
-        # Finds the minimum difference between the stepper's reported angle and the last 10 steering instructions
-        steer_instruct_diff_min = min(
-            map(
-                lambda steer: abs(stepper_steer - steer),
-                self.steering_instructions
+        steer_instruct_diff_min = 0
+        if len(self.steering_instructions) > 0:
+            # Finds the minimum difference between the stepper's reported angle and the last 10 steering instructions
+            steer_instruct_diff_min = min(
+                map(
+                    lambda steer: abs(stepper_steer - steer),
+                    self.steering_instructions
+                )
             )
-        )
 
         if steer_instruct_diff_min > Watchdog.STEERING_DEVIANCE:
             if self.inAutonSteer:
