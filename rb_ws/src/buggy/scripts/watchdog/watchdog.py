@@ -6,6 +6,10 @@ import rospy
 
 from std_msgs.msg import Bool, Int8, Float64
 
+from collections import deque
+
+STEERING_INSTRUCTION_MAX_LEN = 10
+
 class Watchdog:
 
     STEERING_DEVIANCE = 4 #deg
@@ -18,7 +22,8 @@ class Watchdog:
         2 - ERROR        
         """
 
-        self.commanded_steering = 0
+        self.steering_instructions = deque(maxlen=STEERING_INSTRUCTION_MAX_LEN)
+
         self.inAutonSteer = False
 
         rospy.Subscriber(
@@ -36,7 +41,7 @@ class Watchdog:
 
     def set_input_steering(self, msg):
         rospy.logdebug("Got input steering of: "  + str(msg.data))
-        self.commanded_steering = msg.data
+        self.steering_instructions.append(msg.data)
 
     def set_auton_steer(self, msg):
         if (msg.data and not self.inAutonSteer):
@@ -49,16 +54,25 @@ class Watchdog:
     def check_stepper_steering(self, msg):
         stepper_steer = msg.data
         rospy.logdebug("Firmware's reported stepper degree: " + str(stepper_steer))
-        if (self.alarm < 2):
+        if self.alarm < 2:
             self.alarm = 0
-        if abs(stepper_steer - self.commanded_steering) > Watchdog.STEERING_DEVIANCE:
+
+        # Finds the minimum difference between the stepper's reported angle and the last 10 steering instructions
+        steer_instruct_diff_min = min(
+            map(
+                lambda steer: abs(stepper_steer - steer),
+                self.steering_instructions
+            )
+        )
+
+        if steer_instruct_diff_min > Watchdog.STEERING_DEVIANCE:
             if self.inAutonSteer:
                 self.alarm = 2 # ERROR
                 rospy.logerr("STEPPER DEVIANCE (DEGREES OFF): " +  str(abs(stepper_steer - self.commanded_steering)))
             else:
                 rospy.logdebug("(Non Auton) Stepper Deviance of: " + str(abs(stepper_steer - self.commanded_steering)))
 
-        elif abs(stepper_steer - self.commanded_steering) > Watchdog.STEERING_DEVIANCE//2:
+        elif steer_instruct_diff_min > Watchdog.STEERING_DEVIANCE // 2:
             if self.inAutonSteer:
                 self.alarm = max(self.alarm, 1)
                 rospy.logwarn("STEPPER POSSIBILY DEVIATING (DEGREES OFF):  " + str(abs(stepper_steer - self.commanded_steering)))
