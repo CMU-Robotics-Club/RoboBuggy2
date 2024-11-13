@@ -38,6 +38,9 @@ class StanleyController(Controller):
         self.debug_yaw_rate_publisher = rospy.Publisher(
             buggy_name + "/auton/debug/yaw_rate", Float64, queue_size=1
         )
+        self.debug_yaw_rate2_publisher = rospy.Publisher(
+            buggy_name + "/auton/debug/yaw_rate2", Float64, queue_size=1
+        )
 
     def compute_control(
         self, state_msg: Odometry, trajectory: Trajectory
@@ -126,7 +129,8 @@ class StanleyController(Controller):
 
         if (abs(StanleyController.K_D_YAW * (r_meas - r_traj)) > 6.0):
             rospy.logwarn(f"spiked yaw_rate: actual: {r_meas}, expected_basic: {r_traj}, expected_analytic: {r_traj_2}")
-        self.debug_yaw_rate_publisher.publish(StanleyController.K_D_YAW * (r_traj_2 - r_meas))
+        self.debug_yaw_rate_publisher.publish(StanleyController.K_D_YAW * (r_traj - r_meas))
+        self.debug_yaw_rate2_publisher.publish(StanleyController.K_D_YAW * (r_traj_2 - r_meas))
 
         steering_cmd = error_heading + cross_track_component + StanleyController.K_D_YAW * (r_traj - r_meas)
         steering_cmd = np.clip(steering_cmd, -np.pi / 9, np.pi / 9)
