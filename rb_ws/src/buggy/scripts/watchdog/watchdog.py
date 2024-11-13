@@ -1,12 +1,12 @@
 #!/usr/bin/env python3
 
+from collections import deque
+
 import argparse
 
 import rospy
 
 from std_msgs.msg import Bool, Int8, Float64
-
-from collections import deque
 
 STEERING_INSTRUCTION_MAX_LEN = 10
 
