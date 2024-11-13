@@ -120,6 +120,22 @@ class Trajectory:
         theta = np.arctan2(dydt, dxdt)
 
         return theta
+    
+    def get_dheading_by_index(self, index):
+        """Gets the derivative of the heading at given index along trajectory,
+        interpolating if necessary
+
+        Args:
+            index (float): index along the trajectory
+
+        Returns:
+            float: (theta) in rads
+        """
+        # theta = np.interp(index, self.indices, self.positions[:, 2])
+        ddxdt, ddydt = self.interpolation(index, nu=2).reshape((-1, 2)).T
+
+        return ddxdt, ddydt
+
 
     def get_heading_by_distance(self, distance):
         """Gets the heading at given distance along trajectory,

@@ -1,6 +1,7 @@
 import numpy as np
 
 import rospy
+from std_msgs.msg import Float64
 from sensor_msgs.msg import NavSatFix
 from geometry_msgs.msg import Pose as ROSPose
 from nav_msgs.msg import Odometry
@@ -33,6 +34,9 @@ class StanleyController(Controller):
         )
         self.debug_error_publisher = rospy.Publisher(
             buggy_name + "/auton/debug/error", ROSPose, queue_size=1
+        )
+        self.debug_yaw_rate_publisher = rospy.Publisher(
+            buggy_name + "/auton/debug/yaw_rate", Float64, queue_size=1
         )
 
     def compute_control(
@@ -89,7 +93,7 @@ class StanleyController(Controller):
             trajectory.get_index_from_distance(traj_dist))
 
         error_heading = ref_heading - current_pose.theta
-        error_heading = np.arctan2(np.sin(error_heading), np.cos(error_heading))
+        error_heading = np.arctan2(np.sin(error_heading), np.cos(error_heading)) #bounding erro_heading
 
         # Calculate cross track error by finding the distance from the buggy to the tangent line of
         # the reference trajectory
@@ -110,11 +114,19 @@ class StanleyController(Controller):
             StanleyController.CROSS_TRACK_GAIN * error_dist, speed + StanleyController.K_SOFT
         )
 
+        ddxdt, ddydt = trajectory.get_dheading_by_index(trajectory.get_index_from_distance(traj_dist))
+        dxdt, dydt = np.cos(ref_heading), np.sin(ref_heading)
+
+        r_traj_2 = speed * (1/(1 + (dydt/dxdt)**2)) * (ddydt/dxdt - (dydt * ddxdt)/(dxdt ** 2))
+
         # Calculate yaw rate error
         r_meas = yaw_rate
         r_traj = speed * (trajectory.get_heading_by_index(trajectory.get_index_from_distance(traj_dist) + 0.05)
         - trajectory.get_heading_by_index(trajectory.get_index_from_distance(traj_dist))) / 0.05
 
+        if (abs(StanleyController.K_D_YAW * (r_meas - r_traj)) > 6.0):
+            rospy.logwarn(f"spiked yaw_rate: actual: {r_meas}, expected_basic: {r_traj}, expected_analytic: {r_traj_2}")
+        self.debug_yaw_rate_publisher.publish(StanleyController.K_D_YAW * (r_traj_2 - r_meas))
 
         steering_cmd = error_heading + cross_track_component + StanleyController.K_D_YAW * (r_traj - r_meas)
         steering_cmd = np.clip(steering_cmd, -np.pi / 9, np.pi / 9)
