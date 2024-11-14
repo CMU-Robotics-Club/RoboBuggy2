@@ -14,4 +14,5 @@
 
     <node name="foxglove" pkg="foxglove_bridge" type="foxglove_bridge" />
     <node name="telematics" pkg="buggy" type="telematics.py" />
+    <node name="watchdog" pkg="buggy" type="watchdog.py" args = "--self_name SC" output="screen"/>
 </launch>
