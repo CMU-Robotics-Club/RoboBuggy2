@@ -164,7 +164,7 @@ class Translator:
 
                 # TODO: Not mock rolled accurately (Needs to be Fact Checked)
                 try:
-                    lat, long = World.utm_to_gps(packet.y, packet.x)
+                    lat, long = World.utm_to_gps(packet.x, packet.y)
                     odom.pose.pose.position.x = long
                     odom.pose.pose.position.y = lat
                     odom.twist.twist.angular.z = packet.heading_rate
