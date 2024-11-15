@@ -1,0 +1,14 @@
+<launch>
+    <node name="foxglove" pkg="foxglove_bridge" type="foxglove_bridge" />
+
+    <arg name="controller"      default="stanley" />
+    <arg name="start_dist"      default="0.0" />
+    <arg name="path"      default="buggycourse_safe.json" />
+    <arg name="NAND_exist" default="true"/>
+    <group if="$(arg NAND_exist)">
+        <!-- Run the simulation with NAND -->
+        <arg name="autonsystem_args" value="--controller $(arg controller) --dist 0.0 --traj $(arg path) --self_name SC --other_name NAND  --left_curb buggycourse_curb.json" />
+        <node name="auton_system" pkg="buggy" type="autonsystem.py" output="screen" args="$(arg autonsystem_args)"/>
+    </group>
+
+</launch>
