@@ -22,7 +22,7 @@ services:
     device_cgroup_rules:
        - "c *:* rmw"
   tileserver:
-    image: maptiler/tileserver-gl
+    image: maptiler/tileserver-gl@sha256:fb1e78a88d70ebab7044001c53459a91cbb2bdfb937c0cad657b956d1435a874
     volumes:
       - "./maps:/data"
     stdin_open: true # docker run -i
