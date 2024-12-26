@@ -87,7 +87,7 @@ class PathPlanner():
         self,
         self_pose: Pose,
         other_pose: Pose, #Currently NAND's location -- To be Changed
-        ) -> Trajectory:
+        ) -> None:
         """
         draw trajectory starting at the current pose and ending at a fixed distance
         ahead. For each trajectory point, calculate the required offset perpendicular to the nominal
@@ -193,9 +193,6 @@ class PathPlanner():
         )
         positions = nominal_slice + (passing_offsets[:, None] * nominal_normals)
 
-        # prepend current pose
-        # positions = np.vstack((np.array([self_pose.x, self_pose.y]), positions))
-
         # publish passing targets for debugging
         for i in range(len(positions)):
             reference_navsat = NavSatFix()
@@ -206,7 +203,3 @@ class PathPlanner():
 
         local_traj = Trajectory(json_filepath=None, positions=positions)
         self.traj_publisher.publish(local_traj.pack(self_pose.x, self_pose.y))
-        return local_traj, \
-                local_traj.get_closest_index_on_path(
-                self_pose.x,
-                self_pose.y)

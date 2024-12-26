@@ -361,7 +361,7 @@ class Trajectory:
     def unpack(trajMsg : TrajectoryMsg):
         pos = np.array([trajMsg.easting, trajMsg.northing]).transpose(1, 0)
         cur_idx = trajMsg.cur_idx
-        return Trajectory(positions=pos), cur_idx
+        return Trajectory(json_filepath=None, positions=pos), cur_idx
 
 
 if __name__ == "__main__":
